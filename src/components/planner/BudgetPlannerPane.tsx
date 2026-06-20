@@ -2,6 +2,9 @@ import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, TextInput, View } from "react-native";
 import { Recipe } from "../../data/recipes";
+import { useBudgetPlannerMutation } from "../../hooks/api/usePlanner";
+import { apiRecipeToLocalRecipe } from "../../lib/api/adapters";
+import { getApiErrorMessage } from "../../lib/api/errors";
 import { formatNaira } from "../../lib/formatters";
 import { theme } from "../../theme/theme";
 import { AppText } from "../ui/AppText";
@@ -16,6 +19,7 @@ type Props = {
 
 export function BudgetPlannerPane({ recipes }: Props) {
   const [budget, setBudget] = useState("");
+  const budgetPlannerMutation = useBudgetPlannerMutation();
 
   const numericBudget = Number(budget);
 
@@ -25,9 +29,34 @@ export function BudgetPlannerPane({ recipes }: Props) {
     }
 
     return recipes
-      .filter((recipe) => recipe.cost <= numericBudget)
-      .sort((a, b) => a.cost - b.cost);
+      .filter((recipe) => recipe.cost !== null && recipe.cost <= numericBudget)
+      .sort(
+        (a, b) =>
+          (a.cost ?? Number.MAX_SAFE_INTEGER) -
+          (b.cost ?? Number.MAX_SAFE_INTEGER)
+      );
   }, [numericBudget, recipes]);
+
+  const apiMeals =
+    budgetPlannerMutation.data?.meals.map((meal) => ({
+      recipe: apiRecipeToLocalRecipe(meal.recipe),
+      estimatedCost: meal.estimatedCost,
+    })) ?? [];
+  const visibleRecipes =
+    apiMeals.length > 0
+      ? apiMeals.map((meal) => meal.recipe)
+      : matchingRecipes;
+
+  function generateBudgetPlan() {
+    if (!numericBudget || numericBudget <= 0) return;
+
+    budgetPlannerMutation.mutate({
+      budget: numericBudget,
+      mealsPerDay: 1,
+      days: 1,
+      allowUnknownCost: true,
+    });
+  }
 
   return (
     <View style={styles.container}>
@@ -80,20 +109,26 @@ export function BudgetPlannerPane({ recipes }: Props) {
 
       <AppText style={styles.resultsLabel}>Suggested Meals</AppText>
 
-      {!numericBudget ? (
+      {budgetPlannerMutation.isError ? (
+        <EmptyState
+          icon="⚠️"
+          title="Could not generate plan"
+          message={getApiErrorMessage(budgetPlannerMutation.error)}
+        />
+      ) : !numericBudget ? (
         <EmptyState
           icon="💸"
           title="Enter a budget"
           message="Add how much you have and we’ll suggest meals you can cook."
         />
-      ) : matchingRecipes.length === 0 ? (
+      ) : visibleRecipes.length === 0 ? (
         <EmptyState
           icon="😔"
           title="No meals found"
           message="Try increasing your budget or checking back when we add more recipes."
         />
       ) : (
-        matchingRecipes.map((recipe) => (
+        visibleRecipes.map((recipe) => (
           <Pressable
             key={recipe.id}
             onPress={() =>
@@ -117,9 +152,11 @@ export function BudgetPlannerPane({ recipes }: Props) {
             </View>
 
             <View style={styles.resultPriceWrap}>
-              <AppText style={styles.resultPrice}>
-                {formatNaira(recipe.cost)}
-              </AppText>
+              {recipe.cost !== null ? (
+                <AppText style={styles.resultPrice}>
+                  {formatNaira(recipe.cost)}
+                </AppText>
+              ) : null}
               <AppText style={styles.resultDifficulty}>
                 {recipe.difficulty}
               </AppText>
@@ -130,11 +167,14 @@ export function BudgetPlannerPane({ recipes }: Props) {
 
       {numericBudget > 0 && matchingRecipes.length > 0 ? (
         <Button
-          title="Generate Budget Plan"
+          title={
+            budgetPlannerMutation.isPending
+              ? "Generating..."
+              : "Generate Budget Plan"
+          }
           style={styles.generateButton}
-          onPress={() => {
-            // Placeholder for later.
-          }}
+          onPress={generateBudgetPlan}
+          disabled={budgetPlannerMutation.isPending}
         />
       ) : null}
     </View>

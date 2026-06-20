@@ -5,11 +5,19 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { ShoppingListSection } from "../../src/components/shopping/ShoppingListSection";
 import { AppText } from "../../src/components/ui/AppText";
 import { EmptyState } from "../../src/components/ui/EmptyState";
+import { Button } from "../../src/components/ui/Button";
 import { Screen } from "../../src/components/ui/Screen";
 import {
   deleteCheckedShoppingListItems,
   updateShoppingListItemChecked,
 } from "../../src/db/shoppingListRepository";
+import {
+  useClearCheckedShoppingListItemsMutation,
+  useShoppingListQuery,
+  useUpdateShoppingListItemMutation,
+} from "../../src/hooks/api/useShoppingList";
+import { apiShoppingItemToLocalItem } from "../../src/lib/api/adapters";
+import { getApiErrorMessage } from "../../src/lib/api/errors";
 import { formatNaira } from "../../src/lib/formatters";
 import { groupShoppingListItems } from "../../src/lib/groupShoppingListItems";
 import { useShoppingListStore } from "../../src/store/shoppingListStore";
@@ -23,23 +31,40 @@ export default function ShoppingScreen() {
   const clearCheckedItems = useShoppingListStore(
     (state) => state.clearCheckedItems
   );
-  const totalEstimatedCost = useShoppingListStore((state) =>
-    state.totalEstimatedCost()
-  );
-  const checkedCount = useShoppingListStore((state) => state.checkedCount());
-  const itemCount = useShoppingListStore((state) => state.itemCount());
+  const shoppingListQuery = useShoppingListQuery();
+  const updateShoppingItemMutation = useUpdateShoppingListItemMutation();
+  const clearCheckedMutation = useClearCheckedShoppingListItemsMutation();
+  const apiItems =
+    shoppingListQuery.data?.items.map(apiShoppingItemToLocalItem) ?? [];
+  const visibleItems = apiItems.length > 0 ? apiItems : items;
 
-  const sections = groupShoppingListItems(items);
-  const progress = itemCount > 0 ? checkedCount / itemCount : 0;
+  const visibleItemCount = visibleItems.length;
+  const visibleCheckedCount = visibleItems.filter((item) => item.checked).length;
+  const visibleTotalEstimatedCost = visibleItems.reduce(
+    (total, item) => total + item.estimatedPrice,
+    0
+  );
+  const sections = groupShoppingListItems(visibleItems);
+  const progress =
+    visibleItemCount > 0 ? visibleCheckedCount / visibleItemCount : 0;
 
   async function handleToggleItem(itemId: string) {
-    const item = items.find((currentItem) => currentItem.id === itemId);
+    const item = visibleItems.find((currentItem) => currentItem.id === itemId);
 
     if (!item) return;
 
-    toggleItem(itemId);
-
     try {
+      if (apiItems.length > 0) {
+        await updateShoppingItemMutation.mutateAsync({
+          itemId,
+          payload: {
+            checked: !item.checked,
+          },
+        });
+      }
+
+      // TODO: merge backend shopping changes into an offline sync queue.
+      toggleItem(itemId);
       await updateShoppingListItemChecked(db, itemId, !item.checked);
     } catch (error) {
       console.error("Failed to update shopping item", error);
@@ -47,9 +72,13 @@ export default function ShoppingScreen() {
   }
 
   async function handleClearCheckedItems() {
-    clearCheckedItems();
-
     try {
+      if (apiItems.length > 0) {
+        await clearCheckedMutation.mutateAsync();
+      }
+
+      // TODO: merge backend clear into an offline sync queue.
+      clearCheckedItems();
       await deleteCheckedShoppingListItems(db);
     } catch (error) {
       console.error("Failed to delete checked shopping items", error);
@@ -68,11 +97,11 @@ export default function ShoppingScreen() {
 
         <Pressable
           onPress={handleClearCheckedItems}
-          disabled={checkedCount === 0}
+          disabled={visibleCheckedCount === 0 || clearCheckedMutation.isPending}
           style={({ pressed }) => [
             styles.iconButton,
             pressed && styles.pressed,
-            checkedCount === 0 && styles.disabled,
+            visibleCheckedCount === 0 && styles.disabled,
           ]}
         >
           <AppText style={styles.iconText}>🗑️</AppText>
@@ -88,10 +117,10 @@ export default function ShoppingScreen() {
 
           <View style={styles.summaryRight}>
             <AppText style={styles.summaryAmount}>
-              {formatNaira(totalEstimatedCost)}
+              {formatNaira(visibleTotalEstimatedCost)}
             </AppText>
             <AppText style={styles.summaryItems}>
-              {itemCount} {itemCount === 1 ? "item" : "items"}
+              {visibleItemCount} {visibleItemCount === 1 ? "item" : "items"}
             </AppText>
           </View>
         </View>
@@ -108,11 +137,26 @@ export default function ShoppingScreen() {
         </View>
 
         <AppText style={styles.progressLabel}>
-          {checkedCount} of {itemCount} items ticked off
+          {visibleCheckedCount} of {visibleItemCount} items ticked off
         </AppText>
       </View>
 
-      {itemCount === 0 ? (
+      {shoppingListQuery.isLoading ? (
+        <EmptyState
+          icon="🛒"
+          title="Loading shopping list"
+          message="Fetching your active list."
+        />
+      ) : shoppingListQuery.isError && visibleItemCount === 0 ? (
+        <View style={styles.errorState}>
+          <EmptyState
+            icon="⚠️"
+            title="Could not load list"
+            message={getApiErrorMessage(shoppingListQuery.error)}
+          />
+          <Button title="Try again" onPress={() => shoppingListQuery.refetch()} />
+        </View>
+      ) : visibleItemCount === 0 ? (
         <EmptyState
           icon="🛒"
           title="Your shopping list is empty"
@@ -210,6 +254,10 @@ const styles = StyleSheet.create({
   },
   disabled: {
     opacity: 0.35,
+  },
+  errorState: {
+    marginHorizontal: 20,
+    gap: theme.spacing.md,
   },
   summaryCard: {
     marginHorizontal: 20,

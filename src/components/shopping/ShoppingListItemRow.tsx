@@ -3,6 +3,7 @@
 import * as Haptics from "expo-haptics";
 import { Pressable, StyleSheet, View } from "react-native";
 import { formatNaira } from "../../lib/formatters";
+import { capitalizeWords } from "../../lib/textFormatters";
 import { theme } from "../../theme/theme";
 import { ShoppingListItem } from "../../types/shoppingList";
 import { AppText } from "../ui/AppText";
@@ -35,13 +36,15 @@ export function ShoppingListItemRow({ item, onToggle }: Props) {
           style={[styles.name, item.checked && styles.nameChecked]}
           numberOfLines={1}
         >
-          {item.name}
+          {capitalizeWords(item.name)}
         </AppText>
 
         <AppText style={styles.quantity}>{item.quantity}</AppText>
       </View>
 
-      <AppText style={styles.price}>{formatNaira(item.estimatedPrice)}</AppText>
+      {item.estimatedPrice !== null ? (
+        <AppText style={styles.price}>{formatNaira(item.estimatedPrice)}</AppText>
+      ) : null}
     </View>
   );
 }

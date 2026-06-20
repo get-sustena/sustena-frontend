@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   FlatList,
   Pressable,
@@ -9,37 +9,41 @@ import {
 } from "react-native";
 import { RecipeTile } from "../../src/components/recipe/RecipeTile";
 import { AppText } from "../../src/components/ui/AppText";
+import { Button } from "../../src/components/ui/Button";
 import { EmptyState } from "../../src/components/ui/EmptyState";
 import { FilterChip } from "../../src/components/ui/FilterChip";
 import { Screen } from "../../src/components/ui/Screen";
 import { SearchInput } from "../../src/components/ui/SearchInput";
 import { RECIPE_FILTERS } from "../../src/data/recipeFilters";
-import { RECIPES } from "../../src/data/recipes";
+import { useRecipesWithLocalFallback } from "../../src/hooks/api/useRecipes";
+import { apiRecipeToLocalRecipe } from "../../src/lib/api/adapters";
+import { getApiErrorMessage } from "../../src/lib/api/errors";
 import { theme } from "../../src/theme/theme";
+
+const PAGE_SIZE = 30;
 
 export default function RecipesScreen() {
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
+  const [page, setPage] = useState(1);
+  const recipeParams = useMemo(
+    () => ({
+      search: search.trim() || undefined,
+      tag: activeFilter === "all" ? undefined : activeFilter,
+      page,
+      pageSize: PAGE_SIZE,
+    }),
+    [activeFilter, page, search]
+  );
+  const recipesQuery = useRecipesWithLocalFallback(recipeParams);
+  const recipes = recipesQuery.data?.items.map(apiRecipeToLocalRecipe) ?? [];
+  const totalRecipes = recipesQuery.data?.total ?? recipes.length;
+  const totalPages = Math.max(1, Math.ceil(totalRecipes / PAGE_SIZE));
+  const canGoPrevious = page > 1 && !recipesQuery.isFetching;
+  const canGoNext = page < totalPages && !recipesQuery.isFetching;
 
-  const filteredRecipes = useMemo(() => {
-    const normalizedSearch = search.trim().toLowerCase();
-
-    return RECIPES.filter((recipe) => {
-      const matchesFilter =
-        activeFilter === "all" || recipe.filters.includes(activeFilter);
-
-      const matchesSearch =
-        normalizedSearch.length === 0 ||
-        recipe.name.toLowerCase().includes(normalizedSearch) ||
-        recipe.tags.some((tag) =>
-          tag.toLowerCase().includes(normalizedSearch)
-        ) ||
-        recipe.ingredients.some((ingredient) =>
-          ingredient.name.toLowerCase().includes(normalizedSearch)
-        );
-
-      return matchesFilter && matchesSearch;
-    });
+  useEffect(() => {
+    setPage(1);
   }, [activeFilter, search]);
 
   return (
@@ -49,7 +53,7 @@ export default function RecipesScreen() {
       <View style={styles.header}>
         <View>
           <AppText style={styles.eyebrow}>RECIPES</AppText>
-          <AppText style={styles.title}>{RECIPES.length} Recipes</AppText>
+          <AppText style={styles.title}>{totalRecipes} Recipes</AppText>
         </View>
 
         <Pressable style={styles.iconButton}>
@@ -81,17 +85,15 @@ export default function RecipesScreen() {
       </View>
 
       <FlatList
-        data={filteredRecipes}
+        data={recipes}
         keyExtractor={(item) => item.id}
         numColumns={2}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
           styles.gridContent,
-          filteredRecipes.length === 0 && styles.emptyGridContent,
+          recipes.length === 0 && styles.emptyGridContent,
         ]}
-        columnWrapperStyle={
-          filteredRecipes.length > 0 ? styles.columnWrapper : undefined
-        }
+        columnWrapperStyle={recipes.length > 0 ? styles.columnWrapper : undefined}
         renderItem={({ item }) => (
           <RecipeTile
             recipe={item}
@@ -104,11 +106,55 @@ export default function RecipesScreen() {
           />
         )}
         ListEmptyComponent={
-          <EmptyState
-            icon="🍲"
-            title="No recipes found"
-            message="Try another search or clear your selected filter."
-          />
+          recipesQuery.isLoading ? (
+            <EmptyState
+              icon="🍲"
+              title="Loading recipes"
+              message="Fetching the latest recipes for you."
+            />
+          ) : recipesQuery.isError ? (
+            <View style={styles.errorState}>
+              <EmptyState
+                icon="⚠️"
+                title="Could not load recipes"
+                message={getApiErrorMessage(recipesQuery.error)}
+              />
+              <Button title="Try again" onPress={() => recipesQuery.refetch()} />
+            </View>
+          ) : (
+            <EmptyState
+              icon="🍲"
+              title="No recipes found"
+              message="Try another search or clear your selected filter."
+            />
+          )
+        }
+        ListFooterComponent={
+          recipesQuery.data && totalPages > 1 ? (
+            <View style={styles.pagination}>
+              <Button
+                title="Previous"
+                variant="card"
+                onPress={() => setPage((current) => Math.max(1, current - 1))}
+                disabled={!canGoPrevious}
+                style={styles.paginationButton}
+              />
+
+              <AppText style={styles.paginationText}>
+                Page {page} of {totalPages}
+              </AppText>
+
+              <Button
+                title={recipesQuery.isFetching ? "Loading..." : "Next"}
+                variant="primary"
+                onPress={() =>
+                  setPage((current) => Math.min(totalPages, current + 1))
+                }
+                disabled={!canGoNext}
+                style={styles.paginationButton}
+              />
+            </View>
+          ) : null
         }
       />
     </Screen>
@@ -175,9 +221,29 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: "center",
   },
+  errorState: {
+    gap: theme.spacing.md,
+  },
   columnWrapper: {
     gap: theme.spacing.md,
     marginBottom: theme.spacing.md,
+  },
+  pagination: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.sm,
+    paddingTop: theme.spacing.md,
+    paddingBottom: theme.spacing["2xl"],
+  },
+  paginationButton: {
+    flex: 1,
+  },
+  paginationText: {
+    minWidth: 78,
+    textAlign: "center",
+    fontFamily: theme.fontFamily.bodyBold,
+    fontSize: 11,
+    color: theme.colors.textMuted,
   },
   deco: {
     position: "absolute",

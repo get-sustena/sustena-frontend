@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
   controlButtonText: {
     fontFamily: theme.fontFamily.bodyBold,
     fontSize: 22,
-    color: theme.colors.orange,
+    color: theme.colors.navy,
   },
   display: {
     flex: 1,
@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
   number: {
     fontFamily: theme.fontFamily.display,
     fontSize: 40,
-    color: theme.colors.orange,
+    color: theme.colors.navy,
     lineHeight: 44,
   },
   label: {

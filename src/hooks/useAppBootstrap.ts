@@ -15,6 +15,7 @@ import {
   getStoredShoppingListItems,
   mapShoppingListRowToItem,
 } from "../db/shoppingListRepository";
+import { seedPublishedRecipesIfNeeded } from "../db/recipeRepository";
 import { useFavoritesStore } from "../store/favoritesStore";
 import { usePreferencesStore } from "../store/preferencesStore";
 import { useShoppingListStore } from "../store/shoppingListStore";
@@ -39,6 +40,8 @@ export function useAppBootstrap() {
 
     async function bootstrap() {
       try {
+        await seedPublishedRecipesIfNeeded(db);
+
         const storedPreferencesRow = await getStoredPreferences(db);
         const storedPreferences = mapStoredPreferencesRow(storedPreferencesRow);
 
@@ -81,7 +84,7 @@ export function useAppBootstrap() {
     return () => {
       isMounted = false;
     };
-  }, [db, hydratePreferences, hydrateShoppingItems]);
+  }, [db, hydrateFavorites, hydratePreferences, hydrateShoppingItems]);
 
   return {
     isBootstrapping,

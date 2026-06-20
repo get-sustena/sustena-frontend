@@ -1,5 +1,6 @@
 import { type SQLiteDatabase } from "expo-sqlite";
 import { ShoppingListItem } from "../types/shoppingList";
+import { runWithSqliteRetry } from "./sqliteGuards";
 
 type ShoppingListItemRow = {
   id: string;
@@ -66,10 +67,14 @@ export async function insertShoppingListItems(
   db: SQLiteDatabase,
   items: ShoppingListItem[]
 ) {
-  await db.withTransactionAsync(async () => {
-    for (const item of items) {
-      await insertShoppingListItem(db, item);
-    }
+  await runWithSqliteRetry(async () => {
+    await db.withExclusiveTransactionAsync(async (txn) => {
+      const transactionDb = txn as unknown as SQLiteDatabase;
+
+      for (const item of items) {
+        await insertShoppingListItem(transactionDb, item);
+      }
+    });
   });
 }
 

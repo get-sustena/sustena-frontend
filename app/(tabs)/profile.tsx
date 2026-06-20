@@ -1,5 +1,6 @@
 // app/(tabs)/profile.tsx
 
+import { router } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
 import { StyleSheet, View } from "react-native";
 import { FavoriteRecipeCard } from "../../src/components/profile/FavoriteRecipeCard";
@@ -12,9 +13,22 @@ import {
   getDietaryPreferenceLabel,
   getHealthConditionLabel,
 } from "../../src/data/preferenceOptions";
-import { RECIPES } from "../../src/data/recipes";
+import { Recipe } from "../../src/data/recipes";
+import { getLocalRecipes } from "../../src/db/recipeRepository";
+import { useQuery } from "@tanstack/react-query";
 import { deleteFavoriteRecipe } from "../../src/db/favoritesRepository";
+import { useLogoutMutation } from "../../src/hooks/api/useAuth";
+import {
+  useFavoritesQuery,
+  useRemoveFavoriteMutation,
+} from "../../src/hooks/api/useFavorites";
+import {
+  usePreferencesQuery,
+  useUpdatePreferencesMutation,
+} from "../../src/hooks/api/usePreferences";
+import { apiFavoriteToRecipe } from "../../src/lib/api/adapters";
 import { useFavoritesStore } from "../../src/store/favoritesStore";
+import { useAuthStore } from "../../src/store/authStore";
 import { usePreferencesStore } from "../../src/store/preferencesStore";
 import { theme } from "../../src/theme/theme";
 
@@ -23,12 +37,31 @@ export default function ProfileScreen() {
 
   const favorites = useFavoritesStore((state) => state.favorites);
   const removeFavorite = useFavoritesStore((state) => state.removeFavorite);
+  const user = useAuthStore((state) => state.user);
+  const logoutMutation = useLogoutMutation();
+  const favoritesQuery = useFavoritesQuery();
+  const removeFavoriteMutation = useRemoveFavoriteMutation();
+  const updatePreferencesMutation = useUpdatePreferencesMutation();
+  usePreferencesQuery();
+  const localRecipesQuery = useQuery({
+    queryKey: ["recipes", "local-profile-favorites"] as const,
+    queryFn: () => getLocalRecipes(db, { page: 1, pageSize: 500 }),
+  });
+  const localRecipes =
+    localRecipesQuery.data?.items.map(apiFavoriteToRecipeLike).filter(Boolean) ??
+    [];
 
-  const favoriteRecipes = favorites
+  const localFavoriteRecipes = favorites
     .map((favorite) =>
-      RECIPES.find((recipe) => recipe.id === favorite.recipeId)
+      localRecipes.find((recipe) => recipe?.id === favorite.recipeId)
     )
-    .filter((recipe): recipe is (typeof RECIPES)[number] => Boolean(recipe));
+    .filter((recipe): recipe is Recipe => Boolean(recipe));
+  const apiFavoriteRecipes =
+    favoritesQuery.data
+      ?.map(apiFavoriteToRecipe)
+      .filter((recipe): recipe is Recipe => Boolean(recipe)) ?? [];
+  const favoriteRecipes =
+    apiFavoriteRecipes.length > 0 ? apiFavoriteRecipes : localFavoriteRecipes;
 
   const healthConditions = usePreferencesStore(
     (state) => state.healthConditions
@@ -75,6 +108,20 @@ export default function ProfileScreen() {
   );
 
   function cycleUnitMode() {
+    const nextUnitMode =
+      defaultUnitMode === "metric"
+        ? "cups"
+        : defaultUnitMode === "cups"
+          ? "imperial"
+          : "metric";
+
+    updatePreferencesMutation.mutate({
+      healthConditions,
+      dietaryPreference,
+      defaultUnitMode: nextUnitMode,
+      defaultServingSize,
+    });
+
     if (defaultUnitMode === "metric") {
       setDefaultUnitMode("cups");
       return;
@@ -90,6 +137,12 @@ export default function ProfileScreen() {
 
   function increaseServingSize() {
     const next = defaultServingSize >= 5 ? 1 : defaultServingSize + 1;
+    updatePreferencesMutation.mutate({
+      healthConditions,
+      dietaryPreference,
+      defaultUnitMode,
+      defaultServingSize: next,
+    });
     setDefaultServingSize(next);
   }
 
@@ -97,10 +150,16 @@ export default function ProfileScreen() {
     removeFavorite(recipeId);
 
     try {
+      await removeFavoriteMutation.mutateAsync(recipeId);
       await deleteFavoriteRecipe(db, recipeId);
     } catch (error) {
       console.error("Failed to remove favorite", error);
     }
+  }
+
+  async function handleSignOut() {
+    await logoutMutation.mutateAsync();
+    router.replace("/welcome");
   }
 
   return (
@@ -112,8 +171,8 @@ export default function ProfileScreen() {
           <AppText style={styles.avatarEmoji}>👨🏾</AppText>
         </View>
 
-        <AppText style={styles.name}>CookEase User</AppText>
-        <AppText style={styles.email}>local-profile@cookease.app</AppText>
+        <AppText style={styles.name}>{user?.fullName ?? "CookEase User"}</AppText>
+        <AppText style={styles.email}>{user?.email ?? "local-profile@cookease.app"}</AppText>
 
         <View style={styles.badges}>
           <View style={styles.badge}>
@@ -149,7 +208,7 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.statCard}>
-          <AppText style={styles.statValueGreen}>{favorites.length}</AppText>
+          <AppText style={styles.statValueGreen}>{favoriteRecipes.length}</AppText>
           <AppText style={styles.statLabel}>Saved Recipes</AppText>
         </View>
 
@@ -264,9 +323,17 @@ export default function ProfileScreen() {
 
       <View style={styles.footer}>
         <Button
+          title={logoutMutation.isPending ? "Signing out..." : "Sign Out"}
+          variant="primary"
+          onPress={handleSignOut}
+          disabled={logoutMutation.isPending}
+          style={styles.footerButton}
+        />
+        <Button
           title="Reset onboarding/preferences"
           variant="card"
           onPress={resetPreferences}
+          style={styles.footerButton}
         />
       </View>
     </Screen>
@@ -280,6 +347,10 @@ function Decorations() {
       <AppText style={[styles.deco, styles.decoLeaf]}>🌿</AppText>
     </View>
   );
+}
+
+function apiFavoriteToRecipeLike(recipe: Parameters<typeof apiFavoriteToRecipe>[0]["recipe"]) {
+  return recipe ? apiFavoriteToRecipe({ id: "", recipeId: recipe.id, createdAt: "", updatedAt: "", recipe }) : null;
 }
 
 function formatUnitMode(unitMode: string) {
@@ -440,6 +511,10 @@ const styles = StyleSheet.create({
   footer: {
     paddingHorizontal: 20,
     paddingBottom: theme.spacing["3xl"],
+    gap: theme.spacing.md,
+  },
+  footerButton: {
+    width: "100%",
   },
   deco: {
     position: "absolute",

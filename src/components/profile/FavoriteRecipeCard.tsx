@@ -3,7 +3,6 @@
 import { router } from "expo-router";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Recipe } from "../../data/recipes";
-import { formatNaira } from "../../lib/formatters";
 import { theme } from "../../theme/theme";
 import { AppText } from "../ui/AppText";
 
@@ -32,9 +31,7 @@ export function FavoriteRecipeCard({ recipe, onRemove }: Props) {
           {recipe.name}
         </AppText>
 
-        <AppText style={styles.meta}>
-          ⏱ {recipe.time} · {formatNaira(recipe.cost)}
-        </AppText>
+        <AppText style={styles.meta}>⏱ {recipe.time}</AppText>
       </View>
 
       <Pressable

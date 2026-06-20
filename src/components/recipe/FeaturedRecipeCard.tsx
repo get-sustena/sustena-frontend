@@ -1,6 +1,6 @@
+import { Image } from "expo-image";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Recipe } from "../../data/recipes";
-import { formatNaira } from "../../lib/formatters";
 import { theme } from "../../theme/theme";
 import { AppText } from "../ui/AppText";
 
@@ -15,8 +15,16 @@ export function FeaturedRecipeCard({ recipe, onPress }: Props) {
       onPress={onPress}
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
     >
+      {recipe.imageUrl ? (
+        <Image
+          source={{ uri: recipe.imageUrl }}
+          style={styles.image}
+          contentFit="cover"
+          transition={150}
+        />
+      ) : null}
       <View style={styles.decorLayer} />
-      <AppText style={styles.emoji}>{recipe.emoji}</AppText>
+      {!recipe.imageUrl ? <AppText style={styles.emoji}>{recipe.emoji}</AppText> : null}
 
       <View style={styles.content}>
         <AppText style={styles.label}>⭐ Chef&apos;s Pick</AppText>
@@ -25,8 +33,14 @@ export function FeaturedRecipeCard({ recipe, onPress }: Props) {
 
         <View style={styles.metaRow}>
           <AppText style={styles.meta}>⏱ {recipe.time}</AppText>
-          <AppText style={styles.meta}>🔥 {recipe.calories} kcal</AppText>
-          <AppText style={styles.meta}>{formatNaira(recipe.cost)}</AppText>
+          {recipe.calories !== null ? (
+            <AppText style={styles.meta}>🔥 {recipe.calories} kcal</AppText>
+          ) : null}
+          {recipe.cost !== null ? (
+            <AppText style={styles.meta}>
+              ₦{recipe.cost.toLocaleString("en-NG")}
+            </AppText>
+          ) : null}
         </View>
 
         <AppText style={styles.cta}>View Recipe →</AppText>
@@ -48,7 +62,10 @@ const styles = StyleSheet.create({
   decorLayer: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: theme.colors.navy2,
-    opacity: 0.45,
+    opacity: 0.58,
+  },
+  image: {
+    ...StyleSheet.absoluteFillObject,
   },
   pressed: {
     opacity: 0.9,

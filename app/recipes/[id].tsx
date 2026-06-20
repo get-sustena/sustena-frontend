@@ -1,28 +1,40 @@
 // app/recipes/[id].tsx
 
 import * as Haptics from "expo-haptics";
+import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { ServingSizeControl } from "../../src/components/recipe/ServingSizeControl";
 import { AppText } from "../../src/components/ui/AppText";
 import { Button } from "../../src/components/ui/Button";
 import { Screen } from "../../src/components/ui/Screen";
-import { RECIPES } from "../../src/data/recipes";
 import {
   deleteFavoriteRecipe,
   insertFavoriteRecipe,
 } from "../../src/db/favoritesRepository";
 import { insertShoppingListItems } from "../../src/db/shoppingListRepository";
+import {
+  useAddFavoriteMutation,
+  useRemoveFavoriteMutation,
+} from "../../src/hooks/api/useFavorites";
+import { useRecipeDetailWithLocalFallback } from "../../src/hooks/api/useRecipes";
+import { useAddShoppingListItemMutation } from "../../src/hooks/api/useShoppingList";
+import { apiRecipeToLocalRecipe } from "../../src/lib/api/adapters";
+import { getApiErrorMessage } from "../../src/lib/api/errors";
 import { formatNaira } from "../../src/lib/formatters";
 import {
   createInitialIngredientUnitSelections,
   getNextUnitMode,
   getUnitModeLabel,
 } from "../../src/lib/ingredientUnits";
-import { scaleAmountText, scaleCost } from "../../src/lib/scaling";
-import { generateShoppingListItemsFromRecipe } from "../../src/lib/shoppingListGenerator";
+import { scaleAmountText } from "../../src/lib/scaling";
+import {
+  generateShoppingListItemsFromRecipe,
+  isPurchasableRecipeIngredient,
+} from "../../src/lib/shoppingListGenerator";
+import { capitalizeWords } from "../../src/lib/textFormatters";
 import { useFavoritesStore } from "../../src/store/favoritesStore";
 import { usePreferencesStore } from "../../src/store/preferencesStore";
 import { useShoppingListStore } from "../../src/store/shoppingListStore";
@@ -32,7 +44,15 @@ export default function RecipeDetailScreen() {
   const db = useSQLiteContext();
   const { id } = useLocalSearchParams<{ id: string }>();
 
-  const recipe = RECIPES.find((item) => item.id === id);
+  const recipeQuery = useRecipeDetailWithLocalFallback(id);
+  const recipeDetail = recipeQuery.data;
+  const shouldSyncApi = recipeQuery.source === "api" && Boolean(recipeDetail);
+  const recipe = recipeDetail
+    ? apiRecipeToLocalRecipe(recipeDetail)
+    : undefined;
+  const addFavoriteMutation = useAddFavoriteMutation();
+  const removeFavoriteMutation = useRemoveFavoriteMutation();
+  const addShoppingListItemMutation = useAddShoppingListItemMutation();
 
   const defaultServingSize = usePreferencesStore(
     (state) => state.defaultServingSize
@@ -44,9 +64,10 @@ export default function RecipeDetailScreen() {
 
   const [servings, setServings] = useState(defaultServingSize);
 
-  const isFavorite = useFavoritesStore((state) =>
+  const localIsFavorite = useFavoritesStore((state) =>
     recipe ? state.isFavorite(recipe.id) : false
   );
+  const isFavorite = recipeDetail?.isFavorited ?? localIsFavorite;
   const toggleFavorite = useFavoritesStore((state) => state.toggleFavorite);
 
   const [ingredientUnitSelections, setIngredientUnitSelections] = useState(
@@ -60,18 +81,6 @@ export default function RecipeDetailScreen() {
     }
   );
 
-  const scaledCost = useMemo(() => {
-    if (!recipe) return 0;
-
-    return scaleCost({
-      baseCost: recipe.cost,
-      baseServings: recipe.baseServings,
-      selectedServings: servings,
-    });
-  }, [recipe, servings]);
-
-  const costPerPerson = servings > 0 ? Math.round(scaledCost / servings) : 0;
-
   async function handleFavoritePress() {
     if (!recipe) return;
 
@@ -82,6 +91,14 @@ export default function RecipeDetailScreen() {
     const nextIsFavorite = toggleFavorite(recipe.id);
 
     try {
+      if (shouldSyncApi && recipeDetail) {
+        if (recipeDetail.isFavorited) {
+          await removeFavoriteMutation.mutateAsync(recipeDetail.id);
+        } else {
+          await addFavoriteMutation.mutateAsync(recipeDetail.id);
+        }
+      }
+
       if (nextIsFavorite) {
         await insertFavoriteRecipe(db, recipe.id);
       } else {
@@ -98,11 +115,32 @@ export default function RecipeDetailScreen() {
     }
 
     setIngredientUnitSelections((current) => {
+      const apiIngredient = recipeDetail?.ingredients.find(
+        (ingredient) => ingredient.id === ingredientId
+      );
+
+      if (apiIngredient && apiIngredient.availableUnits.length > 1) {
+        const currentIndex = Number(current[ingredientId] ?? 0);
+
+        return {
+          ...current,
+          [ingredientId]: String(
+            (currentIndex + 1) % apiIngredient.availableUnits.length
+          ) as never,
+        };
+      }
+
       const currentUnit = current[ingredientId] ?? defaultUnitMode;
+      const nextUnit =
+        currentUnit === "metric" ||
+        currentUnit === "cups" ||
+        currentUnit === "imperial"
+          ? getNextUnitMode(currentUnit)
+          : defaultUnitMode;
 
       return {
         ...current,
-        [ingredientId]: getNextUnitMode(currentUnit),
+        [ingredientId]: nextUnit,
       };
     });
   }
@@ -116,9 +154,46 @@ export default function RecipeDetailScreen() {
       ingredientUnitSelections,
     });
 
-    addItems(items);
+    if (shouldSyncApi && recipeDetail) {
+      try {
+        await Promise.all(
+          recipeDetail.ingredients
+            .filter(isPurchasableRecipeIngredient)
+            .map((ingredient) => {
+              const selectedIndex = Number(
+                ingredientUnitSelections[ingredient.id] ?? 0
+              );
+              const selectedUnit =
+                ingredient.availableUnits[selectedIndex] ??
+                ingredient.availableUnits[0];
+
+              return addShoppingListItemMutation.mutateAsync({
+                recipeId: recipeDetail.id,
+                name:
+                  ingredient.ingredientName ??
+                  ingredient.canonicalIngredientName ??
+                  ingredient.rawText,
+                canonicalIngredientName: ingredient.canonicalIngredientName,
+                emoji: null,
+                quantity:
+                  selectedUnit?.label ??
+                  ingredient.displayText ??
+                  ingredient.quantityText ??
+                  ingredient.rawText,
+                unit: selectedUnit?.unit ?? ingredient.unit,
+                category: ingredient.category,
+                estimatedPrice: null,
+              });
+            })
+        );
+      } catch (error) {
+        console.error("Failed to sync shopping list items", error);
+      }
+    }
 
     try {
+      // TODO: reconcile backend shopping list writes into the offline sync queue.
+      addItems(items);
       await insertShoppingListItems(db, items);
     } catch (error) {
       console.error("Failed to persist shopping list items", error);
@@ -129,6 +204,30 @@ export default function RecipeDetailScreen() {
     }
 
     router.push("/(tabs)/shopping");
+  }
+
+  if (recipeQuery.isLoading && !recipe) {
+    return (
+      <Screen>
+        <View style={styles.center}>
+          <AppText variant="title">Loading recipe...</AppText>
+        </View>
+      </Screen>
+    );
+  }
+
+  if (recipeQuery.isError && !recipe) {
+    return (
+      <Screen>
+        <View style={styles.center}>
+          <AppText variant="title">Could not load recipe</AppText>
+          <AppText style={styles.errorText}>
+            {getApiErrorMessage(recipeQuery.error)}
+          </AppText>
+          <Button title="Try again" onPress={() => recipeQuery.refetch()} />
+        </View>
+      </Screen>
+    );
   }
 
   if (!recipe) {
@@ -159,7 +258,17 @@ export default function RecipeDetailScreen() {
             <AppText>{isFavorite ? "❤️" : "🤍"}</AppText>
           </Pressable>
 
-          <AppText style={styles.heroEmoji}>{recipe.emoji}</AppText>
+          {recipe.imageUrl ? (
+            <Image
+              source={{ uri: recipe.imageUrl }}
+              style={styles.heroImage}
+              contentFit="cover"
+              transition={150}
+            />
+          ) : (
+            <AppText style={styles.heroEmoji}>{recipe.emoji ?? "🍲"}</AppText>
+          )}
+          <View style={styles.heroImageOverlay} />
 
           <View style={styles.heroBody}>
             <View style={styles.tagRow}>
@@ -174,53 +283,69 @@ export default function RecipeDetailScreen() {
 
             <View style={styles.statRow}>
               <AppText style={styles.stat}>⏱ {recipe.time}</AppText>
-              <AppText style={styles.stat}>🔥 {recipe.calories} kcal</AppText>
+              {recipe.calories !== null ? (
+                <AppText style={styles.stat}>🔥 {recipe.calories} kcal</AppText>
+              ) : null}
               <AppText style={styles.stat}>👨‍🍳 {recipe.difficulty}</AppText>
             </View>
           </View>
         </View>
 
         <View style={styles.body}>
-          <ServingSizeControl value={servings} onChange={setServings} />
+          {/*
+            Estimated cost is hidden until backend price data is reliable.
+            Keep the old UI out of production for now.
+          */}
 
-          <View style={styles.costCard}>
-            <View>
-              <AppText style={styles.costLabel}>Estimated Cost</AppText>
-              <AppText style={styles.costValue}>
-                {formatNaira(scaledCost)}
-              </AppText>
-            </View>
-
-            <View style={styles.costRight}>
-              <AppText style={styles.costLabel}>Per Person</AppText>
-              <AppText style={styles.perPersonValue}>
-                {formatNaira(costPerPerson)}
-              </AppText>
-            </View>
-          </View>
-
-          <View style={styles.infoCard}>
-            <AppText style={styles.infoIcon}>📏</AppText>
-
-            <View style={styles.infoTextWrap}>
-              <AppText style={styles.infoTitle}>Per-ingredient units</AppText>
-              <AppText style={styles.infoText}>
-                Tap each ingredient’s unit pill to switch between metric, cups,
-                and imperial measurements.
-              </AppText>
-            </View>
-          </View>
-
-          <AppText variant="label" style={styles.sectionLabel}>
-            Ingredients
-          </AppText>
+          <SectionHeader title="Ingredients" />
 
           <View style={styles.ingredientsCard}>
             {recipe.ingredients.map((ingredient) => {
+              const apiIngredient = recipeDetail?.ingredients.find(
+                (item) => item.id === ingredient.id
+              );
+
+              if (apiIngredient) {
+                const selectedIndex = Number(
+                  ingredientUnitSelections[ingredient.id] ?? 0
+                );
+                const selectedUnit =
+                  apiIngredient.availableUnits[selectedIndex] ??
+                  apiIngredient.availableUnits[0];
+                const displayAmount =
+                  selectedUnit?.label ??
+                  apiIngredient.displayText ??
+                  apiIngredient.rawText;
+
+                return (
+                  <View key={ingredient.id} style={styles.ingredientItem}>
+                    <AppText style={styles.ingredientEmoji}>🛒</AppText>
+
+                    <View style={styles.ingredientInfo}>
+                      <AppText style={styles.ingredientName}>
+                        {capitalizeWords(ingredient.name)}
+                      </AppText>
+                    </View>
+
+                    <View style={styles.ingredientMeasure}>
+                      <AppText style={styles.ingredientAmount}>
+                        {displayAmount}
+                      </AppText>
+                    </View>
+                  </View>
+                );
+              }
+
               const selectedUnitMode =
                 ingredientUnitSelections[ingredient.id] ?? defaultUnitMode;
 
-              const originalAmount = ingredient.amount[selectedUnitMode];
+              const originalAmount =
+                selectedUnitMode === "metric" ||
+                selectedUnitMode === "cups" ||
+                selectedUnitMode === "imperial"
+                  ? ingredient.amount[selectedUnitMode]
+                  : ingredient.availableUnits?.[Number(selectedUnitMode)]
+                      ?.label ?? ingredient.amount[defaultUnitMode];
 
               const scaledAmount = scaleAmountText({
                 amount: originalAmount,
@@ -236,33 +361,44 @@ export default function RecipeDetailScreen() {
 
                   <View style={styles.ingredientInfo}>
                     <AppText style={styles.ingredientName}>
-                      {ingredient.name}
-                    </AppText>
-
-                    <AppText style={styles.ingredientAmount}>
-                      {scaledAmount}
+                      {capitalizeWords(ingredient.name)}
                     </AppText>
                   </View>
 
-                  <Pressable
-                    onPress={() => handleIngredientUnitPress(ingredient.id)}
-                    style={({ pressed }) => [
-                      styles.unitPill,
-                      pressed && styles.pressed,
-                    ]}
-                  >
-                    <AppText style={styles.unitPillText}>
-                      {getUnitModeLabel(selectedUnitMode)}
+                  <View style={styles.ingredientMeasure}>
+                    <AppText style={styles.ingredientAmount}>
+                      {scaledAmount}
                     </AppText>
-                  </Pressable>
+
+                    <Pressable
+                      onPress={() => handleIngredientUnitPress(ingredient.id)}
+                      style={({ pressed }) => [
+                        styles.unitPill,
+                        pressed && styles.pressed,
+                      ]}
+                    >
+                      <AppText style={styles.unitPillText}>
+                        {selectedUnitMode === "metric" ||
+                        selectedUnitMode === "cups" ||
+                        selectedUnitMode === "imperial"
+                          ? getUnitModeLabel(selectedUnitMode)
+                          : "unit"}
+                      </AppText>
+                    </Pressable>
+                  </View>
                 </View>
               );
             })}
           </View>
 
-          <AppText variant="label" style={styles.sectionLabel}>
-            Instructions
-          </AppText>
+          {recipeDetail && !recipeDetail.baseServings ? null : (
+            <>
+              <SectionHeader title="Serving Size" />
+              <ServingSizeControl value={servings} onChange={setServings} />
+            </>
+          )}
+
+          <SectionHeader title="Instructions" />
 
           <View style={styles.stepsCard}>
             {recipe.steps.map((step, index) => (
@@ -278,9 +414,7 @@ export default function RecipeDetailScreen() {
 
           {recipe.tools.length > 0 ? (
             <>
-              <AppText variant="label" style={styles.sectionLabel}>
-                Helpful Tools
-              </AppText>
+              <SectionHeader title="Helpful Tools" />
 
               <View style={styles.toolSection}>
                 {recipe.tools.map((tool) => (
@@ -306,18 +440,22 @@ export default function RecipeDetailScreen() {
       </Screen>
 
       <View style={styles.ctaBar}>
-        <View style={styles.totalBadge}>
-          <AppText style={styles.totalLabel}>Total</AppText>
-          <AppText style={styles.totalValue}>{formatNaira(scaledCost)}</AppText>
-        </View>
-
         <Button
           title="🛒 Add to Shopping List"
-          variant="accent"
+          variant="primary"
           onPress={handleAddToShoppingList}
           style={styles.ctaButton}
         />
       </View>
+    </View>
+  );
+}
+
+function SectionHeader({ title }: { title: string }) {
+  return (
+    <View style={styles.sectionHeader}>
+      <AppText style={styles.sectionTitle}>{title}</AppText>
+      <View style={styles.sectionRule} />
     </View>
   );
 }
@@ -354,6 +492,11 @@ const styles = StyleSheet.create({
   backText: {
     color: theme.colors.orange,
     fontFamily: theme.fontFamily.bodyBold,
+  },
+  errorText: {
+    color: theme.colors.red,
+    textAlign: "center",
+    paddingHorizontal: theme.spacing.xl,
   },
   hero: {
     height: 300,
@@ -392,6 +535,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     zIndex: 2,
+  },
+  heroImage: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  heroImageOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(12,33,48,0.42)",
   },
   heroEmoji: {
     position: "absolute",
@@ -440,71 +590,24 @@ const styles = StyleSheet.create({
   body: {
     padding: 20,
   },
-  costCard: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1.5,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.lg,
-    paddingVertical: theme.spacing.lg,
-    paddingHorizontal: theme.spacing.xl,
-    marginBottom: theme.spacing.lg,
+  sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-  },
-  costRight: {
-    alignItems: "flex-end",
-  },
-  costLabel: {
-    fontFamily: theme.fontFamily.bodyBold,
-    fontSize: 10,
-    color: theme.colors.textMuted,
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
-    marginBottom: 3,
-  },
-  costValue: {
-    fontFamily: theme.fontFamily.display,
-    fontSize: 25,
-    color: theme.colors.green,
-  },
-  perPersonValue: {
-    fontFamily: theme.fontFamily.bodyBold,
-    fontSize: 16,
-    color: theme.colors.navy,
-  },
-  infoCard: {
-    backgroundColor: theme.colors.navyDim,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
-    padding: theme.spacing.md,
-    marginBottom: theme.spacing.lg,
-    flexDirection: "row",
     gap: theme.spacing.md,
-  },
-  infoIcon: {
-    fontSize: 22,
-  },
-  infoTextWrap: {
-    flex: 1,
-  },
-  infoTitle: {
-    fontFamily: theme.fontFamily.bodyBold,
-    fontSize: 13,
-    color: theme.colors.navy,
-    marginBottom: 2,
-  },
-  infoText: {
-    fontFamily: theme.fontFamily.body,
-    fontSize: 11,
-    lineHeight: 17,
-    color: theme.colors.textMuted,
-  },
-  sectionLabel: {
-    marginTop: theme.spacing.md,
+    marginTop: 14,
     marginBottom: theme.spacing.sm,
+  },
+  sectionTitle: {
+    fontFamily: theme.fontFamily.bodyBold,
+    fontSize: 12,
     color: theme.colors.textMuted,
+    letterSpacing: 1,
+    textTransform: "uppercase",
+  },
+  sectionRule: {
+    flex: 1,
+    height: 1,
+    backgroundColor: theme.colors.border,
   },
   ingredientsCard: {
     backgroundColor: theme.colors.surface,
@@ -527,22 +630,33 @@ const styles = StyleSheet.create({
   },
   ingredientInfo: {
     flex: 1,
+    minWidth: 0,
   },
   ingredientName: {
-    fontFamily: theme.fontFamily.bodyBold,
-    fontSize: 14,
-    color: theme.colors.navy,
+    fontFamily: theme.fontFamily.bodyMedium,
+    fontSize: 13,
+    color: theme.colors.text,
+  },
+  ingredientMeasure: {
+    maxWidth: "48%",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: theme.spacing.sm,
+    // color: theme.colors.navy,
   },
   ingredientAmount: {
-    fontFamily: theme.fontFamily.body,
-    fontSize: 12,
-    color: theme.colors.textMuted,
-    marginTop: 2,
+    flexShrink: 1,
+    fontFamily: theme.fontFamily.bodyBold,
+    fontSize: 13,
+    // color: theme.colors.textMedium,
+    color: theme.colors.navy,
+    textAlign: "right",
   },
   unitPill: {
-    minWidth: 58,
-    paddingHorizontal: 9,
-    paddingVertical: 6,
+    minWidth: 36,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
     borderRadius: theme.radius.sm,
     borderWidth: 1.5,
     borderColor: theme.colors.borderOrange,
@@ -570,9 +684,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: theme.colors.orangeDim,
-    borderWidth: 1.5,
-    borderColor: theme.colors.orange,
+    backgroundColor: theme.colors.navy,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 2,
@@ -580,7 +692,7 @@ const styles = StyleSheet.create({
   stepNumberText: {
     fontFamily: theme.fontFamily.bodyBold,
     fontSize: 12,
-    color: theme.colors.orange,
+    color: theme.colors.white,
   },
   stepText: {
     flex: 1,
@@ -645,29 +757,6 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.cream,
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
-    flexDirection: "row",
-    gap: theme.spacing.md,
-  },
-  totalBadge: {
-    minWidth: 104,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1.5,
-    borderColor: theme.colors.border,
-    paddingHorizontal: theme.spacing.md,
-    justifyContent: "center",
-  },
-  totalLabel: {
-    fontFamily: theme.fontFamily.bodyBold,
-    fontSize: 9,
-    color: theme.colors.textMuted,
-    letterSpacing: 1,
-    textTransform: "uppercase",
-  },
-  totalValue: {
-    fontFamily: theme.fontFamily.display,
-    fontSize: 18,
-    color: theme.colors.green,
   },
   ctaButton: {
     flex: 1,

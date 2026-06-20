@@ -7,6 +7,9 @@ import {
   Ingredient,
 } from "../../data/ingredients";
 import { Recipe } from "../../data/recipes";
+import { useKitchenPlannerMutation } from "../../hooks/api/usePlanner";
+import { apiRecipeToLocalRecipe } from "../../lib/api/adapters";
+import { getApiErrorMessage } from "../../lib/api/errors";
 import { formatNaira } from "../../lib/formatters";
 import { matchRecipesByIngredients } from "../../lib/recipeMatching";
 import { theme } from "../../theme/theme";
@@ -27,6 +30,7 @@ export function KitchenPlannerPane({ recipes }: Props) {
     []
   );
   const [hasSearched, setHasSearched] = useState(false);
+  const kitchenPlannerMutation = useKitchenPlannerMutation();
 
   const selectedIngredients = useMemo(() => {
     return INGREDIENTS.filter((ingredient) =>
@@ -50,13 +54,31 @@ export function KitchenPlannerPane({ recipes }: Props) {
   }, [activeCategory, search]);
 
   const matches = useMemo(() => {
+    if (kitchenPlannerMutation.data) {
+      return kitchenPlannerMutation.data.matches
+        .filter((match) => match.score > 0 && match.score <= 100)
+        .map((match) => ({
+          recipe: apiRecipeToLocalRecipe(match.recipe),
+          score: match.score,
+          matchedIngredients: match.matchedIngredients,
+          missingIngredients: match.missingIngredients,
+          source: "api" as const,
+        }));
+    }
+
     return matchRecipesByIngredients({
       recipes,
       selectedIngredientNames: selectedIngredients.map(
         (ingredient) => ingredient.name
       ),
-    });
-  }, [recipes, selectedIngredients]);
+    })
+      .filter((match) => match.score > 0)
+      .map((match) => ({
+        ...match,
+        score: Math.min(100, Math.max(0, match.score * 100)),
+        source: "local" as const,
+      }));
+  }, [kitchenPlannerMutation.data, recipes, selectedIngredients]);
 
   function toggleIngredient(ingredient: Ingredient) {
     setSelectedIngredientIds((current) => {
@@ -136,7 +158,12 @@ export function KitchenPlannerPane({ recipes }: Props) {
       </View>
 
       <Pressable
-        onPress={() => setHasSearched(true)}
+        onPress={() => {
+          setHasSearched(true);
+          kitchenPlannerMutation.mutate({
+            ingredients: selectedIngredients.map((ingredient) => ingredient.name),
+          });
+        }}
         style={({ pressed }) => [
           styles.findButton,
           pressed && styles.pressed,
@@ -150,7 +177,19 @@ export function KitchenPlannerPane({ recipes }: Props) {
       </Pressable>
 
       {hasSearched ? (
-        matches.length === 0 ? (
+        kitchenPlannerMutation.isError ? (
+          <EmptyState
+            icon="⚠️"
+            title="Could not find matches"
+            message={getApiErrorMessage(kitchenPlannerMutation.error)}
+          />
+        ) : kitchenPlannerMutation.isPending ? (
+          <EmptyState
+            icon="🥬"
+            title="Finding matches"
+            message="Checking your ingredients against the recipe library."
+          />
+        ) : matches.length === 0 ? (
           <EmptyState
             icon="🥬"
             title="No matching recipes"
@@ -196,7 +235,7 @@ export function KitchenPlannerPane({ recipes }: Props) {
 
                 <View style={styles.matchBadge}>
                   <AppText style={styles.matchBadgeText}>
-                    {Math.round(match.score * 100)}%
+                    {Math.round(match.score)}%
                   </AppText>
                 </View>
               </Pressable>

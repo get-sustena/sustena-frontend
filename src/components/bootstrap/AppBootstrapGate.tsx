@@ -1,8 +1,13 @@
 // src/components/bootstrap/AppBootstrapGate.tsx
 
-import { ReactNode } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { router } from "expo-router";
+import { ReactNode, useEffect } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { useAppBootstrap } from "../../hooks/useAppBootstrap";
+import { useAuthBootstrap } from "../../hooks/useAuthBootstrap";
+import { setAuthFailureHandler } from "../../lib/api/authEvents";
+import { useAuthStore } from "../../store/authStore";
 import { theme } from "../../theme/theme";
 import { AppText } from "../ui/AppText";
 
@@ -11,7 +16,23 @@ type Props = {
 };
 
 export function AppBootstrapGate({ children }: Props) {
+  useAuthBootstrap();
+
   const { isBootstrapping, bootstrapError } = useAppBootstrap();
+  const queryClient = useQueryClient();
+  const clearAuth = useAuthStore((state) => state.clearAuth);
+
+  useEffect(() => {
+    setAuthFailureHandler(() => {
+      clearAuth();
+      queryClient.clear();
+      router.replace("/welcome");
+    });
+
+    return () => {
+      setAuthFailureHandler(null);
+    };
+  }, [clearAuth, queryClient]);
 
   if (isBootstrapping) {
     return (

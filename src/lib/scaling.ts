@@ -5,10 +5,14 @@ export function scaleCost({
   baseServings,
   selectedServings,
 }: {
-  baseCost: number;
+  baseCost: number | null;
   baseServings: number;
   selectedServings: number;
 }) {
+  if (baseCost === null) {
+    return null;
+  }
+
   return Math.round((baseCost * selectedServings) / baseServings);
 }
 

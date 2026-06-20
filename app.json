@@ -1,7 +1,8 @@
 {
   "expo": {
-    "name": "cookease-frontend",
+    "name": "Cookease",
     "slug": "cookease-frontend",
+    "owner": "cookease-org",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -40,11 +41,18 @@
         }
       ],
       "expo-font",
-      "expo-sqlite"
+      "expo-sqlite",
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "583bcac4-cacd-4bee-a3ea-833d14ad6092"
+      }
     }
   }
 }

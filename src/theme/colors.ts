@@ -35,6 +35,7 @@ export const lightColors = {
 
   border: "rgba(13,51,71,0.1)",
   border2: "rgba(13,51,71,0.18)",
+  borderStrong: "rgba(13,51,71,0.18)",
   borderOrange: "rgba(232,93,4,0.25)",
 
   background: "#F5EDDA",

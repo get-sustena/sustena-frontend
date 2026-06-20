@@ -1,6 +1,6 @@
+import { Image } from "expo-image";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Recipe } from "../../data/recipes";
-import { formatNaira } from "../../lib/formatters";
 import { theme } from "../../theme/theme";
 import { AppText } from "../ui/AppText";
 
@@ -16,7 +16,16 @@ export function RecipeTile({ recipe, onPress }: Props) {
       style={({ pressed }) => [styles.tile, pressed && styles.pressed]}
     >
       <View style={styles.imagePlaceholder}>
-        <AppText style={styles.emoji}>{recipe.emoji}</AppText>
+        {recipe.imageUrl ? (
+          <Image
+            source={{ uri: recipe.imageUrl }}
+            style={styles.image}
+            contentFit="cover"
+            transition={150}
+          />
+        ) : (
+          <AppText style={styles.emoji}>{recipe.emoji}</AppText>
+        )}
       </View>
 
       <View style={styles.body}>
@@ -26,7 +35,11 @@ export function RecipeTile({ recipe, onPress }: Props) {
 
         <View style={styles.metaRow}>
           <AppText style={styles.meta}>⏱ {recipe.time}</AppText>
-          <AppText style={styles.meta}>{formatNaira(recipe.cost)}</AppText>
+          {recipe.cost !== null ? (
+            <AppText style={styles.meta}>
+              ₦{recipe.cost.toLocaleString("en-NG")}
+            </AppText>
+          ) : null}
         </View>
       </View>
     </Pressable>
@@ -52,6 +65,10 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.cream2,
     alignItems: "center",
     justifyContent: "center",
+  },
+  image: {
+    width: "100%",
+    height: "100%",
   },
   emoji: {
     fontSize: 54,

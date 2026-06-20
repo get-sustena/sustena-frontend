@@ -4,9 +4,11 @@ import { PlannerGoalCard } from "../../src/components/planner/PlannerGoalCard";
 import { FeaturedRecipeCard } from "../../src/components/recipe/FeaturedRecipeCard";
 import { RecipeCard } from "../../src/components/recipe/RecipeCard";
 import { AppText } from "../../src/components/ui/AppText";
+import { EmptyState } from "../../src/components/ui/EmptyState";
 import { Screen } from "../../src/components/ui/Screen";
 import { SectionHeader } from "../../src/components/ui/SectionHeader";
-import { RECIPES } from "../../src/data/recipes";
+import { useRecipesWithLocalFallback } from "../../src/hooks/api/useRecipes";
+import { apiRecipeToLocalRecipe } from "../../src/lib/api/adapters";
 import { theme } from "../../src/theme/theme";
 
 function getGreeting() {
@@ -25,9 +27,22 @@ function openRecipe(recipeId: string) {
 }
 
 export default function HomeScreen() {
-  const featuredRecipe = RECIPES[0];
-  const quickRecipes = RECIPES.filter((recipe) =>
-    recipe.filters.includes("budget")
+  const recipesQuery = useRecipesWithLocalFallback({ page: 1, pageSize: 24 });
+  const quickRecipesQuery = useRecipesWithLocalFallback({
+    quickAndEasy: true,
+    maxTotalTimeMinutes: 45,
+    page: 1,
+    pageSize: 12,
+  });
+  const recipes = recipesQuery.data?.items.map(apiRecipeToLocalRecipe) ?? [];
+  const quickRecipeResults =
+    quickRecipesQuery.data?.items.map(apiRecipeToLocalRecipe) ?? [];
+  const featuredRecipe = recipes[0];
+  const quickRecipes = quickRecipeResults.filter(
+    (recipe) =>
+      recipe.totalTimeMinutes !== null &&
+      recipe.totalTimeMinutes !== undefined &&
+      recipe.totalTimeMinutes <= 45
   );
 
   return (
@@ -57,7 +72,9 @@ export default function HomeScreen() {
       <View style={styles.statusStrip}>
         <View style={styles.statusDot} />
         <AppText style={styles.statusText}>
-          Recipes available offline · Local data ready
+          {recipesQuery.source === "local"
+            ? "Offline fallback active · Local recipes ready"
+            : "Recipes synced · Local recipes ready"}
         </AppText>
       </View>
 
@@ -67,10 +84,18 @@ export default function HomeScreen() {
         onActionPress={() => router.push("/(tabs)/recipes")}
       />
 
-      <FeaturedRecipeCard
-        recipe={featuredRecipe}
-        onPress={() => openRecipe(featuredRecipe.id)}
-      />
+      {featuredRecipe ? (
+        <FeaturedRecipeCard
+          recipe={featuredRecipe}
+          onPress={() => openRecipe(featuredRecipe.id)}
+        />
+      ) : (
+        <EmptyState
+          icon="🍲"
+          title="No recipes ready"
+          message="Recipes will appear here once the library loads."
+        />
+      )}
 
       <SectionHeader title="Smart Planner" />
 
@@ -90,24 +115,6 @@ export default function HomeScreen() {
             onPress={() => router.push("/(tabs)/planner")}
           />
         </View>
-
-        <View style={styles.plannerRow}>
-          <PlannerGoalCard
-            icon="🔥"
-            label="Calorie Goal"
-            title="Track My Macros"
-            onPress={() => router.push("/(tabs)/planner")}
-          />
-
-          <PlannerGoalCard
-            icon="👨‍🍳"
-            label="Marketplace"
-            title="Book a Private Chef"
-            onPress={() => {
-              // Placeholder for now.
-            }}
-          />
-        </View>
       </View>
 
       <SectionHeader
@@ -116,19 +123,27 @@ export default function HomeScreen() {
         onActionPress={() => router.push("/(tabs)/recipes")}
       />
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.recipeScrollContent}
-      >
-        {quickRecipes.map((recipe) => (
-          <RecipeCard
-            key={recipe.id}
-            recipe={recipe}
-            onPress={() => openRecipe(recipe.id)}
-          />
-        ))}
-      </ScrollView>
+      {quickRecipes.length > 0 ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.recipeScrollContent}
+        >
+          {quickRecipes.map((recipe) => (
+            <RecipeCard
+              key={recipe.id}
+              recipe={recipe}
+              onPress={() => openRecipe(recipe.id)}
+            />
+          ))}
+        </ScrollView>
+      ) : (
+        <EmptyState
+          icon="⏱"
+          title="No quick recipes yet"
+          message="Recipes with a known total time of 45 minutes or less will show here."
+        />
+      )}
     </Screen>
   );
 }
@@ -252,8 +267,7 @@ const styles = StyleSheet.create({
   },
   decoTomato: {
     bottom: "20%",
-    right: "3%",
+    right: "12%",
     fontSize: 30,
-    transform: [{ rotate: "15deg" }],
   },
 });

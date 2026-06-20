@@ -7,14 +7,15 @@ import { PlannerTabButton } from "../../src/components/planner/PlannerTabButton"
 import { TimetablePlannerPane } from "../../src/components/planner/TimetablePlannerPane";
 import { AppText } from "../../src/components/ui/AppText";
 import { Screen } from "../../src/components/ui/Screen";
-import { RECIPES } from "../../src/data/recipes";
+import { useRecipesWithLocalFallback } from "../../src/hooks/api/useRecipes";
+import { apiRecipeToLocalRecipe } from "../../src/lib/api/adapters";
 import { theme } from "../../src/theme/theme";
 import { PlannerTab } from "../../src/types/planner";
 
-const PLANNER_TABS: Array<{
+const PLANNER_TABS: {
   label: string;
   value: PlannerTab;
-}> = [
+}[] = [
   {
     label: "💸 Budget",
     value: "budget",
@@ -35,6 +36,8 @@ const PLANNER_TABS: Array<{
 
 export default function PlannerScreen() {
   const [activeTab, setActiveTab] = useState<PlannerTab>("budget");
+  const recipesQuery = useRecipesWithLocalFallback({ page: 1, pageSize: 200 });
+  const recipes = recipesQuery.data?.items.map(apiRecipeToLocalRecipe) ?? [];
 
   return (
     <Screen scroll>
@@ -59,15 +62,13 @@ export default function PlannerScreen() {
         ))}
       </View>
 
-      {activeTab === "budget" ? <BudgetPlannerPane recipes={RECIPES} /> : null}
+      {activeTab === "budget" ? <BudgetPlannerPane recipes={recipes} /> : null}
 
       {activeTab === "kitchen" ? (
-        <KitchenPlannerPane recipes={RECIPES} />
+        <KitchenPlannerPane recipes={recipes} />
       ) : null}
 
-      {activeTab === "timetable" ? (
-        <TimetablePlannerPane recipes={RECIPES} />
-      ) : null}
+      {activeTab === "timetable" ? <TimetablePlannerPane /> : null}
 
       {activeTab === "calories" ? <CaloriesPlannerPane /> : null}
     </Screen>
