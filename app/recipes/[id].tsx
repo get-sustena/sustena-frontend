@@ -21,7 +21,10 @@ import {
 } from "../../src/hooks/api/useFavorites";
 import { useRecipeDetailWithLocalFallback } from "../../src/hooks/api/useRecipes";
 import { useAddShoppingListItemMutation } from "../../src/hooks/api/useShoppingList";
-import { apiRecipeToLocalRecipe } from "../../src/lib/api/adapters";
+import {
+  apiRecipeToLocalRecipe,
+  apiShoppingItemToLocalItem,
+} from "../../src/lib/api/adapters";
 import { getApiErrorMessage } from "../../src/lib/api/errors";
 import { formatNaira } from "../../src/lib/formatters";
 import {
@@ -29,7 +32,7 @@ import {
   getNextUnitMode,
   getUnitModeLabel,
 } from "../../src/lib/ingredientUnits";
-import { scaleAmountText } from "../../src/lib/scaling";
+import { scaleAmountText, scaleCost } from "../../src/lib/scaling";
 import {
   generateShoppingListItemsFromRecipe,
   isPurchasableRecipeIngredient,
@@ -80,6 +83,17 @@ export default function RecipeDetailScreen() {
       });
     }
   );
+  const scaledCost = recipe
+    ? scaleCost({
+        baseCost: recipe.cost,
+        baseServings: recipe.baseServings,
+        selectedServings: servings,
+      })
+    : null;
+  const costPerPerson =
+    scaledCost !== null && servings > 0
+      ? Math.round(scaledCost / servings)
+      : null;
 
   async function handleFavoritePress() {
     if (!recipe) return;
@@ -154,47 +168,62 @@ export default function RecipeDetailScreen() {
       ingredientUnitSelections,
     });
 
-    if (shouldSyncApi && recipeDetail) {
-      try {
-        await Promise.all(
-          recipeDetail.ingredients
-            .filter(isPurchasableRecipeIngredient)
-            .map((ingredient) => {
-              const selectedIndex = Number(
-                ingredientUnitSelections[ingredient.id] ?? 0
-              );
-              const selectedUnit =
-                ingredient.availableUnits[selectedIndex] ??
-                ingredient.availableUnits[0];
+    let itemsToPersist = items;
 
-              return addShoppingListItemMutation.mutateAsync({
-                recipeId: recipeDetail.id,
-                name:
-                  ingredient.ingredientName ??
-                  ingredient.canonicalIngredientName ??
-                  ingredient.rawText,
-                canonicalIngredientName: ingredient.canonicalIngredientName,
-                emoji: null,
-                quantity:
-                  selectedUnit?.label ??
-                  ingredient.displayText ??
-                  ingredient.quantityText ??
-                  ingredient.rawText,
-                unit: selectedUnit?.unit ?? ingredient.unit,
-                category: ingredient.category,
-                estimatedPrice: null,
-              });
-            })
+    if (shouldSyncApi && recipeDetail) {
+      const apiIngredients = recipeDetail.ingredients.filter(
+        isPurchasableRecipeIngredient
+      );
+      const results = await Promise.allSettled(
+        apiIngredients.map((ingredient) => {
+          const selectedIndex = Number(
+            ingredientUnitSelections[ingredient.id] ?? 0
+          );
+          const selectedUnit =
+            ingredient.availableUnits[selectedIndex] ??
+            ingredient.availableUnits[0];
+
+          return addShoppingListItemMutation.mutateAsync({
+            recipeId: recipeDetail.id,
+            name:
+              ingredient.ingredientName ??
+              ingredient.canonicalIngredientName ??
+              ingredient.rawText,
+            canonicalIngredientName: ingredient.canonicalIngredientName,
+            emoji: null,
+            quantity:
+              selectedUnit?.label ??
+              ingredient.displayText ??
+              ingredient.quantityText ??
+              ingredient.rawText,
+            unit: selectedUnit?.unit ?? ingredient.unit,
+            category: ingredient.category,
+            estimatedPrice: null,
+          });
+        })
+      );
+
+      itemsToPersist = results.map((result, index) =>
+        result.status === "fulfilled"
+          ? apiShoppingItemToLocalItem(result.value)
+          : items[index]
+      );
+
+      const rejectedResult = results.find(
+        (result) => result.status === "rejected"
+      );
+
+      if (rejectedResult?.status === "rejected") {
+        console.error(
+          "Failed to sync shopping list items",
+          rejectedResult.reason
         );
-      } catch (error) {
-        console.error("Failed to sync shopping list items", error);
       }
     }
 
     try {
-      // TODO: reconcile backend shopping list writes into the offline sync queue.
-      addItems(items);
-      await insertShoppingListItems(db, items);
+      addItems(itemsToPersist);
+      await insertShoppingListItems(db, itemsToPersist);
     } catch (error) {
       console.error("Failed to persist shopping list items", error);
     }
@@ -292,11 +321,6 @@ export default function RecipeDetailScreen() {
         </View>
 
         <View style={styles.body}>
-          {/*
-            Estimated cost is hidden until backend price data is reliable.
-            Keep the old UI out of production for now.
-          */}
-
           <SectionHeader title="Ingredients" />
 
           <View style={styles.ingredientsCard}>
@@ -312,10 +336,18 @@ export default function RecipeDetailScreen() {
                 const selectedUnit =
                   apiIngredient.availableUnits[selectedIndex] ??
                   apiIngredient.availableUnits[0];
-                const displayAmount =
-                  selectedUnit?.label ??
-                  apiIngredient.displayText ??
-                  apiIngredient.rawText;
+                const displayAmount = scaleAmountText({
+                  amount: getIngredientQuantityUnitLabel({
+                    quantity: selectedUnit?.quantity ?? apiIngredient.quantity,
+                    unit: selectedUnit?.unit ?? apiIngredient.unit,
+                    fallback:
+                      selectedUnit?.label ??
+                      apiIngredient.displayText ??
+                      apiIngredient.rawText,
+                  }),
+                  baseServings: recipe.baseServings,
+                  selectedServings: servings,
+                });
 
                 return (
                   <View key={ingredient.id} style={styles.ingredientItem}>
@@ -331,6 +363,22 @@ export default function RecipeDetailScreen() {
                       <AppText style={styles.ingredientAmount}>
                         {displayAmount}
                       </AppText>
+
+                      {apiIngredient.availableUnits.length > 1 ? (
+                        <Pressable
+                          onPress={() =>
+                            handleIngredientUnitPress(ingredient.id)
+                          }
+                          style={({ pressed }) => [
+                            styles.unitPill,
+                            pressed && styles.pressed,
+                          ]}
+                        >
+                          <AppText style={styles.unitPillText}>
+                            {selectedUnit?.unit ?? "unit"}
+                          </AppText>
+                        </Pressable>
+                      ) : null}
                     </View>
                   </View>
                 );
@@ -391,6 +439,27 @@ export default function RecipeDetailScreen() {
             })}
           </View>
 
+          {scaledCost !== null ? (
+            <>
+              <SectionHeader title="Estimated Cost" />
+              <View style={styles.costRow}>
+                <View style={styles.costMain}>
+                  <AppText style={styles.costLabel}>Total Cost</AppText>
+                  <AppText style={styles.costValue}>
+                    {formatNaira(scaledCost)}
+                  </AppText>
+                </View>
+
+                <View style={styles.costPer}>
+                  <AppText style={styles.costLabel}>Per Person</AppText>
+                  <AppText style={styles.costValueSecondary}>
+                    {costPerPerson !== null ? formatNaira(costPerPerson) : "--"}
+                  </AppText>
+                </View>
+              </View>
+            </>
+          ) : null}
+
           {recipeDetail && !recipeDetail.baseServings ? null : (
             <>
               <SectionHeader title="Serving Size" />
@@ -440,6 +509,13 @@ export default function RecipeDetailScreen() {
       </Screen>
 
       <View style={styles.ctaBar}>
+        {scaledCost !== null ? (
+          <View style={styles.ctaCost}>
+            <AppText style={styles.costLabel}>Total</AppText>
+            <AppText style={styles.costValue}>{formatNaira(scaledCost)}</AppText>
+          </View>
+        ) : null}
+
         <Button
           title="🛒 Add to Shopping List"
           variant="primary"
@@ -467,6 +543,24 @@ function Decorations() {
       <AppText style={[styles.deco, styles.decoPepper]}>🌶️</AppText>
     </View>
   );
+}
+
+function getIngredientQuantityUnitLabel({
+  quantity,
+  unit,
+  fallback,
+}: {
+  quantity: string | number | null | undefined;
+  unit: string | null | undefined;
+  fallback: string;
+}) {
+  if (quantity == null && unit == null) {
+    return fallback;
+  }
+
+  return [quantity, unit]
+    .filter((value) => value !== null && value !== undefined && value !== "")
+    .join(" ");
 }
 
 const styles = StyleSheet.create({
@@ -634,7 +728,7 @@ const styles = StyleSheet.create({
   },
   ingredientName: {
     fontFamily: theme.fontFamily.bodyMedium,
-    fontSize: 13,
+    fontSize: 14,
     color: theme.colors.text,
   },
   ingredientMeasure: {
@@ -643,13 +737,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "flex-end",
     gap: theme.spacing.sm,
-    // color: theme.colors.navy,
   },
   ingredientAmount: {
     flexShrink: 1,
     fontFamily: theme.fontFamily.bodyBold,
     fontSize: 13,
-    // color: theme.colors.textMedium,
     color: theme.colors.navy,
     textAlign: "right",
   },
@@ -667,6 +759,42 @@ const styles = StyleSheet.create({
     fontFamily: theme.fontFamily.bodyBold,
     fontSize: 10,
     color: theme.colors.orange,
+  },
+  costRow: {
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1.5,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing.lg,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: theme.spacing.lg,
+  },
+  costMain: {
+    flex: 1,
+  },
+  costPer: {
+    flex: 1,
+    alignItems: "flex-end",
+  },
+  costLabel: {
+    fontFamily: theme.fontFamily.bodyBold,
+    fontSize: 10,
+    color: theme.colors.textMuted,
+    letterSpacing: 1,
+    textTransform: "uppercase",
+    marginBottom: 3,
+  },
+  costValue: {
+    fontFamily: theme.fontFamily.display,
+    fontSize: 25,
+    color: theme.colors.green,
+  },
+  costValueSecondary: {
+    fontFamily: theme.fontFamily.bodyBold,
+    fontSize: 16,
+    color: theme.colors.navy,
   },
   stepsCard: {
     backgroundColor: theme.colors.surface,
@@ -751,12 +879,18 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.md,
     paddingHorizontal: 20,
     paddingTop: theme.spacing.md,
     paddingBottom: 28,
     backgroundColor: theme.colors.cream,
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
+  },
+  ctaCost: {
+    minWidth: 92,
   },
   ctaButton: {
     flex: 1,

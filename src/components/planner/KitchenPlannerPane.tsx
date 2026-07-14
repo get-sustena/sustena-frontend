@@ -6,23 +6,17 @@ import {
   INGREDIENT_CATEGORIES,
   Ingredient,
 } from "../../data/ingredients";
-import { Recipe } from "../../data/recipes";
 import { useKitchenPlannerMutation } from "../../hooks/api/usePlanner";
 import { apiRecipeToLocalRecipe } from "../../lib/api/adapters";
 import { getApiErrorMessage } from "../../lib/api/errors";
 import { formatNaira } from "../../lib/formatters";
-import { matchRecipesByIngredients } from "../../lib/recipeMatching";
 import { theme } from "../../theme/theme";
 import { AppText } from "../ui/AppText";
 import { EmptyState } from "../ui/EmptyState";
 import { FilterChip } from "../ui/FilterChip";
 import { SearchInput } from "../ui/SearchInput";
 
-type Props = {
-  recipes: Recipe[];
-};
-
-export function KitchenPlannerPane({ recipes }: Props) {
+export function KitchenPlannerPane() {
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] =
     useState<(typeof INGREDIENT_CATEGORIES)[number]>("All");
@@ -54,31 +48,17 @@ export function KitchenPlannerPane({ recipes }: Props) {
   }, [activeCategory, search]);
 
   const matches = useMemo(() => {
-    if (kitchenPlannerMutation.data) {
-      return kitchenPlannerMutation.data.matches
+    return (
+      kitchenPlannerMutation.data?.matches
         .filter((match) => match.score > 0 && match.score <= 100)
         .map((match) => ({
           recipe: apiRecipeToLocalRecipe(match.recipe),
           score: match.score,
           matchedIngredients: match.matchedIngredients,
           missingIngredients: match.missingIngredients,
-          source: "api" as const,
-        }));
-    }
-
-    return matchRecipesByIngredients({
-      recipes,
-      selectedIngredientNames: selectedIngredients.map(
-        (ingredient) => ingredient.name
-      ),
-    })
-      .filter((match) => match.score > 0)
-      .map((match) => ({
-        ...match,
-        score: Math.min(100, Math.max(0, match.score * 100)),
-        source: "local" as const,
-      }));
-  }, [kitchenPlannerMutation.data, recipes, selectedIngredients]);
+        })) ?? []
+    );
+  }, [kitchenPlannerMutation.data]);
 
   function toggleIngredient(ingredient: Ingredient) {
     setSelectedIngredientIds((current) => {
@@ -90,6 +70,7 @@ export function KitchenPlannerPane({ recipes }: Props) {
     });
 
     setHasSearched(false);
+    kitchenPlannerMutation.reset();
   }
 
   return (
@@ -225,7 +206,10 @@ export function KitchenPlannerPane({ recipes }: Props) {
                   </AppText>
 
                   <AppText style={styles.resultMeta}>
-                    ⏱ {match.recipe.time} · {formatNaira(match.recipe.cost)}
+                    ⏱ {match.recipe.time}
+                    {match.recipe.cost !== null
+                      ? ` · ${formatNaira(match.recipe.cost)}`
+                      : ""}
                   </AppText>
 
                   <AppText style={styles.resultSubMeta} numberOfLines={1}>

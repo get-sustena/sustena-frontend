@@ -1,7 +1,6 @@
 import { router } from "expo-router";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { PlannerGoalCard } from "../../src/components/planner/PlannerGoalCard";
-import { FeaturedRecipeCard } from "../../src/components/recipe/FeaturedRecipeCard";
 import { RecipeCard } from "../../src/components/recipe/RecipeCard";
 import { AppText } from "../../src/components/ui/AppText";
 import { EmptyState } from "../../src/components/ui/EmptyState";
@@ -69,16 +68,16 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      <View style={styles.statusStrip}>
+      {/* <View style={styles.statusStrip}>
         <View style={styles.statusDot} />
         <AppText style={styles.statusText}>
           {recipesQuery.source === "local"
             ? "Offline fallback active · Local recipes ready"
             : "Recipes synced · Local recipes ready"}
         </AppText>
-      </View>
+      </View> */}
 
-      <SectionHeader
+      {/* <SectionHeader
         title="Today's Pick"
         actionLabel="See all →"
         onActionPress={() => router.push("/(tabs)/recipes")}
@@ -95,7 +94,7 @@ export default function HomeScreen() {
           title="No recipes ready"
           message="Recipes will appear here once the library loads."
         />
-      )}
+      )} */}
 
       <SectionHeader title="Smart Planner" />
 

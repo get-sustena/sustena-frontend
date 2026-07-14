@@ -7,8 +7,6 @@ import { PlannerTabButton } from "../../src/components/planner/PlannerTabButton"
 import { TimetablePlannerPane } from "../../src/components/planner/TimetablePlannerPane";
 import { AppText } from "../../src/components/ui/AppText";
 import { Screen } from "../../src/components/ui/Screen";
-import { useRecipesWithLocalFallback } from "../../src/hooks/api/useRecipes";
-import { apiRecipeToLocalRecipe } from "../../src/lib/api/adapters";
 import { theme } from "../../src/theme/theme";
 import { PlannerTab } from "../../src/types/planner";
 
@@ -28,16 +26,14 @@ const PLANNER_TABS: {
     label: "📅 Plan",
     value: "timetable",
   },
-  {
-    label: "🔥 Calories",
-    value: "calories",
-  },
+  // {
+  //   label: "🔥 Calories",
+  //   value: "calories",
+  // },
 ];
 
 export default function PlannerScreen() {
   const [activeTab, setActiveTab] = useState<PlannerTab>("budget");
-  const recipesQuery = useRecipesWithLocalFallback({ page: 1, pageSize: 200 });
-  const recipes = recipesQuery.data?.items.map(apiRecipeToLocalRecipe) ?? [];
 
   return (
     <Screen scroll>
@@ -62,11 +58,9 @@ export default function PlannerScreen() {
         ))}
       </View>
 
-      {activeTab === "budget" ? <BudgetPlannerPane recipes={recipes} /> : null}
+      {activeTab === "budget" ? <BudgetPlannerPane /> : null}
 
-      {activeTab === "kitchen" ? (
-        <KitchenPlannerPane recipes={recipes} />
-      ) : null}
+      {activeTab === "kitchen" ? <KitchenPlannerPane /> : null}
 
       {activeTab === "timetable" ? <TimetablePlannerPane /> : null}
 

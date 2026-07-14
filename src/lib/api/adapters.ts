@@ -7,6 +7,7 @@ import {
   ShoppingListItem as ApiShoppingListItem,
 } from "../../types/api";
 import { ShoppingListItem } from "../../types/shoppingList";
+import { capitalizeWords } from "../textFormatters";
 import { API_BASE_URL } from "./config";
 
 export function apiRecipeToLocalRecipe(
@@ -163,7 +164,7 @@ function toLocalTags(tags: string[]) {
     if (normalized === "healthy") return "Healthy";
     if (normalized === "breakfast") return "Breakfast";
 
-    return tag;
+    return capitalizeWords(tag.replace(/_/g, " "));
   }) as RecipeTag[];
 }
 

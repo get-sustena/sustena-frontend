@@ -29,7 +29,11 @@ export default function RecipesScreen() {
   const recipeParams = useMemo(
     () => ({
       search: search.trim() || undefined,
-      tag: activeFilter === "all" ? undefined : activeFilter,
+      tag:
+        activeFilter === "all" || activeFilter === "budget"
+          ? undefined
+          : activeFilter,
+      maxCost: activeFilter === "budget" ? 5000 : undefined,
       page,
       pageSize: PAGE_SIZE,
     }),
