@@ -1,14 +1,34 @@
+// app/(tabs)/home.tsx
+
+import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
-import { PlannerGoalCard } from "../../src/components/planner/PlannerGoalCard";
+import { useState } from "react";
+import {
+  LayoutChangeEvent,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  QuickRecipeCardsSkeleton,
+  RecommendationCardSkeleton,
+} from "../../src/components/home/HomeRecipeSkeletons";
+import { FeaturedRecipeCard } from "../../src/components/recipe/FeaturedRecipeCard";
 import { RecipeCard } from "../../src/components/recipe/RecipeCard";
 import { AppText } from "../../src/components/ui/AppText";
-import { EmptyState } from "../../src/components/ui/EmptyState";
-import { Screen } from "../../src/components/ui/Screen";
-import { SectionHeader } from "../../src/components/ui/SectionHeader";
+import { Icon } from "../../src/components/ui/Icon";
 import { useRecipesWithLocalFallback } from "../../src/hooks/api/useRecipes";
 import { apiRecipeToLocalRecipe } from "../../src/lib/api/adapters";
+import { useAuthStore } from "../../src/store/authStore";
+import { useProfileAnswersStore } from "../../src/store/profileAnswersStore";
+import { showToast } from "../../src/store/uiStore";
 import { theme } from "../../src/theme/theme";
+
+const KITCHEN_QUICK_CATEGORIES = ["Proteins", "Produce", "Grains"];
 
 function getGreeting() {
   const hour = new Date().getHours();
@@ -25,7 +45,17 @@ function openRecipe(recipeId: string) {
   });
 }
 
+function openPlanner(tab: "budget" | "kitchen", category?: string) {
+  router.push({
+    pathname: "/(tabs)/planner",
+    params: category ? { tab, category } : { tab },
+  });
+}
+
 export default function HomeScreen() {
+  const insets = useSafeAreaInsets();
+  const nickname = useProfileAnswersStore((state) => state.nickname);
+  const firstName = useAuthStore((state) => state.user?.firstName);
   const recipesQuery = useRecipesWithLocalFallback({ page: 1, pageSize: 24 });
   const quickRecipesQuery = useRecipesWithLocalFallback({
     quickAndEasy: true,
@@ -36,7 +66,8 @@ export default function HomeScreen() {
   const recipes = recipesQuery.data?.items.map(apiRecipeToLocalRecipe) ?? [];
   const quickRecipeResults =
     quickRecipesQuery.data?.items.map(apiRecipeToLocalRecipe) ?? [];
-  const featuredRecipe = recipes[0];
+  const [featuredIndex, setFeaturedIndex] = useState(0);
+  const featuredRecipe = recipes[featuredIndex % Math.max(recipes.length, 1)];
   const quickRecipes = quickRecipeResults.filter(
     (recipe) =>
       recipe.totalTimeMinutes !== null &&
@@ -44,229 +75,549 @@ export default function HomeScreen() {
       recipe.totalTimeMinutes <= 45
   );
 
+  const displayName = nickname?.trim() || firstName?.trim();
+  const greeting = displayName
+    ? `${getGreeting()}, ${displayName}`
+    : getGreeting();
+
   return (
-    <Screen scroll>
-      <Decorations />
-
-      <View style={styles.header}>
-        <View>
-          <AppText style={styles.eyebrow}>{getGreeting()}</AppText>
-          <AppText style={styles.title}>
-            What are we{"\n"}cooking today?
-          </AppText>
-        </View>
-
-        <View style={styles.headerActions}>
-          <Pressable style={styles.iconButton}>
-            <AppText style={styles.iconText}>🔍</AppText>
-          </Pressable>
-
-          <Pressable style={styles.iconButton}>
-            <AppText style={styles.iconText}>🔔</AppText>
-            <View style={styles.notificationDot} />
-          </Pressable>
-        </View>
-      </View>
-
-      {/* <View style={styles.statusStrip}>
-        <View style={styles.statusDot} />
-        <AppText style={styles.statusText}>
-          {recipesQuery.source === "local"
-            ? "Offline fallback active · Local recipes ready"
-            : "Recipes synced · Local recipes ready"}
-        </AppText>
-      </View> */}
-
-      {/* <SectionHeader
-        title="Today's Pick"
-        actionLabel="See all →"
-        onActionPress={() => router.push("/(tabs)/recipes")}
-      />
-
-      {featuredRecipe ? (
-        <FeaturedRecipeCard
-          recipe={featuredRecipe}
-          onPress={() => openRecipe(featuredRecipe.id)}
-        />
-      ) : (
-        <EmptyState
-          icon="🍲"
-          title="No recipes ready"
-          message="Recipes will appear here once the library loads."
-        />
-      )} */}
-
-      <SectionHeader title="Smart Planner" />
-
-      <View style={styles.plannerGrid}>
-        <View style={styles.plannerRow}>
-          <PlannerGoalCard
-            icon="💸"
-            label="Budget"
-            title="Cook on a Budget"
-            onPress={() => router.push("/(tabs)/planner")}
-          />
-
-          <PlannerGoalCard
-            icon="🥬"
-            label="Inventory"
-            title="What's in My Kitchen?"
-            onPress={() => router.push("/(tabs)/planner")}
-          />
-        </View>
-      </View>
-
-      <SectionHeader
-        title="Quick & Easy"
-        actionLabel="Browse →"
-        onActionPress={() => router.push("/(tabs)/recipes")}
-      />
-
-      {quickRecipes.length > 0 ? (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.recipeScrollContent}
+    <View style={styles.screen}>
+      <View
+        style={[styles.header, { paddingTop: Math.max(insets.top, 44) }]}
+      >
+        <Pressable
+          onPress={() => router.push("/(tabs)/profile")}
+          accessibilityRole="button"
+          accessibilityLabel="Open profile"
         >
-          {quickRecipes.map((recipe) => (
-            <RecipeCard
-              key={recipe.id}
-              recipe={recipe}
-              onPress={() => openRecipe(recipe.id)}
+          <AppText style={styles.greeting}>{greeting}</AppText>
+        </Pressable>
+
+        <Pressable
+          onPress={() => showToast("No new notifications")}
+          style={styles.notifButton}
+          accessibilityRole="button"
+          accessibilityLabel="Notifications"
+        >
+          <Icon name="notification" size={18} color={theme.colors.text} />
+          <View style={styles.notifDot} />
+        </Pressable>
+      </View>
+
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: Math.max(insets.bottom, 16) + 92 },
+        ]}
+      >
+        <View style={styles.plannerSection}>
+          <AppText style={[styles.sectionTitle, styles.plannerTitle]}>
+            Smart Planner
+          </AppText>
+
+          <Pressable
+            onPress={() => openPlanner("kitchen")}
+            style={({ pressed }) => [
+              styles.kitchenCard,
+              pressed && styles.pressed,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Open What's in My Kitchen"
+          >
+            <LinearGradient
+              colors={["#1D3327", "#152119"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFillObject}
             />
-          ))}
-        </ScrollView>
-      ) : (
-        <EmptyState
-          icon="⏱"
-          title="No quick recipes yet"
-          message="Recipes with a known total time of 45 minutes or less will show here."
-        />
-      )}
-    </Screen>
+            <View style={styles.kitchenGlow} />
+
+            <View style={styles.kitchenIconWrap}>
+              <Icon name="cook" size={22} color={theme.colors.green} />
+            </View>
+
+            <AppText style={styles.kitchenTitle}>
+              What&apos;s in My Kitchen?
+            </AppText>
+            <AppText style={styles.kitchenSubtitle}>
+              Tell us what you&apos;ve got, and we&apos;ll match it to recipes
+              you can cook right now.
+            </AppText>
+
+            <View style={styles.kitchenPillRow}>
+              {KITCHEN_QUICK_CATEGORIES.map((category) => (
+                <Pressable
+                  key={category}
+                  onPress={(event) => {
+                    event.stopPropagation();
+                    openPlanner("kitchen", category);
+                  }}
+                  style={({ pressed }) => [
+                    styles.kitchenPill,
+                    pressed && styles.kitchenPillPressed,
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Browse ${category.toLowerCase()}`}
+                >
+                  <AppText style={styles.kitchenPillText}>{category}</AppText>
+                </Pressable>
+              ))}
+            </View>
+          </Pressable>
+
+          <Pressable
+            onPress={() => openPlanner("budget")}
+            style={({ pressed }) => [
+              styles.budgetRow,
+              pressed && styles.pressed,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Plan meals around a budget"
+          >
+            <Icon name="budget" size={15} color={theme.colors.textMedium} />
+            <AppText style={styles.budgetRowText}>
+              Or plan a full day of meals around your budget
+            </AppText>
+          </Pressable>
+        </View>
+
+        <View style={styles.recommendationSection}>
+          <View style={styles.sectionHeaderRow}>
+            <AppText style={styles.sectionTitle}>Our Recommendation</AppText>
+
+            <Pressable
+              onPress={() => {
+                setFeaturedIndex((current) => current + 1);
+                showToast("New pick found!");
+              }}
+              style={({ pressed }) => [
+                styles.shuffleButton,
+                pressed && styles.actionPressed,
+              ]}
+              disabled={recipes.length < 2}
+              accessibilityRole="button"
+              accessibilityLabel="Shuffle recommendation"
+            >
+              <Icon name="swap" size={13} color={theme.colors.linkGreen} />
+              <AppText style={styles.shuffleText}>Shuffle</AppText>
+            </Pressable>
+          </View>
+
+          {recipesQuery.isLoading ? (
+            <RecommendationCardSkeleton />
+          ) : featuredRecipe ? (
+            <FeaturedRecipeCard
+              recipe={featuredRecipe}
+              onPress={() => openRecipe(featuredRecipe.id)}
+            />
+          ) : (
+            <HomeSectionState
+              title={
+                recipesQuery.isError
+                  ? "Recommendations unavailable"
+                  : "No recipes ready"
+              }
+              message={
+                recipesQuery.isError
+                  ? "We couldn't load recipes right now."
+                  : "Recipes will appear here once the library is ready."
+              }
+              onRetry={
+                recipesQuery.isError ? () => recipesQuery.refetch() : undefined
+              }
+            />
+          )}
+        </View>
+
+        <View style={styles.quickSection}>
+          <View style={[styles.sectionHeaderRow, styles.quickHeaderRow]}>
+            <AppText style={styles.sectionTitle}>Quick &amp; Easy</AppText>
+
+            <Pressable
+              onPress={() => router.push("/(tabs)/recipes")}
+              style={({ pressed }) => pressed && styles.actionPressed}
+              accessibilityRole="button"
+              accessibilityLabel="See all recipes"
+            >
+              <AppText style={styles.seeAllText}>See all</AppText>
+            </Pressable>
+          </View>
+
+          {quickRecipesQuery.isLoading ? (
+            <QuickRecipeCardsSkeleton />
+          ) : quickRecipes.length > 0 ? (
+            <QuickCarousel recipes={quickRecipes} />
+          ) : (
+            <View style={styles.quickStateWrap}>
+              <HomeSectionState
+                title={
+                  quickRecipesQuery.isError
+                    ? "Quick recipes unavailable"
+                    : "No quick recipes yet"
+                }
+                message={
+                  quickRecipesQuery.isError
+                    ? "We couldn't load quick recipes right now."
+                    : "Recipes taking 45 minutes or less will show here."
+                }
+                onRetry={
+                  quickRecipesQuery.isError
+                    ? () => quickRecipesQuery.refetch()
+                    : undefined
+                }
+              />
+            </View>
+          )}
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
-function Decorations() {
+function HomeSectionState({
+  title,
+  message,
+  onRetry,
+}: {
+  title: string;
+  message: string;
+  onRetry?: () => void;
+}) {
   return (
-    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-      <AppText style={[styles.deco, styles.decoHerb]}>🌿</AppText>
-      <AppText style={[styles.deco, styles.decoPepper]}>🫑</AppText>
-      <AppText style={[styles.deco, styles.decoTomato]}>🍅</AppText>
+    <View style={styles.state}>
+      <View style={styles.stateIcon}>
+        <Icon name="cook" size={24} color={theme.colors.textMutedAlt} />
+      </View>
+      <AppText style={styles.stateTitle}>{title}</AppText>
+      <AppText style={styles.stateMessage}>{message}</AppText>
+      {onRetry ? (
+        <Pressable
+          onPress={onRetry}
+          style={({ pressed }) => [
+            styles.retryButton,
+            pressed && styles.actionPressed,
+          ]}
+          accessibilityRole="button"
+        >
+          <AppText style={styles.retryText}>Try again</AppText>
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
+
+function QuickCarousel({
+  recipes,
+}: {
+  recipes: ReturnType<typeof apiRecipeToLocalRecipe>[];
+}) {
+  const [containerWidth, setContainerWidth] = useState(0);
+  const [contentWidth, setContentWidth] = useState(0);
+  const [scrollX, setScrollX] = useState(0);
+
+  const trackWidth = 120;
+  const maxScroll = Math.max(contentWidth - containerWidth, 1);
+  const thumbWidth = Math.min(
+    trackWidth,
+    Math.max(
+      30,
+      containerWidth > 0
+        ? trackWidth * (containerWidth / Math.max(contentWidth, 1))
+        : trackWidth * 0.4
+    )
+  );
+  const thumbX =
+    contentWidth > containerWidth
+      ? (Math.min(scrollX, maxScroll) / maxScroll) * (trackWidth - thumbWidth)
+      : 0;
+
+  function handleLayout(event: LayoutChangeEvent) {
+    setContainerWidth(event.nativeEvent.layout.width);
+  }
+
+  function handleScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
+    setScrollX(Math.max(0, event.nativeEvent.contentOffset.x));
+  }
+
+  return (
+    <View>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        onLayout={handleLayout}
+        onContentSizeChange={(width) => setContentWidth(width)}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+        contentContainerStyle={styles.recipeScrollContent}
+        decelerationRate="fast"
+      >
+        {recipes.map((recipe) => (
+          <RecipeCard
+            key={recipe.id}
+            recipe={recipe}
+            onPress={() => openRecipe(recipe.id)}
+          />
+        ))}
+      </ScrollView>
+
+      <View style={styles.scrollTrackWrap}>
+        <View style={styles.scrollTrack}>
+          <View
+            style={[
+              styles.scrollThumb,
+              { width: thumbWidth, transform: [{ translateX: thumbX }] },
+            ]}
+          />
+        </View>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: theme.colors.white,
+  },
   header: {
-    paddingHorizontal: 24,
-    paddingTop: 52,
-    paddingBottom: 14,
+    paddingHorizontal: 20,
+    paddingBottom: 6,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    backgroundColor: theme.colors.white,
   },
-  eyebrow: {
-    fontFamily: theme.fontFamily.bodyBold,
-    fontSize: 10,
-    color: theme.colors.textMuted,
-    letterSpacing: 2,
-    textTransform: "uppercase",
-    marginBottom: 3,
+  scrollContent: {
+    backgroundColor: theme.colors.white,
   },
-  title: {
-    fontFamily: theme.fontFamily.display,
-    fontSize: 24,
-    lineHeight: 27,
+  greeting: {
+    fontFamily: theme.fontFamily.bodySemiBold,
+    fontSize: 15,
     color: theme.colors.navy,
   },
-  headerActions: {
-    flexDirection: "row",
-    gap: theme.spacing.sm,
-  },
-  iconButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 13,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1.5,
+  notifButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: theme.colors.card,
+    borderWidth: 1,
     borderColor: theme.colors.border,
     alignItems: "center",
     justifyContent: "center",
-    position: "relative",
+    shadowColor: theme.colors.text,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.14,
+    shadowRadius: 6,
+    elevation: 2,
   },
-  iconText: {
-    fontSize: 18,
-  },
-  notificationDot: {
+  notifDot: {
     position: "absolute",
     top: 8,
     right: 8,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: theme.colors.orange,
-    borderWidth: 2,
-    borderColor: theme.colors.cream,
-  },
-  statusStrip: {
-    marginHorizontal: 20,
-    marginBottom: 18,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: theme.radius.sm,
-    backgroundColor: theme.colors.greenDim,
-    borderWidth: 1,
-    borderColor: "rgba(42,125,79,0.2)",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: theme.spacing.sm,
-  },
-  statusDot: {
     width: 7,
     height: 7,
     borderRadius: 4,
-    backgroundColor: theme.colors.green,
+    backgroundColor: theme.colors.orange,
+    borderWidth: 1.5,
+    borderColor: theme.colors.card,
   },
-  statusText: {
-    fontFamily: theme.fontFamily.bodySemiBold,
-    fontSize: 11,
-    color: theme.colors.green,
+  pressed: {
+    opacity: 0.9,
+    transform: [{ scale: 0.99 }],
   },
-  plannerGrid: {
+  actionPressed: {
+    opacity: 0.65,
+  },
+  plannerSection: {
     paddingHorizontal: 20,
-    gap: 11,
-    marginBottom: 26,
-  },
-  plannerRow: {
-    flexDirection: "row",
-    gap: 11,
-  },
-  recipeScrollContent: {
-    paddingHorizontal: 20,
-    gap: 12,
+    paddingTop: 16,
     paddingBottom: 28,
   },
-  deco: {
+  recommendationSection: {
+    paddingHorizontal: 20,
+    paddingBottom: 28,
+  },
+  quickSection: {
+    paddingBottom: 6,
+  },
+  sectionTitle: {
+    fontFamily: theme.fontFamily.display,
+    fontSize: 19,
+    color: theme.colors.navy,
+  },
+  plannerTitle: {
+    marginBottom: 12,
+  },
+  sectionHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  quickHeaderRow: {
+    paddingHorizontal: 20,
+  },
+  shuffleButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  shuffleText: {
+    fontFamily: theme.fontFamily.bodySemiBold,
+    fontSize: 12,
+    color: theme.colors.linkGreen,
+  },
+  seeAllText: {
+    fontFamily: theme.fontFamily.bodySemiBold,
+    fontSize: 13,
+    color: theme.colors.linkGreen,
+  },
+  kitchenCard: {
+    borderRadius: 20,
+    padding: 20,
+    overflow: "hidden",
+    marginBottom: 10,
+    shadowColor: theme.colors.navy,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.24,
+    shadowRadius: 18,
+    elevation: 6,
+  },
+  kitchenGlow: {
     position: "absolute",
-    opacity: 0.1,
+    top: -30,
+    right: -30,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: "rgba(52,182,115,0.2)",
   },
-  decoHerb: {
-    top: "8%",
-    right: "4%",
-    fontSize: 32,
-    opacity: 0.12,
-    transform: [{ rotate: "20deg" }],
+  kitchenIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: "rgba(52,182,115,0.18)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 14,
   },
-  decoPepper: {
-    top: "40%",
-    left: "2%",
-    fontSize: 36,
-    transform: [{ rotate: "-18deg" }],
+  kitchenTitle: {
+    fontFamily: theme.fontFamily.display,
+    fontSize: 18,
+    color: theme.colors.onDark,
+    marginBottom: 4,
   },
-  decoTomato: {
-    bottom: "20%",
-    right: "12%",
-    fontSize: 30,
+  kitchenSubtitle: {
+    fontFamily: theme.fontFamily.body,
+    fontSize: 13,
+    lineHeight: 19,
+    color: "#9FB0A3",
+    maxWidth: 240,
+    marginBottom: 14,
+  },
+  kitchenPillRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  kitchenPill: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.16)",
+    backgroundColor: "rgba(255,255,255,0.1)",
+    paddingHorizontal: 13,
+    paddingVertical: 8,
+  },
+  kitchenPillPressed: {
+    backgroundColor: "rgba(255,255,255,0.18)",
+    transform: [{ scale: 0.97 }],
+  },
+  kitchenPillText: {
+    fontFamily: theme.fontFamily.monoBold,
+    fontSize: 14,
+    color: theme.colors.onDark,
+  },
+  budgetRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 9,
+    paddingVertical: 11,
+    paddingHorizontal: 4,
+  },
+  budgetRowText: {
+    flex: 1,
+    fontFamily: theme.fontFamily.bodySemiBold,
+    fontSize: 13.5,
+    color: theme.colors.navy,
+  },
+  recipeScrollContent: {
+    gap: 14,
+    paddingHorizontal: 20,
+    paddingBottom: 10,
+  },
+  scrollTrackWrap: {
+    alignItems: "center",
+    paddingBottom: 8,
+  },
+  scrollTrack: {
+    width: 120,
+    height: 3,
+    borderRadius: 999,
+    backgroundColor: "#EDF2E3",
+    overflow: "hidden",
+  },
+  scrollThumb: {
+    height: "100%",
+    borderRadius: 999,
+    backgroundColor: theme.colors.border,
+  },
+  quickStateWrap: {
+    paddingHorizontal: 20,
+  },
+  state: {
+    minHeight: 180,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.card,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+  stateIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: theme.colors.card2,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 10,
+  },
+  stateTitle: {
+    fontFamily: theme.fontFamily.bodySemiBold,
+    fontSize: 14,
+    color: theme.colors.navy,
+    textAlign: "center",
+    marginBottom: 4,
+  },
+  stateMessage: {
+    fontFamily: theme.fontFamily.body,
+    fontSize: 12.5,
+    lineHeight: 18,
+    color: theme.colors.textMuted,
+    textAlign: "center",
+  },
+  retryButton: {
+    marginTop: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: theme.colors.navy,
+  },
+  retryText: {
+    fontFamily: theme.fontFamily.bodySemiBold,
+    fontSize: 12,
+    color: theme.colors.onDark,
   },
 });

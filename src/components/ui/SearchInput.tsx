@@ -1,6 +1,6 @@
 import { StyleSheet, TextInput, View } from "react-native";
 import { theme } from "../../theme/theme";
-import { AppText } from "./AppText";
+import { Icon } from "./Icon";
 
 type Props = {
   value: string;
@@ -15,7 +15,7 @@ export function SearchInput({
 }: Props) {
   return (
     <View style={styles.container}>
-      <AppText style={styles.icon}>🔍</AppText>
+      <Icon name="discover" size={18} color={theme.colors.textMedium} />
 
       <TextInput
         value={value}
@@ -34,24 +34,20 @@ const styles = StyleSheet.create({
   container: {
     marginHorizontal: 20,
     marginBottom: theme.spacing.lg,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1.5,
+    backgroundColor: theme.colors.card,
+    borderWidth: 1,
     borderColor: theme.colors.border,
-    borderRadius: 14,
-    paddingHorizontal: theme.spacing.lg,
-    minHeight: 50,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     flexDirection: "row",
     alignItems: "center",
-    gap: theme.spacing.md,
-  },
-  icon: {
-    fontSize: 15,
-    color: theme.colors.textMuted,
+    gap: 10,
   },
   input: {
     flex: 1,
     fontFamily: theme.fontFamily.body,
-    fontSize: 14,
+    fontSize: 15,
     color: theme.colors.text,
     paddingVertical: 0,
   },

@@ -126,6 +126,44 @@ export interface UserPreferences {
   updatedAt: ISODateTimeString;
 }
 
+export interface UserProfileAnswers {
+  id: UUIDString;
+  userId: UUIDString;
+  nickname: string | null;
+  gender: string | null;
+  birthdayMonth: number | null;
+  birthdayDay: number | null;
+  lifestyle: string | null;
+  remoteFlex: string | null;
+  experience: string | null;
+  goals: string[];
+  challenges: string[];
+  habitWho: string | null;
+  habitFreq: string | null;
+  habitTime: string | null;
+  heard: string | null;
+  heardOther: string | null;
+  createdAt: ISODateTimeString;
+  updatedAt: ISODateTimeString;
+}
+
+export interface UserProfileAnswersUpdateRequest {
+  nickname?: string | null;
+  gender?: string | null;
+  birthdayMonth?: number | null;
+  birthdayDay?: number | null;
+  lifestyle?: string | null;
+  remoteFlex?: string | null;
+  experience?: string | null;
+  goals?: string[];
+  challenges?: string[];
+  habitWho?: string | null;
+  habitFreq?: string | null;
+  habitTime?: string | null;
+  heard?: string | null;
+  heardOther?: string | null;
+}
+
 export interface RecipeListItem {
   id: string;
   name: string;
@@ -150,12 +188,68 @@ export interface IngredientAvailableUnit {
   confidence: DecimalString | number;
 }
 
+export type IngredientConversionContext =
+  | "mass"
+  | "volume"
+  | "count"
+  | "rice"
+  | "plain_flour"
+  | "millet"
+  | "sorghum";
+
+export interface IngredientLocalName {
+  name: string;
+  languageOrRegion: string | null;
+}
+
+export interface Ingredient {
+  id: string;
+  canonicalName: string;
+  displayName: string;
+  categoryId: string | null;
+  categoryName: string | null;
+  subcategory: string | null;
+  aliases: string[];
+  localNames: IngredientLocalName[];
+  searchTerms: string[];
+  defaultMeasurementBasis: string | null;
+  conversionContext: IngredientConversionContext;
+  storageZone: string | null;
+  allergenGroup: string | null;
+  isCommonNigeria: boolean;
+  isCommonUsUk: boolean;
+  isActive: boolean;
+  notes: string | null;
+  createdAt: ISODateTimeString;
+  updatedAt: ISODateTimeString;
+}
+
+export interface IngredientSearchParams {
+  search?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface Unit {
+  id: string;
+  name: string;
+  context: string;
+  baseUnit: string;
+  baseFactorMin: DecimalString | number;
+  baseFactorMax: DecimalString | number;
+  isApproximate: boolean;
+  precisionLabel: string | null;
+  scope: string | null;
+  sourceId: string | null;
+}
+
 export interface RecipeIngredient {
   id: UUIDString;
   position: number;
   rawText: string;
   ingredientName: string | null;
   canonicalIngredientName: string | null;
+  ingredientId: string | null;
   quantity: DecimalString | number | null;
   unit: string | null;
   quantityText: string | null;
@@ -262,6 +356,7 @@ export interface BudgetPlannerResponse {
   meals: PlannerMeal[];
   matches: [];
   totalEstimatedCost: number;
+  message: string;
 }
 
 export interface KitchenPlannerResponse {
@@ -293,6 +388,33 @@ export interface SignupRequest {
 export interface LoginRequest {
   email: string;
   password: string;
+}
+
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+export interface ForgotPasswordResponse {
+  success: boolean;
+}
+
+export interface VerifyResetCodeRequest {
+  email: string;
+  code: string;
+}
+
+export interface VerifyResetCodeResponse {
+  resetToken: string;
+  expiresIn: number;
+}
+
+export interface ResetPasswordRequest {
+  resetToken: string;
+  newPassword: string;
+}
+
+export interface ResetPasswordResponse {
+  success: boolean;
 }
 
 export interface UserPreferencesUpdateRequest {
@@ -343,10 +465,20 @@ export interface ShoppingListItemUpdateRequest {
 
 export type ShoppingListItemUpdate = ShoppingListItemUpdateRequest;
 
+export interface ShoppingListCreateRequest {
+  name: string;
+  isActive?: boolean;
+}
+
+export interface ShoppingListUpdateRequest {
+  name?: string;
+  isActive?: boolean;
+}
+
 export interface BudgetPlannerRequest {
   budget: number;
-  mealsPerDay?: number;
-  days?: number;
+  servingSize?: number;
+  maxTotalTimeMinutes?: number | null;
   dietaryPreference?: DietaryPreference;
   healthConditions?: string[];
   allowUnknownCost?: boolean;

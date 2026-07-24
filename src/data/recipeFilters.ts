@@ -11,27 +11,27 @@ export const RECIPE_FILTERS: RecipeFilter[] = [
     value: "all",
   },
   {
-    label: "🇳🇬 Nigerian",
+    label: "Nigerian",
     value: "nigerian",
   },
   {
-    label: "🌱 Vegan",
+    label: "Vegan",
     value: "vegan",
   },
   {
-    label: "💸 Budget",
+    label: "Budget",
     value: "budget",
   },
   {
-    label: "💪 High Protein",
+    label: "High Protein",
     value: "highprotein",
   },
   {
-    label: "⚡ Quick",
+    label: "Quick",
     value: "quick",
   },
   {
-    label: "🐟 Pescetarian",
+    label: "Pescetarian",
     value: "pescetarian",
   },
 ];

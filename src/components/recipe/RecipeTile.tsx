@@ -1,8 +1,12 @@
-import { Image } from "expo-image";
+// src/components/recipe/RecipeTile.tsx
+// The Recipes tab's 2-column grid tile — ported verbatim from the mockup's
+// renderRecGrid() card template.
+
 import { Pressable, StyleSheet, View } from "react-native";
 import { Recipe } from "../../data/recipes";
 import { theme } from "../../theme/theme";
 import { AppText } from "../ui/AppText";
+import { RecipePhoto } from "./RecipePhoto";
 
 type Props = {
   recipe: Recipe;
@@ -15,18 +19,12 @@ export function RecipeTile({ recipe, onPress }: Props) {
       onPress={onPress}
       style={({ pressed }) => [styles.tile, pressed && styles.pressed]}
     >
-      <View style={styles.imagePlaceholder}>
-        {recipe.imageUrl ? (
-          <Image
-            source={{ uri: recipe.imageUrl }}
-            style={styles.image}
-            contentFit="cover"
-            transition={150}
-          />
-        ) : (
-          <AppText style={styles.emoji}>{recipe.emoji}</AppText>
-        )}
-      </View>
+      <RecipePhoto
+        imageUrl={recipe.imageUrl}
+        fallbackLabel="recipe photo"
+        fallbackLabelVariant="compact"
+        style={styles.photo}
+      />
 
       <View style={styles.body}>
         <AppText style={styles.name} numberOfLines={2}>
@@ -34,10 +32,11 @@ export function RecipeTile({ recipe, onPress }: Props) {
         </AppText>
 
         <View style={styles.metaRow}>
-          <AppText style={styles.meta}>⏱ {recipe.time}</AppText>
+          <AppText style={styles.meta}>{recipe.time}</AppText>
           {recipe.cost !== null ? (
             <AppText style={styles.meta}>
-              ₦{recipe.cost.toLocaleString("en-NG")}
+              {" "}
+              · ₦{recipe.cost.toLocaleString("en-NG")}
             </AppText>
           ) : null}
         </View>
@@ -50,46 +49,42 @@ const styles = StyleSheet.create({
   tile: {
     flex: 1,
     minWidth: 0,
-    borderRadius: theme.radius.lg,
-    borderWidth: 1.5,
+    backgroundColor: theme.colors.card,
+    borderWidth: 1,
     borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
+    borderRadius: 16,
     overflow: "hidden",
+    shadowColor: "#1B211C",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.24,
+    shadowRadius: 24,
+    elevation: 3,
   },
   pressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.98 }],
+    opacity: 0.9,
   },
-  imagePlaceholder: {
-    height: 118,
-    backgroundColor: theme.colors.cream2,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  image: {
-    width: "100%",
-    height: "100%",
-  },
-  emoji: {
-    fontSize: 54,
+  photo: {
+    height: 104,
   },
   body: {
-    paddingHorizontal: 11,
-    paddingVertical: 10,
+    paddingHorizontal: 13,
+    paddingTop: 12,
+    paddingBottom: 14,
   },
   name: {
-    fontFamily: theme.fontFamily.bodyBold,
-    fontSize: 13,
-    lineHeight: 17,
-    color: theme.colors.navy,
-    marginBottom: 5,
+    fontFamily: theme.fontFamily.bodySemiBold,
+    fontSize: 15,
+    lineHeight: 18,
+    color: theme.colors.text,
   },
   metaRow: {
-    gap: 2,
+    flexDirection: "row",
+    marginTop: 6,
   },
   meta: {
-    fontFamily: theme.fontFamily.body,
-    fontSize: 10,
-    color: theme.colors.textMuted,
+    fontFamily: theme.fontFamily.mono,
+    fontSize: 13,
+    letterSpacing: 0,
+    color: theme.colors.textMedium,
   },
 });

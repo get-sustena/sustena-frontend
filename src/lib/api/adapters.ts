@@ -24,7 +24,7 @@ export function apiRecipeToLocalRecipe(
     name: recipe.name,
     emoji: "🍲",
     imageUrl: normalizeImageUrl(recipe.imageUrl),
-    time: totalTimeMinutes ? `${totalTimeMinutes} min` : "Time varies",
+    time: totalTimeMinutes ? `${totalTimeMinutes} MIN` : "Time varies",
     calories: recipe.caloriesPerServing,
     cost: recipe.estimatedCost,
     prepTimeMinutes: "prepTimeMinutes" in recipe ? recipe.prepTimeMinutes : null,

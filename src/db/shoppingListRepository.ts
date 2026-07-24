@@ -1,5 +1,5 @@
 import { type SQLiteDatabase } from "expo-sqlite";
-import { ShoppingListItem } from "../types/shoppingList";
+import { DEFAULT_SHOPPING_LIST_ID, ShoppingListItem } from "../types/shoppingList";
 import { runWithSqliteRetry } from "./sqliteGuards";
 
 type ShoppingListItemRow = {
@@ -14,9 +14,25 @@ type ShoppingListItemRow = {
   source_recipe_id: string | null;
   created_at: string;
   updated_at: string;
+  list_id: string | null;
 };
 
-export async function getStoredShoppingListItems(db: SQLiteDatabase) {
+export async function getStoredShoppingListItems(
+  db: SQLiteDatabase,
+  listId?: string
+) {
+  if (listId) {
+    return db.getAllAsync<ShoppingListItemRow>(
+      `
+      SELECT *
+      FROM shopping_list_items
+      WHERE list_id = ?
+      ORDER BY created_at ASC
+      `,
+      [listId]
+    );
+  }
+
   return db.getAllAsync<ShoppingListItemRow>(
     `
     SELECT *
@@ -43,9 +59,10 @@ export async function insertShoppingListItem(
       checked,
       source_recipe_id,
       created_at,
-      updated_at
+      updated_at,
+      list_id
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
     [
       item.id,
@@ -59,6 +76,7 @@ export async function insertShoppingListItem(
       item.sourceRecipeId ?? null,
       item.createdAt,
       item.updatedAt,
+      item.listId ?? DEFAULT_SHOPPING_LIST_ID,
     ]
   );
 }
@@ -119,6 +137,38 @@ export async function deleteAllShoppingListItems(db: SQLiteDatabase) {
   await db.runAsync(`DELETE FROM shopping_list_items`);
 }
 
+export async function deleteShoppingListItemsForList(
+  db: SQLiteDatabase,
+  listId: string
+) {
+  await db.runAsync(
+    `
+    DELETE FROM shopping_list_items
+    WHERE list_id = ?
+    `,
+    [listId]
+  );
+}
+
+export async function getShoppingListItemSummaries(db: SQLiteDatabase) {
+  return db.getAllAsync<{
+    list_id: string;
+    item_count: number;
+    checked_count: number;
+    total_estimated_price: number;
+  }>(
+    `
+    SELECT
+      list_id,
+      COUNT(*) AS item_count,
+      SUM(CASE WHEN checked = 1 THEN 1 ELSE 0 END) AS checked_count,
+      SUM(estimated_price) AS total_estimated_price
+    FROM shopping_list_items
+    GROUP BY list_id
+    `
+  );
+}
+
 export function mapShoppingListRowToItem(
   row: ShoppingListItemRow
 ): ShoppingListItem {
@@ -134,5 +184,6 @@ export function mapShoppingListRowToItem(
     sourceRecipeId: row.source_recipe_id ?? undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    listId: row.list_id ?? DEFAULT_SHOPPING_LIST_ID,
   };
 }

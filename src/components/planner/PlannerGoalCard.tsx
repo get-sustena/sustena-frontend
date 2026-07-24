@@ -1,9 +1,10 @@
 import { Pressable, StyleSheet, View, ViewStyle } from "react-native";
 import { theme } from "../../theme/theme";
 import { AppText } from "../ui/AppText";
+import { Icon, IconName } from "../ui/Icon";
 
 type Props = {
-  icon: string;
+  icon: IconName;
   label: string;
   title: string;
   onPress?: () => void;
@@ -18,7 +19,9 @@ export function PlannerGoalCard({ icon, label, title, onPress, style }: Props) {
     >
       <View style={styles.decorCircle} />
 
-      <AppText style={styles.icon}>{icon}</AppText>
+      <View style={styles.iconWrap}>
+        <Icon name={icon} size={20} color={theme.colors.primary} />
+      </View>
       <AppText style={styles.label}>{label}</AppText>
       <AppText style={styles.title}>{title}</AppText>
     </Pressable>
@@ -51,8 +54,7 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.98 }],
     borderColor: theme.colors.navy,
   },
-  icon: {
-    fontSize: 26,
+  iconWrap: {
     marginBottom: 10,
   },
   label: {

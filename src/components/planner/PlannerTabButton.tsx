@@ -10,15 +10,21 @@ type Props = {
   onPress: (value: PlannerTab) => void;
 };
 
-export function PlannerTabButton({ label, value, active, onPress }: Props) {
+export function PlannerTabButton({
+  label,
+  value,
+  active,
+  onPress,
+}: Props) {
   return (
     <Pressable
       onPress={() => onPress(value)}
       style={({ pressed }) => [
         styles.button,
-        active && styles.activeButton,
         pressed && styles.pressed,
       ]}
+      accessibilityRole="tab"
+      accessibilityState={{ selected: active }}
     >
       <AppText style={[styles.label, active && styles.activeLabel]}>
         {label}
@@ -30,26 +36,23 @@ export function PlannerTabButton({ label, value, active, onPress }: Props) {
 const styles = StyleSheet.create({
   button: {
     flex: 1,
-    minHeight: 38,
-    borderRadius: 10,
+    minHeight: 42,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 4,
-  },
-  activeButton: {
-    backgroundColor: theme.colors.navy,
+    zIndex: 1,
   },
   pressed: {
-    opacity: 0.82,
-    transform: [{ scale: 0.98 }],
+    opacity: 0.7,
   },
   label: {
-    fontFamily: theme.fontFamily.bodyBold,
-    fontSize: 10,
-    color: theme.colors.textMuted,
+    fontFamily: theme.fontFamily.bodyMedium,
+    fontSize: 13.5,
+    color: theme.colors.textMedium,
     textAlign: "center",
   },
   activeLabel: {
-    color: theme.colors.onDark,
+    fontFamily: theme.fontFamily.bodySemiBold,
+    color: theme.colors.text,
   },
 });

@@ -3,15 +3,18 @@
 import * as Haptics from "expo-haptics";
 import { Pressable, StyleSheet, View } from "react-native";
 import { formatNaira } from "../../lib/formatters";
-import { capitalizeWords } from "../../lib/textFormatters";
+import {
+  capitalizeWords,
+  formatShoppingQuantity,
+} from "../../lib/textFormatters";
 import { theme } from "../../theme/theme";
 import { ShoppingListItem } from "../../types/shoppingList";
 import { AppText } from "../ui/AppText";
+import { Icon } from "../ui/Icon";
 
 type Props = {
   item: ShoppingListItem;
   onToggle: (itemId: string) => void;
-  onRemove?: (itemId: string) => void;
 };
 
 export function ShoppingListItemRow({ item, onToggle }: Props) {
@@ -26,10 +29,10 @@ export function ShoppingListItemRow({ item, onToggle }: Props) {
         onPress={handleToggle}
         style={[styles.checkbox, item.checked && styles.checkboxChecked]}
       >
-        {item.checked ? <AppText style={styles.checkmark}>✓</AppText> : null}
+        {item.checked ? (
+          <Icon name="check" size={15} color={theme.colors.onDark} strokeWidth={2.6} />
+        ) : null}
       </Pressable>
-
-      <AppText style={styles.emoji}>{item.emoji}</AppText>
 
       <View style={styles.info}>
         <AppText
@@ -39,12 +42,14 @@ export function ShoppingListItemRow({ item, onToggle }: Props) {
           {capitalizeWords(item.name)}
         </AppText>
 
-        <AppText style={styles.quantity}>{item.quantity}</AppText>
+        <AppText style={styles.quantity}>
+          {formatShoppingQuantity(item.quantity)}
+        </AppText>
       </View>
 
-      {item.estimatedPrice !== null ? (
-        <AppText style={styles.price}>{formatNaira(item.estimatedPrice)}</AppText>
-      ) : null}
+      <AppText style={styles.price}>
+        {formatNaira(item.estimatedPrice)}
+      </AppText>
     </View>
   );
 }
@@ -53,54 +58,48 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",
-    gap: theme.spacing.md,
-    paddingVertical: 13,
+    gap: 12,
+    paddingVertical: 11,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
   checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
-    borderWidth: 2,
-    borderColor: theme.colors.border2,
+    width: 24,
+    height: 24,
+    borderRadius: 7,
+    borderWidth: 1.5,
+    borderColor: theme.colors.border,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: theme.colors.surface,
+    backgroundColor: theme.colors.card,
   },
   checkboxChecked: {
-    backgroundColor: theme.colors.green,
-    borderColor: theme.colors.green,
-  },
-  checkmark: {
-    fontFamily: theme.fontFamily.bodyBold,
-    fontSize: 13,
-    color: theme.colors.white,
-  },
-  emoji: {
-    fontSize: 22,
+    backgroundColor: theme.colors.navy,
+    borderWidth: 0,
   },
   info: {
     flex: 1,
+    minWidth: 0,
   },
   name: {
-    fontFamily: theme.fontFamily.bodyBold,
+    fontFamily: theme.fontFamily.body,
     fontSize: 14,
-    color: theme.colors.navy,
+    color: theme.colors.text,
   },
   nameChecked: {
-    color: theme.colors.textDim,
+    color: "#9AA298",
     textDecorationLine: "line-through",
   },
   quantity: {
-    fontFamily: theme.fontFamily.body,
-    fontSize: 11,
-    color: theme.colors.textMuted,
+    fontFamily: theme.fontFamily.mono,
+    fontSize: 13,
+    color: theme.colors.textMedium,
     marginTop: 2,
   },
   price: {
-    fontFamily: theme.fontFamily.bodyBold,
-    fontSize: 12,
-    color: theme.colors.textMedium,
+    fontFamily: theme.fontFamily.monoMedium,
+    fontSize: 15,
+    color: theme.colors.text,
+    flexShrink: 0,
   },
 });

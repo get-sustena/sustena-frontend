@@ -1,6 +1,8 @@
 // src/store/shoppingListStore.ts
 
 import { create } from "zustand";
+import { formatQuantityValue } from "../lib/scaling";
+import { extractLeadingQuantity } from "../lib/quantityParsing";
 import { ShoppingListItem } from "../types/shoppingList";
 
 type ShoppingListState = {
@@ -92,21 +94,54 @@ function mergeShoppingListItems(
   const items = [...existingItems];
 
   for (const newItem of newItems) {
-    const existingItem = items.find(
+    const existingIndex = items.findIndex(
       (item) =>
         item.name.toLowerCase() === newItem.name.toLowerCase() &&
-        item.quantity === newItem.quantity &&
         item.category === newItem.category
     );
 
-    if (existingItem) {
-      // For now, avoid duplicating the exact same item.
-      // Later, when ingredients are structured, we can merge quantities properly.
+    if (existingIndex === -1) {
+      items.push(newItem);
       continue;
     }
 
-    items.push(newItem);
+    const existingItem = items[existingIndex];
+    const mergedQuantity = mergeQuantities(
+      existingItem.quantity,
+      newItem.quantity
+    );
+
+    if (mergedQuantity === null) {
+      // Units don't match or aren't parseable — keep both lines rather
+      // than dropping or silently combining incompatible quantities.
+      items.push(newItem);
+      continue;
+    }
+
+    items[existingIndex] = {
+      ...existingItem,
+      quantity: mergedQuantity,
+      estimatedPrice: existingItem.estimatedPrice + newItem.estimatedPrice,
+      updatedAt: new Date().toISOString(),
+    };
   }
 
   return items;
+}
+
+function mergeQuantities(a: string, b: string): string | null {
+  const parsedA = extractLeadingQuantity(a);
+  const parsedB = extractLeadingQuantity(b);
+
+  if (!parsedA || !parsedB) {
+    return a === b ? a : null;
+  }
+
+  if (parsedA.unit.toLowerCase() !== parsedB.unit.toLowerCase()) {
+    return null;
+  }
+
+  const sum = formatQuantityValue(parsedA.value + parsedB.value);
+
+  return parsedA.unit ? `${sum} ${parsedA.unit}` : sum;
 }

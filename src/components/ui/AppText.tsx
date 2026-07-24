@@ -6,6 +6,7 @@ type AppTextVariant =
   | "muted"
   | "dim"
   | "label"
+  | "mono"
   | "title"
   | "display"
   | "button";
@@ -21,41 +22,46 @@ export function AppText({ variant = "body", style, ...props }: Props) {
 const styles = StyleSheet.create({
   body: {
     fontFamily: theme.fontFamily.body,
-    fontSize: 14,
+    fontSize: theme.fontSize.md,
     color: theme.colors.text,
   },
   muted: {
     fontFamily: theme.fontFamily.body,
-    fontSize: 13,
+    fontSize: theme.fontSize.sm,
     color: theme.colors.textMuted,
   },
   dim: {
     fontFamily: theme.fontFamily.body,
-    fontSize: 12,
+    fontSize: theme.fontSize.xs,
     color: theme.colors.textDim,
   },
   label: {
-    fontFamily: theme.fontFamily.bodyBold,
-    fontSize: 10,
+    fontFamily: theme.fontFamily.mono,
+    fontSize: theme.fontSize.xs,
     color: theme.colors.textMuted,
-    letterSpacing: 1.5,
+    letterSpacing: 1.2,
     textTransform: "uppercase",
+  },
+  mono: {
+    fontFamily: theme.fontFamily.mono,
+    fontSize: theme.fontSize.md,
+    color: theme.colors.text,
   },
   title: {
     fontFamily: theme.fontFamily.display,
-    fontSize: 24,
+    fontSize: theme.fontSize["3xl"],
     color: theme.colors.navy,
-    lineHeight: 28,
+    lineHeight: 30,
   },
   display: {
     fontFamily: theme.fontFamily.display,
-    fontSize: 34,
+    fontSize: theme.fontSize["4xl"],
     color: theme.colors.navy,
-    lineHeight: 40,
+    lineHeight: 38,
   },
   button: {
     fontFamily: theme.fontFamily.bodyBold,
-    fontSize: 14,
+    fontSize: theme.fontSize.md,
     color: theme.colors.onDark,
   },
 });

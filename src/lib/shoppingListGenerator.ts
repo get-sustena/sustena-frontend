@@ -101,7 +101,7 @@ function getIngredientAmount({
   fallbackUnitMode: UnitMode;
 }) {
   if (selectedUnitMode === "metric" || selectedUnitMode === "cups" || selectedUnitMode === "imperial") {
-    return ingredient.amount[selectedUnitMode];
+    return ingredient.amount[selectedUnitMode] ?? getFallbackAmount(ingredient, fallbackUnitMode);
   }
 
   const selectedIndex = Number(selectedUnitMode);
@@ -111,7 +111,14 @@ function getIngredientAmount({
 
   return (
     selectedAvailableUnit?.label ??
+    getFallbackAmount(ingredient, fallbackUnitMode)
+  );
+}
+
+function getFallbackAmount(ingredient: RecipeIngredient, fallbackUnitMode: UnitMode) {
+  return (
     ingredient.displayText ??
-    ingredient.amount[fallbackUnitMode]
+    ingredient.amount[fallbackUnitMode] ??
+    (ingredient.rawText || "as needed")
   );
 }

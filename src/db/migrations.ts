@@ -6,7 +6,7 @@ import {
   runWithSqliteRetry,
 } from "./sqliteGuards";
 
-const DATABASE_VERSION = 3;
+const DATABASE_VERSION = 6;
 let migrationQueue = Promise.resolve();
 
 export async function migrateDbIfNeeded(db: SQLiteDatabase) {
@@ -185,6 +185,88 @@ async function runMigrations(db: SQLiteDatabase) {
       );
 
       PRAGMA user_version = 3;
+    `);
+  }
+
+  const versionAfterRecipes = versionAfterFavorites < 3 ? 3 : versionAfterFavorites;
+
+  if (versionAfterRecipes < 4) {
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS sync_queue (
+        id TEXT PRIMARY KEY NOT NULL,
+        kind TEXT NOT NULL,
+        payload_json TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        attempts INTEGER NOT NULL DEFAULT 0
+      );
+
+      PRAGMA user_version = 4;
+    `);
+  }
+
+  const versionAfterSyncQueue = versionAfterRecipes < 4 ? 4 : versionAfterRecipes;
+
+  // Local-only Complete Profile answers — no backend fields exist for any of
+  // this yet, so it never touches sync_queue. See redesign plan Phase 0.8.
+  if (versionAfterSyncQueue < 5) {
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS local_profile_answers (
+        id TEXT PRIMARY KEY NOT NULL,
+        nickname TEXT,
+        gender TEXT,
+        birthday_month INTEGER,
+        birthday_day INTEGER,
+        lifestyle TEXT,
+        remote_flex TEXT,
+        experience TEXT,
+        goals_json TEXT NOT NULL,
+        challenges_json TEXT NOT NULL,
+        habit_who TEXT,
+        habit_freq TEXT,
+        habit_time TEXT,
+        heard TEXT,
+        heard_other TEXT,
+        updated_at TEXT NOT NULL
+      );
+
+      PRAGMA user_version = 5;
+    `);
+  }
+
+  const versionAfterProfileAnswers =
+    versionAfterSyncQueue < 5 ? 5 : versionAfterSyncQueue;
+
+  // Local-only multi-list shopping support. Exactly one list (is_default_synced_list = 1)
+  // stays wired to the real shopping-list API/sync queue; every other list is pure
+  // local CRUD. See redesign plan Phase 0.9.
+  if (versionAfterProfileAnswers < 6) {
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS shopping_lists (
+        id TEXT PRIMARY KEY NOT NULL,
+        name TEXT NOT NULL,
+        is_default_synced_list INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      ALTER TABLE shopping_list_items ADD COLUMN list_id TEXT;
+    `);
+
+    const defaultListId = "default";
+    const now = new Date().toISOString();
+
+    await db.runAsync(
+      `
+      INSERT INTO shopping_lists (id, name, is_default_synced_list, created_at, updated_at)
+      VALUES (?, ?, 1, ?, ?)
+      `,
+      [defaultListId, "My Shopping List", now, now]
+    );
+
+    await db.execAsync(`
+      UPDATE shopping_list_items SET list_id = '${defaultListId}' WHERE list_id IS NULL;
+
+      PRAGMA user_version = 6;
     `);
   }
 }

@@ -3,13 +3,14 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { ReactNode, useEffect } from "react";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { useAppBootstrap } from "../../hooks/useAppBootstrap";
 import { useAuthBootstrap } from "../../hooks/useAuthBootstrap";
 import { setAuthFailureHandler } from "../../lib/api/authEvents";
 import { useAuthStore } from "../../store/authStore";
 import { theme } from "../../theme/theme";
 import { AppText } from "../ui/AppText";
+import { ProgressLoader } from "../ui/ProgressLoader";
 
 type Props = {
   children: ReactNode;
@@ -35,12 +36,7 @@ export function AppBootstrapGate({ children }: Props) {
   }, [clearAuth, queryClient]);
 
   if (isBootstrapping) {
-    return (
-      <View style={styles.container}>
-        <ActivityIndicator color={theme.colors.primary} />
-        <AppText style={styles.text}>Preparing CookEase…</AppText>
-      </View>
-    );
+    return <ProgressLoader variant="screen" message="Preparing Sustena..." />;
   }
 
   if (bootstrapError) {

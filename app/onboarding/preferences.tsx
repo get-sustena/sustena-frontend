@@ -19,8 +19,17 @@ export default function DietaryPreferencesOnboardingScreen() {
   const completeOnboarding = usePreferencesStore(
     (state) => state.completeOnboarding
   );
+  const hasCompletedOnboarding = usePreferencesStore(
+    (state) => state.hasCompletedOnboarding
+  );
 
   function handleFinish() {
+    // Editing from Profile after onboarding is already done: just return there.
+    if (hasCompletedOnboarding) {
+      router.back();
+      return;
+    }
+
     completeOnboarding();
     router.replace("/(tabs)/home");
   }
@@ -30,18 +39,17 @@ export default function DietaryPreferencesOnboardingScreen() {
       stepLabel="Step 2 of 2"
       title="Your food style?"
       subtitle="Tell us how you eat and we’ll find the perfect Nigerian and continental recipes for you."
-      heroEmoji="🥗"
-      heroIcon="🍽️"
+      heroIcon="vegetarian"
       activeStep={2}
       footer={
         <View style={styles.actions}>
           <Button
-            title="← Back"
+            title="Back"
             variant="ghost"
             onPress={() => router.back()}
           />
           <Button
-            title="Get Started 🎉"
+            title="Get Started"
             style={styles.primaryButton}
             onPress={handleFinish}
           />

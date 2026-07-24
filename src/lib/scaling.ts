@@ -1,5 +1,10 @@
 // src/lib/scaling.ts
 
+import {
+  NUMERIC_TOKEN_PATTERN_GLOBAL,
+  parseQuantityToken,
+} from "./quantityParsing";
+
 export function scaleCost({
   baseCost,
   baseServings,
@@ -13,7 +18,7 @@ export function scaleCost({
     return null;
   }
 
-  return Math.round((baseCost * selectedServings) / baseServings);
+  return Math.round((baseCost * selectedServings) / getSafeBaseServings(baseServings));
 }
 
 export function scaleAmountText({
@@ -21,32 +26,37 @@ export function scaleAmountText({
   baseServings,
   selectedServings,
 }: {
-  amount: string;
+  amount: string | null | undefined;
   baseServings: number;
   selectedServings: number;
 }) {
+  if (!amount) {
+    return "";
+  }
+
   const normalizedAmount = amount.trim();
 
   if (shouldSkipScaling(normalizedAmount)) {
     return normalizedAmount;
   }
 
-  const factor = selectedServings / baseServings;
+  const factor = selectedServings / getSafeBaseServings(baseServings);
 
-  return normalizedAmount.replace(
-    /(\d+\.\d+|\d+\/\d+|\d+|½|⅓|⅔|¼|¾|⅛|⅜|⅝|⅞)/g,
-    (match) => {
-      const numericValue = parseQuantity(match);
+  return normalizedAmount.replace(NUMERIC_TOKEN_PATTERN_GLOBAL, (match) => {
+    const numericValue = parseQuantityToken(match);
 
-      if (numericValue === null) {
-        return match;
-      }
-
-      const scaledValue = numericValue * factor;
-
-      return formatScaledQuantity(scaledValue);
+    if (numericValue === null) {
+      return match;
     }
-  );
+
+    const scaledValue = numericValue * factor;
+
+    return formatQuantityValue(scaledValue);
+  });
+}
+
+function getSafeBaseServings(baseServings: number) {
+  return Number.isFinite(baseServings) && baseServings > 0 ? baseServings : 1;
 }
 
 function shouldSkipScaling(amount: string) {
@@ -62,58 +72,36 @@ function shouldSkipScaling(amount: string) {
   );
 }
 
-function parseQuantity(value: string) {
-  const vulgarFractions: Record<string, number> = {
-    "½": 1 / 2,
-    "⅓": 1 / 3,
-    "⅔": 2 / 3,
-    "¼": 1 / 4,
-    "¾": 3 / 4,
-    "⅛": 1 / 8,
-    "⅜": 3 / 8,
-    "⅝": 5 / 8,
-    "⅞": 7 / 8,
-  };
+const FRACTION_MAP: Record<number, string> = {
+  0.125: "⅛",
+  0.25: "¼",
+  0.375: "⅜",
+  0.5: "½",
+  0.625: "⅝",
+  0.75: "¾",
+  0.875: "⅞",
+};
 
-  if (value in vulgarFractions) {
-    return vulgarFractions[value];
+export function formatQuantityValue(value: number) {
+  if (!Number.isFinite(value) || value <= 0) {
+    return "0";
   }
 
-  if (value.includes("/")) {
-    const [numerator, denominator] = value.split("/").map(Number);
+  const rounded = Math.round(value * 8) / 8;
+  // Never collapse a nonzero quantity down to "0" — floor at the smallest
+  // displayable fraction instead of silently dropping the ingredient.
+  const clamped = rounded === 0 ? 0.125 : rounded;
 
-    if (!numerator || !denominator) {
-      return null;
-    }
-
-    return numerator / denominator;
+  if (Number.isInteger(clamped)) {
+    return String(clamped);
   }
 
-  const parsed = Number(value);
-
-  return Number.isNaN(parsed) ? null : parsed;
-}
-
-function formatScaledQuantity(value: number) {
-  const rounded = Math.round(value * 4) / 4;
-
-  if (Number.isInteger(rounded)) {
-    return String(rounded);
-  }
-
-  const whole = Math.floor(rounded);
-  const fraction = rounded - whole;
-
-  const fractionMap: Record<number, string> = {
-    0.25: "¼",
-    0.5: "½",
-    0.75: "¾",
-  };
-
-  const fractionText = fractionMap[fraction];
+  const whole = Math.floor(clamped);
+  const fraction = clamped - whole;
+  const fractionText = FRACTION_MAP[fraction];
 
   if (!fractionText) {
-    return String(Number(rounded.toFixed(2)));
+    return String(Number(clamped.toFixed(2)));
   }
 
   if (whole === 0) {

@@ -1,11 +1,23 @@
-import { RecipeSearchParams } from "../../types/api";
+import { IngredientSearchParams, RecipeSearchParams } from "../../types/api";
 
 export const queryKeys = {
   auth: {
     me: ["auth", "me"] as const,
   },
+  units: {
+    all: ["units"] as const,
+  },
+  ingredients: {
+    list: (params?: IngredientSearchParams) =>
+      ["ingredients", "list", params ?? {}] as const,
+    categories: ["ingredients", "categories"] as const,
+    catalog: ["ingredients", "catalog"] as const,
+  },
   preferences: {
     me: ["preferences", "me"] as const,
+  },
+  profileAnswers: {
+    me: ["profile-answers", "me"] as const,
   },
   recipes: {
     all: ["recipes"] as const,
@@ -20,6 +32,9 @@ export const queryKeys = {
   },
   shoppingList: {
     active: ["shopping-list", "active"] as const,
+  },
+  shoppingLists: {
+    all: ["shopping-lists"] as const,
   },
   planner: {
     budget: (payload: unknown) => ["planner", "budget", payload] as const,

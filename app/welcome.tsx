@@ -1,187 +1,230 @@
 import { router } from "expo-router";
-import { StyleSheet, View } from "react-native";
+import { StatusBar } from "expo-status-bar";
+import { useEffect } from "react";
+import {
+  Pressable,
+  StyleSheet,
+  useWindowDimensions,
+  View,
+} from "react-native";
+import Animated, {
+  Easing,
+  interpolate,
+  useAnimatedProps,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withTiming,
+} from "react-native-reanimated";
+import Svg, { Path } from "react-native-svg";
 import { AppText } from "../src/components/ui/AppText";
-import { Button } from "../src/components/ui/Button";
-import { Screen } from "../src/components/ui/Screen";
+import { LOGO_PATH_D } from "../src/components/ui/Logo";
 import { theme } from "../src/theme/theme";
 
+const REFERENCE_WIDTH = 390;
+const REFERENCE_HEIGHT = 844;
+const AnimatedPath = Animated.createAnimatedComponent(Path);
+
 export default function WelcomeScreen() {
+  const { width, height } = useWindowDimensions();
+  const logoProgress = useSharedValue(0);
+  const drawProgress = useSharedValue(0);
+  const wordProgress = useSharedValue(0);
+  const missionProgress = useSharedValue(0);
+  const ctaProgress = useSharedValue(0);
+  const scaleX = width / REFERENCE_WIDTH;
+  const scaleY = height / REFERENCE_HEIGHT;
+
+  useEffect(() => {
+    const designEase = Easing.bezier(0.2, 0, 0, 1);
+
+    drawProgress.value = withTiming(1, {
+      duration: 1300,
+      easing: Easing.linear,
+    });
+    logoProgress.value = withDelay(
+      1292,
+      withTiming(1, { duration: 608, easing: designEase })
+    );
+    wordProgress.value = withDelay(
+      1900,
+      withTiming(1, { duration: 700, easing: designEase })
+    );
+    missionProgress.value = withDelay(
+      2600,
+      withTiming(1, { duration: 400, easing: Easing.out(Easing.cubic) })
+    );
+    ctaProgress.value = withDelay(
+      3200,
+      withTiming(1, { duration: 400, easing: designEase })
+    );
+  }, [
+    ctaProgress,
+    drawProgress,
+    logoProgress,
+    missionProgress,
+    wordProgress,
+  ]);
+
+  const logoStyle = useAnimatedStyle(() => ({
+    left:
+      interpolate(logoProgress.value, [0, 1], [65.49, 85.64]) * scaleX,
+    top: interpolate(logoProgress.value, [0, 1], [285, 343]) * scaleY,
+    width:
+      interpolate(logoProgress.value, [0, 1], [259.02, 58.71]) * scaleX,
+    height: interpolate(logoProgress.value, [0, 1], [150, 34]) * scaleY,
+  }));
+
+  const pathProps = useAnimatedProps(() => ({
+    strokeDashoffset: 5000 * (1 - drawProgress.value),
+  }));
+
+  const wordRevealStyle = useAnimatedStyle(() => ({
+    width: 150 * scaleX * wordProgress.value,
+  }));
+
+  const missionStyle = useAnimatedStyle(() => ({
+    opacity: missionProgress.value,
+  }));
+
+  const ctaStyle = useAnimatedStyle(() => ({
+    opacity: ctaProgress.value,
+    transform: [{ translateY: (1 - ctaProgress.value) * 14 }],
+  }));
+
   return (
-    <Screen>
-      <View style={styles.container}>
-        <Decorations />
+    <View style={styles.screen}>
+      <StatusBar style="dark" backgroundColor={theme.colors.card} />
 
-        <View style={styles.content}>
-          <View style={styles.logoIcon}>
-            <AppText style={styles.logoEmoji}>🍲</AppText>
-          </View>
+      <Animated.View pointerEvents="none" style={[styles.logo, logoStyle]}>
+        <Svg
+          width="100%"
+          height="100%"
+          viewBox="30.497 68.843 153.503 88.893"
+        >
+          <AnimatedPath
+            animatedProps={pathProps}
+            d={LOGO_PATH_D}
+            fill="none"
+            stroke={theme.colors.navy}
+            strokeWidth={12}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeDasharray="5000 5000"
+          />
+        </Svg>
+      </Animated.View>
 
-          <AppText style={styles.logoText}>
-            Cook<AppText style={styles.logoEmphasis}>Ease</AppText>
-          </AppText>
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          styles.wordReveal,
+          {
+            left: 154.35 * scaleX,
+            top: 343 * scaleY,
+            height: 34 * scaleY,
+          },
+          wordRevealStyle,
+        ]}
+      >
+        <AppText
+          numberOfLines={1}
+          style={[styles.wordmark, { width: 150 * scaleX }]}
+        >
+          Sustena
+        </AppText>
+      </Animated.View>
 
-          <AppText style={styles.tagline}>
-            The operating system of the kitchen
-          </AppText>
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          styles.missionWrap,
+          {
+            left: 34 * scaleX,
+            right: 34 * scaleX,
+            top: 404 * scaleY,
+          },
+          missionStyle,
+        ]}
+      >
+        <AppText style={styles.mission}>
+          The easiest answer to &apos;what&apos;s for dinner?&apos;
+        </AppText>
+      </Animated.View>
 
-          <AppText style={styles.subtitle}>
-            We do the thinking.{"\n"}You do the cooking.
-          </AppText>
-
-          <View style={styles.actions}>
-            <Button
-              title="Get Started →"
-              variant="primary"
-              onPress={() =>
-                router.push({
-                  pathname: "/auth",
-                  params: { mode: "signup" },
-                })
-              }
-            />
-
-            <Button
-              title="I already have an account"
-              variant="outline"
-              onPress={() =>
-                router.push({
-                  pathname: "/auth",
-                  params: { mode: "signin" },
-                })
-              }
-            />
-          </View>
-        </View>
-      </View>
-    </Screen>
-  );
-}
-
-function Decorations() {
-  return (
-    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-      <AppText style={[styles.deco, styles.decoTomato]}>🍅</AppText>
-      <AppText style={[styles.deco, styles.decoHerb]}>🌿</AppText>
-      <AppText style={[styles.deco, styles.decoPepper]}>🌶️</AppText>
-      <AppText style={[styles.deco, styles.decoOnion]}>🧅</AppText>
-      <AppText style={[styles.deco, styles.decoLemon]}>🍋</AppText>
-      <AppText style={[styles.deco, styles.decoPlantain]}>🍌</AppText>
-      <AppText style={[styles.deco, styles.decoBroccoli]}>🥦</AppText>
-      <AppText style={[styles.deco, styles.decoGrain]}>🌾</AppText>
+      <Animated.View
+        style={[
+          styles.ctaWrap,
+          {
+            left: 34 * scaleX,
+            right: 34 * scaleX,
+            bottom: 56 * scaleY,
+          },
+          ctaStyle,
+        ]}
+      >
+        <Pressable
+          onPress={() => router.push("/onboarding/product")}
+          style={({ pressed }) => [
+            styles.ctaButton,
+            pressed && styles.ctaPressed,
+          ]}
+        >
+          <AppText style={styles.ctaText}>Get Started</AppText>
+        </Pressable>
+      </Animated.View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     flex: 1,
-    backgroundColor: theme.colors.cream,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 40,
+    backgroundColor: theme.colors.card,
   },
-  content: {
-    width: "100%",
-    alignItems: "center",
-  },
-  logoIcon: {
-    width: 88,
-    height: 88,
-    borderRadius: 26,
-    backgroundColor: theme.colors.navy,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 16,
-  },
-  logoEmoji: {
-    fontSize: 40,
-  },
-  logoText: {
-    fontFamily: theme.fontFamily.display,
-    fontSize: 46,
-    color: theme.colors.navy,
-    letterSpacing: -1.5,
-    lineHeight: 52,
-  },
-  logoEmphasis: {
-    fontFamily: theme.fontFamily.display,
-    fontSize: 46,
-    color: theme.colors.orange,
-    fontStyle: "italic",
-  },
-  tagline: {
-    fontFamily: theme.fontFamily.body,
-    fontSize: 12,
-    color: theme.colors.textMuted,
-    letterSpacing: 2.5,
-    textTransform: "uppercase",
-    marginTop: 6,
-    marginBottom: 48,
-    textAlign: "center",
-  },
-  subtitle: {
-    fontFamily: theme.fontFamily.body,
-    fontSize: 13,
-    color: theme.colors.textMedium,
-    lineHeight: 21,
-    textAlign: "center",
-    marginBottom: 48,
-  },
-  actions: {
-    width: "100%",
-    gap: theme.spacing.md,
-  },
-  deco: {
+  logo: {
     position: "absolute",
-    opacity: 0.14,
   },
-  decoTomato: {
-    top: "6%",
-    left: "4%",
-    fontSize: 44,
-    transform: [{ rotate: "-15deg" }],
+  wordReveal: {
+    position: "absolute",
+    justifyContent: "center",
+    overflow: "hidden",
   },
-  decoHerb: {
-    top: "12%",
-    right: "5%",
-    fontSize: 36,
-    transform: [{ rotate: "20deg" }],
+  wordmark: {
+    fontFamily: theme.fontFamily.displayExtraBold,
+    fontSize: 29,
+    lineHeight: 34,
+    letterSpacing: 0,
+    color: theme.colors.linkGreen,
   },
-  decoPepper: {
-    top: "28%",
-    left: -8,
-    fontSize: 52,
-    transform: [{ rotate: "-25deg" }],
+  missionWrap: {
+    position: "absolute",
   },
-  decoOnion: {
-    top: "55%",
-    left: "6%",
-    fontSize: 38,
-    transform: [{ rotate: "12deg" }],
+  mission: {
+    fontFamily: theme.fontFamily.body,
+    fontStyle: "italic",
+    fontSize: 14,
+    lineHeight: 21,
+    color: theme.colors.textMuted,
+    textAlign: "center",
   },
-  decoLemon: {
-    top: "62%",
-    right: "4%",
-    fontSize: 40,
-    transform: [{ rotate: "-18deg" }],
+  ctaWrap: {
+    position: "absolute",
   },
-  decoPlantain: {
-    bottom: "18%",
-    left: "3%",
-    fontSize: 46,
-    transform: [{ rotate: "-22deg" }],
+  ctaButton: {
+    minHeight: 48,
+    borderRadius: 999,
+    backgroundColor: theme.colors.accent,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 18,
   },
-  decoBroccoli: {
-    bottom: "12%",
-    right: "6%",
-    fontSize: 42,
-    transform: [{ rotate: "16deg" }],
+  ctaPressed: {
+    transform: [{ scale: 0.98 }],
   },
-  decoGrain: {
-    top: "50%",
-    left: "44%",
-    fontSize: 30,
-    opacity: 0.1,
-    transform: [{ rotate: "8deg" }],
+  ctaText: {
+    fontFamily: theme.fontFamily.bodySemiBold,
+    fontSize: 15,
+    color: theme.colors.text,
   },
 });

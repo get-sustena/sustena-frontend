@@ -2,15 +2,21 @@
 
 import { router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
+import { LinearGradient } from "expo-linear-gradient";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useMealPlanMutation } from "../../hooks/api/usePlanner";
 import { apiRecipeToLocalRecipe } from "../../lib/api/adapters";
 import { getApiErrorMessage } from "../../lib/api/errors";
 import { theme } from "../../theme/theme";
 import { PlannerMeal } from "../../types/api";
+import { RecipePhoto } from "../recipe/RecipePhoto";
 import { AppText } from "../ui/AppText";
-import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
+import { Icon } from "../ui/Icon";
+import {
+  MEAL_PLAN_LOADING_MESSAGES,
+  ProgressLoader,
+} from "../ui/ProgressLoader";
 
 export function TimetablePlannerPane() {
   const mealPlanMutation = useMealPlanMutation();
@@ -48,11 +54,7 @@ export function TimetablePlannerPane() {
           message={getApiErrorMessage(mealPlanMutation.error)}
         />
       ) : mealPlanMutation.isPending ? (
-        <EmptyState
-          icon="📅"
-          title="Generating plan"
-          message="Building a 7-day meal plan from published recipes."
-        />
+        <ProgressLoader messages={MEAL_PLAN_LOADING_MESSAGES} />
       ) : groupedMeals.length === 0 ? (
         <EmptyState
           icon="📅"
@@ -83,14 +85,6 @@ export function TimetablePlannerPane() {
                   >
                     {getWeekdayLabel(group.day)}
                   </AppText>
-                  <AppText
-                    style={[
-                      styles.dayTabSubLabel,
-                      isActive && styles.dayTabLabelActive,
-                    ]}
-                  >
-                    Day {group.day}
-                  </AppText>
                 </Pressable>
               );
             })}
@@ -111,31 +105,35 @@ export function TimetablePlannerPane() {
                       })
                     }
                     style={({ pressed }) => [
-                      styles.mealSlot,
+                      styles.mealRow,
                       pressed && styles.pressed,
                     ]}
                   >
-                    <View style={styles.timeBox}>
-                      <AppText style={styles.timeLabel}>
-                        {formatMealSlot(meal.mealSlot)}
-                      </AppText>
-                    </View>
-
-                    <View style={styles.divider} />
-
-                    <AppText style={styles.mealEmoji}>{recipe.emoji}</AppText>
+                    <RecipePhoto
+                      imageUrl={recipe.imageUrl}
+                      style={styles.mealThumb}
+                    />
 
                     <View style={styles.mealInfo}>
-                      <AppText style={styles.mealName}>{recipe.name}</AppText>
+                      <AppText style={styles.mealSlotLabel}>
+                        {formatMealSlot(meal.mealSlot)}
+                      </AppText>
+                      <AppText style={styles.mealName} numberOfLines={1}>
+                        {recipe.name}
+                      </AppText>
                       <AppText style={styles.mealMeta}>
-                        {recipe.calories !== null
-                          ? `${recipe.calories} kcal · `
-                          : ""}
                         {recipe.time}
+                        {recipe.calories !== null
+                          ? ` · ${recipe.calories} kcal`
+                          : ""}
                       </AppText>
                     </View>
 
-                    <AppText style={styles.chevron}>›</AppText>
+                    <Icon
+                      name="chevronRight"
+                      size={16}
+                      color={theme.colors.textDim}
+                    />
                   </Pressable>
                 );
               })}
@@ -145,17 +143,30 @@ export function TimetablePlannerPane() {
       )}
 
       <View style={styles.buttonWrap}>
-        <Button
-          title={
-            mealPlanMutation.isPending
+        <Pressable
+          onPress={generateMealPlan}
+          disabled={mealPlanMutation.isPending}
+          style={({ pressed }) => [
+            styles.generateButton,
+            pressed && styles.pressed,
+            mealPlanMutation.isPending && styles.disabledButton,
+          ]}
+        >
+          <LinearGradient
+            colors={["#1D3327", "#0F1B12"]}
+            style={StyleSheet.absoluteFillObject}
+          />
+          {!mealPlanMutation.isPending && groupedMeals.length > 0 ? (
+            <Icon name="swap" size={15} color={theme.colors.onDark} />
+          ) : null}
+          <AppText style={styles.generateButtonText}>
+            {mealPlanMutation.isPending
               ? "Generating..."
               : groupedMeals.length > 0
-                ? "🔄 Regenerate Weekly Plan"
-                : "Generate Weekly Plan"
-          }
-          disabled={mealPlanMutation.isPending}
-          onPress={generateMealPlan}
-        />
+                ? "Regenerate Weekly Plan"
+                : "Generate Weekly Plan"}
+          </AppText>
+        </Pressable>
       </View>
     </View>
   );
@@ -209,17 +220,17 @@ const styles = StyleSheet.create({
     gap: theme.spacing.lg,
   },
   dayTabs: {
-    gap: theme.spacing.sm,
+    gap: 8,
     paddingBottom: theme.spacing.sm,
   },
   dayTab: {
     minWidth: 72,
-    borderRadius: theme.radius.md,
+    borderRadius: 999,
     borderWidth: 1.5,
     borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
+    backgroundColor: theme.colors.card,
+    paddingHorizontal: 16,
+    paddingVertical: 11,
     alignItems: "center",
   },
   dayTabActive: {
@@ -227,77 +238,77 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.navy,
   },
   dayTabLabel: {
-    fontFamily: theme.fontFamily.bodyBold,
+    fontFamily: theme.fontFamily.monoBold,
     fontSize: 13,
-    color: theme.colors.navy,
-  },
-  dayTabSubLabel: {
-    fontFamily: theme.fontFamily.bodyBold,
-    fontSize: 9,
-    color: theme.colors.textMuted,
+    letterSpacing: 0.4,
     textTransform: "uppercase",
-    marginTop: 2,
+    color: theme.colors.textMedium,
   },
   dayTabLabelActive: {
-    color: theme.colors.onDark,
+    color: "#C7CCC0",
   },
   dayMeals: {
     gap: theme.spacing.sm,
   },
-  mealSlot: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1.5,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.lg,
-    padding: theme.spacing.md,
-    marginBottom: theme.spacing.md,
+  mealRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: theme.spacing.md,
+    gap: 10,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
   },
   pressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.98 }],
+    opacity: 0.9,
   },
-  timeBox: {
-    width: 68,
-    alignItems: "center",
+  disabledButton: {
+    opacity: 0.5,
   },
-  timeLabel: {
-    fontFamily: theme.fontFamily.bodyBold,
-    fontSize: 8,
-    color: theme.colors.textMuted,
-    letterSpacing: 1,
-    textTransform: "uppercase",
-  },
-  divider: {
-    width: 1,
-    height: 40,
-    backgroundColor: theme.colors.border,
-  },
-  mealEmoji: {
-    fontSize: 28,
+  mealThumb: {
+    width: 64,
+    height: 64,
+    borderRadius: 16,
   },
   mealInfo: {
     flex: 1,
+    minWidth: 0,
+  },
+  mealSlotLabel: {
+    fontFamily: theme.fontFamily.monoBold,
+    fontSize: 11.5,
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
+    color: theme.colors.goldText,
+    marginBottom: 4,
   },
   mealName: {
-    fontFamily: theme.fontFamily.bodyBold,
-    fontSize: 14,
-    color: theme.colors.navy,
+    fontFamily: theme.fontFamily.bodySemiBold,
+    fontSize: 15,
+    lineHeight: 19,
+    color: theme.colors.text,
   },
   mealMeta: {
-    fontFamily: theme.fontFamily.body,
-    fontSize: 11,
-    color: theme.colors.textMuted,
-    marginTop: 2,
-  },
-  chevron: {
-    fontSize: 22,
-    color: theme.colors.textDim,
+    fontFamily: theme.fontFamily.mono,
+    fontSize: 12.5,
+    color: theme.colors.textMedium,
+    marginTop: 5,
   },
   buttonWrap: {
     paddingHorizontal: 20,
     marginTop: theme.spacing.sm,
+  },
+  generateButton: {
+    height: 58,
+    borderRadius: 999,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    overflow: "hidden",
+  },
+  generateButtonText: {
+    fontFamily: theme.fontFamily.bodyBold,
+    fontSize: 15.5,
+    color: theme.colors.onDark,
   },
 });

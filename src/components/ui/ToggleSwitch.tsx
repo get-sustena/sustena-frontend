@@ -13,6 +13,8 @@ export function ToggleSwitch({ value, onChange }: Props) {
     <Pressable
       onPress={onChange}
       style={[styles.track, value && styles.trackOn]}
+      accessibilityRole="switch"
+      accessibilityState={{ checked: value }}
     >
       <View style={[styles.thumb, value && styles.thumbOn]} />
     </Pressable>
@@ -21,15 +23,15 @@ export function ToggleSwitch({ value, onChange }: Props) {
 
 const styles = StyleSheet.create({
   track: {
-    width: 44,
+    width: 46,
     height: 26,
     borderRadius: 13,
-    backgroundColor: theme.colors.cream2,
+    backgroundColor: theme.colors.border,
     padding: 3,
     justifyContent: "center",
   },
   trackOn: {
-    backgroundColor: theme.colors.orange,
+    backgroundColor: theme.colors.navy,
   },
   thumb: {
     width: 20,
@@ -38,6 +40,6 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.white,
   },
   thumbOn: {
-    transform: [{ translateX: 18 }],
+    transform: [{ translateX: 20 }],
   },
 });

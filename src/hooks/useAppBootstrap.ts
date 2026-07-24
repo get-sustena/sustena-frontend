@@ -7,6 +7,10 @@ import {
   mapFavoriteRowToFavorite,
 } from "../db/favoritesRepository";
 import {
+  getStoredProfileAnswers,
+  mapStoredProfileAnswersRow,
+} from "../db/localProfileAnswersRepository";
+import {
   getStoredPreferences,
   mapStoredPreferencesRow,
   saveStoredPreferences,
@@ -15,10 +19,17 @@ import {
   getStoredShoppingListItems,
   mapShoppingListRowToItem,
 } from "../db/shoppingListRepository";
+import {
+  getStoredShoppingLists,
+  mapShoppingListRowToMeta,
+} from "../db/shoppingListsRepository";
 import { seedPublishedRecipesIfNeeded } from "../db/recipeRepository";
 import { useFavoritesStore } from "../store/favoritesStore";
 import { usePreferencesStore } from "../store/preferencesStore";
+import { useProfileAnswersStore } from "../store/profileAnswersStore";
 import { useShoppingListStore } from "../store/shoppingListStore";
+import { useShoppingListsStore } from "../store/shoppingListsStore";
+import { DEFAULT_SHOPPING_LIST_ID } from "../types/shoppingList";
 
 export function useAppBootstrap() {
   const db = useSQLiteContext();
@@ -34,6 +45,12 @@ export function useAppBootstrap() {
   );
 
   const hydrateFavorites = useFavoritesStore((state) => state.hydrateFavorites);
+  const hydrateProfileAnswers = useProfileAnswersStore(
+    (state) => state.hydrateProfileAnswers
+  );
+  const hydrateShoppingLists = useShoppingListsStore(
+    (state) => state.hydrateLists
+  );
 
   useEffect(() => {
     let isMounted = true;
@@ -62,10 +79,25 @@ export function useAppBootstrap() {
           });
         }
 
-        const storedShoppingItems = await getStoredShoppingListItems(db);
+        const storedShoppingItems = await getStoredShoppingListItems(
+          db,
+          DEFAULT_SHOPPING_LIST_ID
+        );
         hydrateShoppingItems(storedShoppingItems.map(mapShoppingListRowToItem));
         const storedFavorites = await getStoredFavorites(db);
         hydrateFavorites(storedFavorites.map(mapFavoriteRowToFavorite));
+
+        const storedProfileAnswersRow = await getStoredProfileAnswers(db);
+        const storedProfileAnswers = mapStoredProfileAnswersRow(
+          storedProfileAnswersRow
+        );
+
+        if (storedProfileAnswers) {
+          hydrateProfileAnswers(storedProfileAnswers);
+        }
+
+        const storedShoppingLists = await getStoredShoppingLists(db);
+        hydrateShoppingLists(storedShoppingLists.map(mapShoppingListRowToMeta));
       } catch (error) {
         console.error(error);
 
@@ -84,7 +116,14 @@ export function useAppBootstrap() {
     return () => {
       isMounted = false;
     };
-  }, [db, hydrateFavorites, hydratePreferences, hydrateShoppingItems]);
+  }, [
+    db,
+    hydrateFavorites,
+    hydratePreferences,
+    hydrateProfileAnswers,
+    hydrateShoppingItems,
+    hydrateShoppingLists,
+  ]);
 
   return {
     isBootstrapping,

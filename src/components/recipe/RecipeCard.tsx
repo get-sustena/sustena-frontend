@@ -1,8 +1,12 @@
-import { Image } from "expo-image";
+// src/components/recipe/RecipeCard.tsx
+// The Home screen's "Quick & Easy" horizontal carousel card — ported
+// verbatim from the mockup's quickCard() function.
+
 import { Pressable, StyleSheet, View } from "react-native";
 import { Recipe } from "../../data/recipes";
 import { theme } from "../../theme/theme";
 import { AppText } from "../ui/AppText";
+import { PhotoChip, RecipePhoto } from "./RecipePhoto";
 
 type Props = {
   recipe: Recipe;
@@ -16,103 +20,89 @@ export function RecipeCard({ recipe, onPress }: Props) {
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+      accessibilityRole="button"
+      accessibilityLabel={`Open ${recipe.name}`}
     >
-      <View style={styles.imagePlaceholder}>
-        {recipe.imageUrl ? (
-          <Image
-            source={{ uri: recipe.imageUrl }}
-            style={styles.image}
-            contentFit="cover"
-            transition={150}
-          />
-        ) : (
-          <AppText style={styles.emoji}>{recipe.emoji}</AppText>
-        )}
-      </View>
-
-      <View style={styles.body}>
+      <RecipePhoto imageUrl={recipe.imageUrl} scrim="compact" style={styles.photo}>
         {firstTag ? (
-          <View style={styles.tag}>
-            <AppText style={styles.tagText}>{firstTag}</AppText>
+          <View style={styles.tagWrap}>
+            <PhotoChip label={firstTag} background="rgba(251,251,247,0.85)" />
           </View>
         ) : null}
 
-        <AppText style={styles.name} numberOfLines={2}>
-          {recipe.name}
-        </AppText>
+        <View style={styles.content}>
+          <AppText style={styles.name} numberOfLines={2}>
+            {recipe.name}
+          </AppText>
 
-        <View style={styles.metaRow}>
-          <AppText style={styles.meta}>⏱ {recipe.time}</AppText>
-          {recipe.cost !== null ? (
-            <AppText style={styles.meta}>
-              ₦{recipe.cost.toLocaleString("en-NG")}
-            </AppText>
-          ) : null}
+          <View style={styles.metaRow}>
+            <AppText style={styles.meta}>{recipe.time}</AppText>
+            {recipe.cost !== null ? (
+              <>
+                <AppText style={styles.metaDot}>·</AppText>
+                <AppText style={styles.meta}>
+                  ₦{recipe.cost.toLocaleString("en-NG")}
+                </AppText>
+              </>
+            ) : null}
+            <AppText style={styles.metaDot}>·</AppText>
+            <AppText style={styles.meta}>{recipe.difficulty}</AppText>
+          </View>
         </View>
-      </View>
+      </RecipePhoto>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    width: 158,
-    borderRadius: theme.radius.lg,
-    borderWidth: 1.5,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
+    width: 190,
+    height: 236,
+    borderRadius: 20,
     overflow: "hidden",
+    shadowColor: "#1B211C",
+    shadowOffset: { width: 0, height: 7 },
+    shadowOpacity: 0.18,
+    shadowRadius: 13,
+    elevation: 5,
   },
   pressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.98 }],
+    opacity: 0.9,
   },
-  imagePlaceholder: {
-    height: 118,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: theme.colors.cream2,
+  photo: {
+    flex: 1,
+    justifyContent: "flex-end",
   },
-  image: {
-    width: "100%",
-    height: "100%",
+  tagWrap: {
+    position: "absolute",
+    top: 10,
+    left: 10,
   },
-  emoji: {
-    fontSize: 56,
-  },
-  body: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  tag: {
-    alignSelf: "flex-start",
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.navyDim,
-    marginBottom: 5,
-  },
-  tagText: {
-    fontFamily: theme.fontFamily.bodyBold,
-    fontSize: 9,
-    color: theme.colors.navy2,
-    letterSpacing: 0.5,
+  content: {
+    paddingHorizontal: 13,
+    paddingBottom: 13,
   },
   name: {
-    fontFamily: theme.fontFamily.bodyBold,
-    fontSize: 13,
-    lineHeight: 16,
-    color: theme.colors.navy,
-    marginBottom: 4,
+    fontFamily: theme.fontFamily.bodySemiBold,
+    fontSize: 15,
+    lineHeight: 19,
+    color: theme.colors.onDark,
+    marginBottom: 7,
   },
   metaRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: theme.spacing.sm,
+    gap: 6,
   },
   meta: {
-    fontFamily: theme.fontFamily.body,
-    fontSize: 10,
-    color: theme.colors.textMuted,
+    fontFamily: theme.fontFamily.mono,
+    fontSize: 12.5,
+    color: theme.colors.onDark,
+  },
+  metaDot: {
+    fontFamily: theme.fontFamily.mono,
+    fontSize: 12.5,
+    color: theme.colors.onDark,
+    opacity: 0.6,
   },
 });

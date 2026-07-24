@@ -16,13 +16,18 @@ export default function HealthOnboardingScreen() {
   const toggleHealthCondition = usePreferencesStore(
     (state) => state.toggleHealthCondition
   );
-  const completeOnboarding = usePreferencesStore(
-    (state) => state.completeOnboarding
+  const hasCompletedOnboarding = usePreferencesStore(
+    (state) => state.hasCompletedOnboarding
   );
 
-  function handleSkip() {
-    completeOnboarding();
-    router.replace("/(tabs)/home");
+  function handleNext() {
+    // Editing from Profile after onboarding is done: just return there.
+    if (hasCompletedOnboarding) {
+      router.back();
+      return;
+    }
+
+    router.push("/onboarding/preferences");
   }
 
   return (
@@ -30,16 +35,15 @@ export default function HealthOnboardingScreen() {
       stepLabel="Step 1 of 2"
       title="Any health conditions?"
       subtitle="We’ll tailor your meal suggestions to keep you feeling your best."
-      heroEmoji="🏥"
-      heroIcon="💊"
+      heroIcon="ncd"
       activeStep={1}
       footer={
         <View style={styles.actions}>
-          <Button title="Skip" variant="ghost" onPress={handleSkip} />
+          <Button title="Skip" variant="ghost" onPress={handleNext} />
           <Button
-            title="Continue →"
+            title="Continue"
             style={styles.primaryButton}
-            onPress={() => router.push("/onboarding/preferences")}
+            onPress={handleNext}
           />
         </View>
       }

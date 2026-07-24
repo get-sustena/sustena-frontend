@@ -10,6 +10,7 @@ type AuthState = {
 
   setUser: (user: User | null) => void;
   setIsHydratingAuth: (value: boolean) => void;
+  setAuthenticatedOffline: () => void;
   clearAuth: () => void;
 };
 
@@ -28,6 +29,16 @@ export const useAuthStore = create<AuthState>((set) => ({
   setIsHydratingAuth: (value) => {
     set({
       isHydratingAuth: value,
+    });
+  },
+
+  // Tokens exist locally but we couldn't reach the server to verify them
+  // (cold start, timeout, offline). Treat the session as valid rather than
+  // forcing a sign-out — a stale/invalid token will still surface as a real
+  // 401 the next time an authenticated request is made.
+  setAuthenticatedOffline: () => {
+    set({
+      isAuthenticated: true,
     });
   },
 

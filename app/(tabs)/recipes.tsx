@@ -1,94 +1,113 @@
 import { router } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
-import {
-  FlatList,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
-} from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { FlatList, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { RecipeTile } from "../../src/components/recipe/RecipeTile";
 import { AppText } from "../../src/components/ui/AppText";
 import { Button } from "../../src/components/ui/Button";
 import { EmptyState } from "../../src/components/ui/EmptyState";
 import { FilterChip } from "../../src/components/ui/FilterChip";
-import { Screen } from "../../src/components/ui/Screen";
+import { Icon } from "../../src/components/ui/Icon";
+import { ProgressLoader } from "../../src/components/ui/ProgressLoader";
 import { SearchInput } from "../../src/components/ui/SearchInput";
 import { RECIPE_FILTERS } from "../../src/data/recipeFilters";
+import type { Recipe } from "../../src/data/recipes";
 import { useRecipesWithLocalFallback } from "../../src/hooks/api/useRecipes";
 import { apiRecipeToLocalRecipe } from "../../src/lib/api/adapters";
 import { getApiErrorMessage } from "../../src/lib/api/errors";
 import { theme } from "../../src/theme/theme";
 
 const PAGE_SIZE = 30;
+const EXPERIENCE_OPTIONS = [
+  { value: "beginner", label: "Beginner", level: 1 },
+  { value: "intermediate", label: "Intermediate", level: 2 },
+  { value: "advanced", label: "Advanced", level: 3 },
+] as const;
 
 export default function RecipesScreen() {
+  const insets = useSafeAreaInsets();
+  const listRef = useRef<FlatList>(null);
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
   const [page, setPage] = useState(1);
+  const [recipePages, setRecipePages] = useState<Record<number, Recipe[]>>({});
+  const [experienceCardDismissed, setExperienceCardDismissed] = useState(false);
   const recipeParams = useMemo(
     () => ({
       search: search.trim() || undefined,
       tag:
-        activeFilter === "all" || activeFilter === "budget"
+        activeFilter === "all" ||
+        activeFilter === "budget" ||
+        activeFilter === "quick"
           ? undefined
-          : activeFilter,
+          : activeFilter === "highprotein"
+            ? "high-protein"
+            : activeFilter,
       maxCost: activeFilter === "budget" ? 5000 : undefined,
+      quickAndEasy: activeFilter === "quick" ? true : undefined,
+      maxTotalTimeMinutes: activeFilter === "quick" ? 45 : undefined,
       page,
       pageSize: PAGE_SIZE,
     }),
     [activeFilter, page, search]
   );
   const recipesQuery = useRecipesWithLocalFallback(recipeParams);
-  const recipes = recipesQuery.data?.items.map(apiRecipeToLocalRecipe) ?? [];
+  const recipes = useMemo(
+    () =>
+      Object.keys(recipePages)
+        .map(Number)
+        .sort((a, b) => a - b)
+        .flatMap((pageNumber) => recipePages[pageNumber]),
+    [recipePages]
+  );
   const totalRecipes = recipesQuery.data?.total ?? recipes.length;
   const totalPages = Math.max(1, Math.ceil(totalRecipes / PAGE_SIZE));
-  const canGoPrevious = page > 1 && !recipesQuery.isFetching;
-  const canGoNext = page < totalPages && !recipesQuery.isFetching;
+  const canLoadMore = page < totalPages;
 
   useEffect(() => {
     setPage(1);
+    setRecipePages({});
+    listRef.current?.scrollToOffset({ offset: 0, animated: false });
   }, [activeFilter, search]);
 
+  useEffect(() => {
+    if (!recipesQuery.data) {
+      return;
+    }
+
+    const items = recipesQuery.data.items.map(apiRecipeToLocalRecipe);
+    setRecipePages((current) =>
+      page === 1 ? { 1: items } : { ...current, [page]: items }
+    );
+  }, [page, recipesQuery.data]);
+
   return (
-    <Screen>
-      <Decorations />
+    <View style={styles.screen}>
+      <View
+        style={[
+          styles.header,
+          { paddingTop: Math.max(52, insets.top + 5) },
+        ]}
+      >
+        <AppText style={styles.title}>
+          {recipesQuery.data ? `${totalRecipes} Recipes` : "Recipes"}
+        </AppText>
 
-      <View style={styles.header}>
-        <View>
-          <AppText style={styles.eyebrow}>RECIPES</AppText>
-          <AppText style={styles.title}>{totalRecipes} Recipes</AppText>
-        </View>
-
-        <Pressable style={styles.iconButton}>
-          <AppText style={styles.iconText}>🔍</AppText>
+        <Pressable
+          onPress={() => router.push("/saved-recipes")}
+          style={({ pressed }) => [
+            styles.bookmarkButton,
+            pressed && styles.pressed,
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel="Open saved recipes"
+        >
+          <Icon name="bookmark" size={19} color={theme.colors.text} />
         </Pressable>
       </View>
 
-      <SearchInput
-        value={search}
-        onChangeText={setSearch}
-        placeholder="Search jollof, egusi, pasta…"
-      />
-
-      <View style={styles.filterWrapper}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterContent}
-        >
-          {RECIPE_FILTERS.map((filter) => (
-            <FilterChip
-              key={filter.value}
-              label={filter.label}
-              active={filter.value === activeFilter}
-              onPress={() => setActiveFilter(filter.value)}
-            />
-          ))}
-        </ScrollView>
-      </View>
-
       <FlatList
+        ref={listRef}
         data={recipes}
         keyExtractor={(item) => item.id}
         numColumns={2}
@@ -98,6 +117,39 @@ export default function RecipesScreen() {
           recipes.length === 0 && styles.emptyGridContent,
         ]}
         columnWrapperStyle={recipes.length > 0 ? styles.columnWrapper : undefined}
+        ListHeaderComponent={
+          <View>
+            <SearchInput
+              value={search}
+              onChangeText={setSearch}
+              placeholder="Search jollof, egusi, pasta..."
+            />
+
+            <View style={styles.filterWrapper}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.filterContent}
+              >
+                {RECIPE_FILTERS.map((filter) => (
+                  <FilterChip
+                    key={filter.value}
+                    label={filter.label}
+                    active={filter.value === activeFilter}
+                    onPress={() => setActiveFilter(filter.value)}
+                  />
+                ))}
+              </ScrollView>
+            </View>
+
+            {!experienceCardDismissed ? (
+              <ExperienceCard
+                onDismiss={() => setExperienceCardDismissed(true)}
+                onSelect={() => setExperienceCardDismissed(true)}
+              />
+            ) : null}
+          </View>
+        }
         renderItem={({ item }) => (
           <RecipeTile
             recipe={item}
@@ -109,13 +161,15 @@ export default function RecipesScreen() {
             }
           />
         )}
+        onEndReached={() => {
+          if (canLoadMore && !recipesQuery.isFetching) {
+            setPage((current) => current + 1);
+          }
+        }}
+        onEndReachedThreshold={0.55}
         ListEmptyComponent={
           recipesQuery.isLoading ? (
-            <EmptyState
-              icon="🍲"
-              title="Loading recipes"
-              message="Fetching the latest recipes for you."
-            />
+            <ProgressLoader message="Fetching the latest recipes for you..." />
           ) : recipesQuery.isError ? (
             <View style={styles.errorState}>
               <EmptyState
@@ -134,135 +188,266 @@ export default function RecipesScreen() {
           )
         }
         ListFooterComponent={
-          recipesQuery.data && totalPages > 1 ? (
-            <View style={styles.pagination}>
-              <Button
-                title="Previous"
-                variant="card"
-                onPress={() => setPage((current) => Math.max(1, current - 1))}
-                disabled={!canGoPrevious}
-                style={styles.paginationButton}
-              />
-
-              <AppText style={styles.paginationText}>
-                Page {page} of {totalPages}
-              </AppText>
-
-              <Button
-                title={recipesQuery.isFetching ? "Loading..." : "Next"}
-                variant="primary"
-                onPress={() =>
-                  setPage((current) => Math.min(totalPages, current + 1))
-                }
-                disabled={!canGoNext}
-                style={styles.paginationButton}
-              />
-            </View>
+          recipes.length > 0 && recipesQuery.isFetching ? (
+            <RecipeGridSkeleton />
+          ) : recipes.length > 0 && !canLoadMore ? (
+            <AppText style={styles.endOfList}>You&apos;re all caught up.</AppText>
           ) : null
         }
       />
-    </Screen>
+    </View>
   );
 }
 
-function Decorations() {
+function RecipeGridSkeleton() {
   return (
-    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-      <AppText style={[styles.deco, styles.decoLeaf]}>🌿</AppText>
-      <AppText style={[styles.deco, styles.decoTomato]}>🍅</AppText>
+    <View style={styles.skeletonRow} accessibilityLabel="Loading more recipes">
+      {[0, 1].map((item) => (
+        <View key={item} style={styles.skeletonCard}>
+          <View style={styles.skeletonImage} />
+          <View style={styles.skeletonLineWide} />
+          <View style={styles.skeletonLineShort} />
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function ExperienceCard({
+  onDismiss,
+  onSelect,
+}: {
+  onDismiss: () => void;
+  onSelect: () => void;
+}) {
+  return (
+    <View style={styles.experienceWrap}>
+      <View style={styles.experienceCard}>
+        <Pressable
+          onPress={onDismiss}
+          style={({ pressed }) => [
+            styles.experienceClose,
+            pressed && styles.pressed,
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel="Dismiss experience question"
+        >
+          <Icon name="close" size={14} color={theme.colors.textMuted} />
+        </Pressable>
+
+        <AppText style={styles.experienceEyebrow}>Tune your feed</AppText>
+        <AppText style={styles.experienceTitle}>
+          How do you feel in the kitchen?
+        </AppText>
+
+        <View style={styles.experienceOptions}>
+          {EXPERIENCE_OPTIONS.map((option) => (
+            <Pressable
+              key={option.value}
+              onPress={onSelect}
+              style={({ pressed }) => [
+                styles.experienceOption,
+                pressed && styles.pressed,
+              ]}
+            >
+              <AppText style={styles.experienceOptionLabel}>
+                {option.label}
+              </AppText>
+              <View style={styles.experienceDots}>
+                {[1, 2, 3].map((dot) => (
+                  <View
+                    key={dot}
+                    style={[
+                      styles.experienceDot,
+                      dot <= option.level && styles.experienceDotActive,
+                    ]}
+                  />
+                ))}
+              </View>
+            </Pressable>
+          ))}
+        </View>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  header: {
-    paddingHorizontal: 24,
-    paddingTop: 52,
-    paddingBottom: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+  screen: {
+    flex: 1,
+    backgroundColor: theme.colors.white,
   },
-  eyebrow: {
-    fontFamily: theme.fontFamily.bodyBold,
-    fontSize: 10,
-    color: theme.colors.textMuted,
-    letterSpacing: 2,
-    textTransform: "uppercase",
-    marginBottom: 3,
+  header: {
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
   },
   title: {
     fontFamily: theme.fontFamily.display,
-    fontSize: 24,
-    lineHeight: 28,
+    fontSize: 26,
+    letterSpacing: 0,
     color: theme.colors.navy,
   },
-  iconButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 13,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1.5,
+  bookmarkButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: theme.colors.card,
+    borderWidth: 1,
     borderColor: theme.colors.border,
     alignItems: "center",
     justifyContent: "center",
-  },
-  iconText: {
-    fontSize: 18,
+    shadowColor: theme.colors.text,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.14,
+    shadowRadius: 6,
+    elevation: 2,
   },
   filterWrapper: {
-    marginBottom: theme.spacing.lg,
+    marginBottom: 16,
   },
   filterContent: {
     paddingHorizontal: 20,
     gap: theme.spacing.sm,
   },
   gridContent: {
-    paddingHorizontal: 20,
     paddingBottom: 110,
   },
   emptyGridContent: {
     flexGrow: 1,
-    justifyContent: "center",
   },
   errorState: {
     gap: theme.spacing.md,
   },
   columnWrapper: {
-    gap: theme.spacing.md,
-    marginBottom: theme.spacing.md,
+    gap: 12,
+    marginBottom: 12,
+    paddingHorizontal: 20,
   },
-  pagination: {
+  skeletonRow: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: theme.spacing.sm,
-    paddingTop: theme.spacing.md,
-    paddingBottom: theme.spacing["2xl"],
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingTop: 4,
+    paddingBottom: 24,
   },
-  paginationButton: {
+  skeletonCard: {
     flex: 1,
+    minWidth: 0,
   },
-  paginationText: {
-    minWidth: 78,
+  skeletonImage: {
+    width: "100%",
+    aspectRatio: 1.08,
+    borderRadius: 8,
+    backgroundColor: theme.colors.card2,
+    marginBottom: 10,
+  },
+  skeletonLineWide: {
+    width: "82%",
+    height: 13,
+    borderRadius: 4,
+    backgroundColor: theme.colors.card2,
+    marginBottom: 7,
+  },
+  skeletonLineShort: {
+    width: "52%",
+    height: 10,
+    borderRadius: 4,
+    backgroundColor: theme.colors.card2,
+  },
+  endOfList: {
+    paddingTop: 10,
+    paddingBottom: 28,
     textAlign: "center",
-    fontFamily: theme.fontFamily.bodyBold,
-    fontSize: 11,
+    fontFamily: theme.fontFamily.bodyMedium,
+    fontSize: 12,
     color: theme.colors.textMuted,
   },
-  deco: {
+  pressed: {
+    opacity: 0.82,
+  },
+  experienceWrap: {
+    paddingHorizontal: 20,
+    paddingBottom: 4,
+  },
+  experienceCard: {
+    position: "relative",
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 18,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 18,
+    backgroundColor: theme.colors.white,
+    shadowColor: theme.colors.text,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.08,
+    shadowRadius: 24,
+    elevation: 2,
+  },
+  experienceClose: {
     position: "absolute",
-    opacity: 0.1,
+    top: 12,
+    right: 12,
+    width: 26,
+    height: 26,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.card2,
+    zIndex: 1,
   },
-  decoLeaf: {
-    top: "12%",
-    right: "8%",
-    fontSize: 34,
-    transform: [{ rotate: "18deg" }],
+  experienceEyebrow: {
+    fontFamily: theme.fontFamily.monoBold,
+    fontSize: 11,
+    color: theme.colors.textMuted,
+    letterSpacing: 0,
+    textTransform: "uppercase",
+    marginBottom: 8,
   },
-  decoTomato: {
-    bottom: "18%",
-    left: "4%",
-    fontSize: 32,
-    transform: [{ rotate: "-16deg" }],
+  experienceTitle: {
+    paddingRight: 26,
+    marginBottom: 14,
+    fontFamily: theme.fontFamily.display,
+    fontSize: 17,
+    color: theme.colors.text,
+  },
+  experienceOptions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  experienceOption: {
+    minHeight: 38,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderWidth: 1.5,
+    borderColor: theme.colors.border,
+    borderRadius: 999,
+    backgroundColor: theme.colors.white,
+  },
+  experienceOptionLabel: {
+    fontFamily: theme.fontFamily.bodySemiBold,
+    fontSize: 13,
+    color: theme.colors.text,
+  },
+  experienceDots: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+  },
+  experienceDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: theme.colors.border,
+  },
+  experienceDotActive: {
+    backgroundColor: theme.colors.green,
   },
 });

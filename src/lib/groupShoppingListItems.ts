@@ -44,7 +44,16 @@ export function groupShoppingListItems(
     })
     .map(([category, categoryItems]) => ({
       category,
-      items: categoryItems,
+      items: [...categoryItems].sort((itemA, itemB) => {
+        const createdA = Date.parse(itemA.createdAt);
+        const createdB = Date.parse(itemB.createdAt);
+
+        if (Number.isNaN(createdA) || Number.isNaN(createdB)) {
+          return 0;
+        }
+
+        return createdA - createdB;
+      }),
     }));
 }
 

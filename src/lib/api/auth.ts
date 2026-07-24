@@ -2,12 +2,18 @@
 
 import {
   AuthResponse,
+  ForgotPasswordRequest,
+  ForgotPasswordResponse,
   LoginRequest,
   LogoutAllResponse,
   LogoutRequest,
   LogoutResponse,
+  ResetPasswordRequest,
+  ResetPasswordResponse,
   SignupRequest,
   User,
+  VerifyResetCodeRequest,
+  VerifyResetCodeResponse,
 } from "../../types/api";
 import { apiRequest, AppAxiosRequestConfig } from "./client";
 import {
@@ -86,4 +92,31 @@ export async function logoutAll() {
   await clearAuthTokens();
 
   return response;
+}
+
+export function forgotPassword(payload: ForgotPasswordRequest) {
+  return apiRequest<ForgotPasswordResponse>({
+    url: "/auth/forgot-password",
+    method: "POST",
+    data: payload,
+    _skipAuthRefresh: true,
+  });
+}
+
+export function verifyResetCode(payload: VerifyResetCodeRequest) {
+  return apiRequest<VerifyResetCodeResponse>({
+    url: "/auth/verify-reset-code",
+    method: "POST",
+    data: payload,
+    _skipAuthRefresh: true,
+  });
+}
+
+export function resetPassword(payload: ResetPasswordRequest) {
+  return apiRequest<ResetPasswordResponse>({
+    url: "/auth/reset-password",
+    method: "POST",
+    data: payload,
+    _skipAuthRefresh: true,
+  });
 }

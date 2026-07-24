@@ -1,51 +1,131 @@
 import { router } from "expo-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
-import {
-  INGREDIENTS,
-  INGREDIENT_CATEGORIES,
-  Ingredient,
-} from "../../data/ingredients";
+import { useIngredientCatalogQuery } from "../../hooks/api/useIngredients";
 import { useKitchenPlannerMutation } from "../../hooks/api/usePlanner";
 import { apiRecipeToLocalRecipe } from "../../lib/api/adapters";
 import { getApiErrorMessage } from "../../lib/api/errors";
 import { formatNaira } from "../../lib/formatters";
 import { theme } from "../../theme/theme";
+import type { Ingredient } from "../../types/api";
+import { RecipePhoto } from "../recipe/RecipePhoto";
 import { AppText } from "../ui/AppText";
 import { EmptyState } from "../ui/EmptyState";
 import { FilterChip } from "../ui/FilterChip";
+import { Icon } from "../ui/Icon";
+import { ProgressLoader } from "../ui/ProgressLoader";
 import { SearchInput } from "../ui/SearchInput";
 
-export function KitchenPlannerPane() {
+const ALL_CATEGORY = "All";
+const KITCHEN_CATEGORIES = [
+  ALL_CATEGORY,
+  "Proteins",
+  "Grains",
+  "Produce",
+  "Spices",
+  "Dairy",
+] as const;
+const CATEGORY_NEEDLES: Record<string, string[]> = {
+  Proteins: ["meat", "poultry", "fish", "seafood", "beans", "pulses", "nuts"],
+  Grains: ["grains", "cereals", "flours", "pasta", "noodles", "tubers"],
+  Produce: ["vegetables", "greens", "fruits"],
+  Spices: ["herbs", "spices", "seasonings", "condiments", "sauces"],
+  Dairy: ["dairy", "eggs", "alternatives"],
+};
+
+const INITIAL_INGREDIENT_COUNT = 50;
+const INGREDIENT_BATCH_SIZE = 10;
+
+const EMPTY_CATALOG: Ingredient[] = [];
+
+type Props = {
+  initialCategory?: string;
+  loadMoreSignal?: number;
+};
+
+export function KitchenPlannerPane({
+  initialCategory,
+  loadMoreSignal = 0,
+}: Props) {
   const [search, setSearch] = useState("");
-  const [activeCategory, setActiveCategory] =
-    useState<(typeof INGREDIENT_CATEGORIES)[number]>("All");
+  const [activeCategory, setActiveCategory] = useState<string>(ALL_CATEGORY);
+  const [visibleIngredientCount, setVisibleIngredientCount] = useState(
+    INITIAL_INGREDIENT_COUNT
+  );
   const [selectedIngredientIds, setSelectedIngredientIds] = useState<string[]>(
     []
   );
   const [hasSearched, setHasSearched] = useState(false);
+  const previousLoadMoreSignal = useRef(loadMoreSignal);
   const kitchenPlannerMutation = useKitchenPlannerMutation();
 
-  const selectedIngredients = useMemo(() => {
-    return INGREDIENTS.filter((ingredient) =>
-      selectedIngredientIds.includes(ingredient.id)
+  const catalogQuery = useIngredientCatalogQuery();
+  const catalog = catalogQuery.data ?? EMPTY_CATALOG;
+
+  useEffect(() => {
+    if (!initialCategory) {
+      return;
+    }
+
+    const matchedCategory = KITCHEN_CATEGORIES.find(
+      (category) => category.toLowerCase() === initialCategory.toLowerCase()
     );
-  }, [selectedIngredientIds]);
 
-  const visibleIngredients = useMemo(() => {
-    const normalizedSearch = search.trim().toLowerCase();
+    if (matchedCategory) {
+      setActiveCategory(matchedCategory);
+    }
+  }, [initialCategory]);
 
-    return INGREDIENTS.filter((ingredient) => {
+  const ingredientsById = useMemo(
+    () => new Map(catalog.map((ingredient) => [ingredient.id, ingredient])),
+    [catalog]
+  );
+
+  const selectedIngredients = useMemo(() => {
+    return selectedIngredientIds
+      .map((id) => ingredientsById.get(id))
+      .filter((ingredient): ingredient is Ingredient => Boolean(ingredient));
+  }, [selectedIngredientIds, ingredientsById]);
+
+  const normalizedSearch = search.trim().toLowerCase();
+
+  const filteredIngredients = useMemo(() => {
+    return catalog.filter((ingredient) => {
       const matchesCategory =
-        activeCategory === "All" || ingredient.category === activeCategory;
+        activeCategory === ALL_CATEGORY ||
+        matchesKitchenCategory(ingredient, activeCategory);
 
-      const matchesSearch =
-        normalizedSearch.length === 0 ||
-        ingredient.name.toLowerCase().includes(normalizedSearch);
+      if (!matchesCategory) {
+        return false;
+      }
 
-      return matchesCategory && matchesSearch;
+      if (normalizedSearch.length === 0) {
+        return true;
+      }
+
+      return matchesIngredientSearch(ingredient, normalizedSearch);
     });
-  }, [activeCategory, search]);
+  }, [catalog, activeCategory, normalizedSearch]);
+
+  const visibleIngredients = filteredIngredients.slice(
+    0,
+    visibleIngredientCount
+  );
+
+  useEffect(() => {
+    setVisibleIngredientCount(INITIAL_INGREDIENT_COUNT);
+  }, [activeCategory, normalizedSearch]);
+
+  useEffect(() => {
+    if (previousLoadMoreSignal.current === loadMoreSignal) {
+      return;
+    }
+
+    previousLoadMoreSignal.current = loadMoreSignal;
+    setVisibleIngredientCount((current) =>
+      Math.min(current + INGREDIENT_BATCH_SIZE, filteredIngredients.length)
+    );
+  }, [filteredIngredients.length, loadMoreSignal]);
 
   const matches = useMemo(() => {
     return (
@@ -75,107 +155,132 @@ export function KitchenPlannerPane() {
 
   return (
     <View style={styles.container}>
-      <SearchInput
-        value={search}
-        onChangeText={setSearch}
-        placeholder="Search ingredients..."
-      />
-
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.categoryContent}
-      >
-        {INGREDIENT_CATEGORIES.map((category) => (
-          <FilterChip
-            key={category}
-            label={getCategoryLabel(category)}
-            active={category === activeCategory}
-            onPress={() => setActiveCategory(category)}
+      {!hasSearched ? (
+        <>
+          <SearchInput
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Search ingredients..."
           />
-        ))}
-      </ScrollView>
 
-      {selectedIngredients.length > 0 ? (
-        <View style={styles.selectedBar}>
-          <AppText style={styles.selectedLabel}>Selected:</AppText>
-
-          <View style={styles.selectedTags}>
-            {selectedIngredients.map((ingredient) => (
-              <View key={ingredient.id} style={styles.selectedTag}>
-                <AppText style={styles.selectedTagText}>
-                  {ingredient.name}
-                </AppText>
-              </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.categoryContent}
+          >
+            {KITCHEN_CATEGORIES.map((category) => (
+              <FilterChip
+                key={category}
+                label={category}
+                active={category === activeCategory}
+                onPress={() => setActiveCategory(category)}
+              />
             ))}
+          </ScrollView>
+
+          {selectedIngredients.length > 0 ? (
+            <View style={styles.selectedBar}>
+              <AppText style={styles.selectedLabel}>Selected:</AppText>
+
+              <View style={styles.selectedTags}>
+                {selectedIngredients.map((ingredient) => (
+                  <View key={ingredient.id} style={styles.selectedTag}>
+                    <AppText style={styles.selectedTagText}>
+                      {ingredient.displayName}
+                    </AppText>
+                  </View>
+                ))}
+              </View>
+            </View>
+          ) : null}
+
+          <View style={styles.ingredientGrid}>
+            {visibleIngredients.map((ingredient) => {
+              const isSelected = selectedIngredientIds.includes(ingredient.id);
+
+              return (
+                <Pressable
+                  key={ingredient.id}
+                  onPress={() => toggleIngredient(ingredient)}
+                  style={[
+                    styles.ingredientChip,
+                    isSelected && styles.selectedIngredientChip,
+                  ]}
+                >
+                  <AppText
+                    style={[
+                      styles.ingredientChipText,
+                      isSelected && styles.selectedIngredientChipText,
+                    ]}
+                  >
+                    {ingredient.displayName}
+                  </AppText>
+                </Pressable>
+              );
+            })}
           </View>
-        </View>
-      ) : null}
 
-      <View style={styles.ingredientGrid}>
-        {visibleIngredients.map((ingredient) => {
-          const isSelected = selectedIngredientIds.includes(ingredient.id);
+          <Pressable
+            onPress={() => {
+              setHasSearched(true);
+              kitchenPlannerMutation.mutate({
+                ingredients: selectedIngredients.map(
+                  (ingredient) => ingredient.canonicalName
+                ),
+              });
+            }}
+            style={({ pressed }) => [
+              styles.findButton,
+              pressed && styles.pressed,
+              selectedIngredientIds.length === 0 && styles.disabledButton,
+            ]}
+            disabled={selectedIngredientIds.length === 0}
+          >
+            <Icon name="discover" size={16} color={theme.colors.onDark} />
+            <AppText style={styles.findButtonText}>
+              Find Matching Recipes
+            </AppText>
+          </Pressable>
+        </>
+      ) : (
+        <>
+          <Pressable
+            onPress={() => {
+              setHasSearched(false);
+              kitchenPlannerMutation.reset();
+            }}
+            style={({ pressed }) => [
+              styles.changeIngredients,
+              pressed && styles.pressed,
+            ]}
+          >
+            <Icon
+              name="chevronLeft"
+              size={15}
+              color={theme.colors.navy3}
+            />
+            <AppText style={styles.changeIngredientsText}>
+              Change Ingredients
+            </AppText>
+          </Pressable>
 
-          return (
-            <Pressable
-              key={ingredient.id}
-              onPress={() => toggleIngredient(ingredient)}
-              style={[
-                styles.ingredientChip,
-                isSelected && styles.selectedIngredientChip,
-              ]}
-            >
-              <AppText
-                style={[
-                  styles.ingredientChipText,
-                  isSelected && styles.selectedIngredientChipText,
-                ]}
-              >
-                {ingredient.name}
-              </AppText>
-            </Pressable>
-          );
-        })}
-      </View>
-
-      <Pressable
-        onPress={() => {
-          setHasSearched(true);
-          kitchenPlannerMutation.mutate({
-            ingredients: selectedIngredients.map((ingredient) => ingredient.name),
-          });
-        }}
-        style={({ pressed }) => [
-          styles.findButton,
-          pressed && styles.pressed,
-          selectedIngredientIds.length === 0 && styles.disabledButton,
-        ]}
-        disabled={selectedIngredientIds.length === 0}
-      >
-        <AppText style={styles.findButtonText}>
-          Find Matching Recipes 🔍
-        </AppText>
-      </Pressable>
-
-      {hasSearched ? (
-        kitchenPlannerMutation.isError ? (
+          {kitchenPlannerMutation.isError ? (
           <EmptyState
             icon="⚠️"
             title="Could not find matches"
             message={getApiErrorMessage(kitchenPlannerMutation.error)}
           />
         ) : kitchenPlannerMutation.isPending ? (
-          <EmptyState
-            icon="🥬"
-            title="Finding matches"
-            message="Checking your ingredients against the recipe library."
-          />
+          <ProgressLoader message="Checking your ingredients against the recipe library..." />
         ) : matches.length === 0 ? (
-          <EmptyState
-            icon="🥬"
-            title="No matching recipes"
-            message="Try adding more ingredients or selecting common staples like rice, tomatoes, onions, or eggs."
-          />
+          <View style={styles.emptyResults}>
+            <View style={styles.emptyResultsIconWrap}>
+              <Icon name="pantry" size={28} color={theme.colors.textMutedAlt} />
+            </View>
+            <AppText style={styles.emptyResultsText}>
+              No matches found.{"\n"}Try adding more ingredients.
+            </AppText>
+          </View>
         ) : (
           <View style={styles.results}>
             <AppText style={styles.resultsLabel}>
@@ -196,17 +301,18 @@ export function KitchenPlannerPane() {
                   pressed && styles.pressed,
                 ]}
               >
-                <AppText style={styles.resultEmoji}>
-                  {match.recipe.emoji}
-                </AppText>
+                <RecipePhoto
+                  imageUrl={match.recipe.imageUrl}
+                  style={styles.resultThumb}
+                />
 
                 <View style={styles.resultInfo}>
-                  <AppText style={styles.resultName}>
+                  <AppText style={styles.resultName} numberOfLines={1}>
                     {match.recipe.name}
                   </AppText>
 
                   <AppText style={styles.resultMeta}>
-                    ⏱ {match.recipe.time}
+                    {match.recipe.time}
                     {match.recipe.cost !== null
                       ? ` · ${formatNaira(match.recipe.cost)}`
                       : ""}
@@ -225,23 +331,42 @@ export function KitchenPlannerPane() {
               </Pressable>
             ))}
           </View>
-        )
-      ) : null}
+          )}
+        </>
+      )}
     </View>
   );
 }
 
-function getCategoryLabel(category: string) {
-  const map: Record<string, string> = {
-    All: "All",
-    Proteins: "🍖 Proteins",
-    Grains: "🌾 Grains",
-    Produce: "🥦 Produce",
-    Spices: "🌶️ Spices",
-    Dairy: "🥛 Dairy",
-  };
+function matchesKitchenCategory(ingredient: Ingredient, category: string) {
+  const backendCategory = ingredient.categoryName?.toLowerCase() ?? "";
+  const needles = CATEGORY_NEEDLES[category] ?? [];
 
-  return map[category] ?? category;
+  return needles.some((needle) => backendCategory.includes(needle));
+}
+
+function matchesIngredientSearch(
+  ingredient: Ingredient,
+  normalizedSearch: string
+) {
+  if (
+    ingredient.canonicalName.toLowerCase().includes(normalizedSearch) ||
+    ingredient.displayName.toLowerCase().includes(normalizedSearch)
+  ) {
+    return true;
+  }
+
+  return (
+    ingredient.aliases.some((alias) =>
+      alias.toLowerCase().includes(normalizedSearch)
+    ) ||
+    ingredient.searchTerms.some((term) =>
+      term.toLowerCase().includes(normalizedSearch)
+    ) ||
+    ingredient.localNames.some((localName) =>
+      localName.name.toLowerCase().includes(normalizedSearch)
+    )
+  );
 }
 
 const styles = StyleSheet.create({
@@ -250,145 +375,190 @@ const styles = StyleSheet.create({
   },
   categoryContent: {
     paddingHorizontal: 20,
-    gap: theme.spacing.sm,
-    marginBottom: theme.spacing.lg,
+    gap: 8,
+    marginBottom: 14,
   },
   selectedBar: {
     marginHorizontal: 20,
-    backgroundColor: theme.colors.navyDim,
+    backgroundColor: theme.colors.card2,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    borderRadius: theme.radius.sm,
-    padding: theme.spacing.md,
-    marginBottom: theme.spacing.lg,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 14,
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: theme.spacing.sm,
+    gap: 8,
   },
   selectedLabel: {
-    fontFamily: theme.fontFamily.bodyBold,
-    fontSize: 11,
-    color: theme.colors.textMuted,
+    fontFamily: theme.fontFamily.monoBold,
+    fontSize: 12,
+    color: theme.colors.textMedium,
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
   },
   selectedTags: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: theme.spacing.sm,
+    gap: 6,
     flex: 1,
   },
   selectedTag: {
     backgroundColor: theme.colors.navy,
-    borderRadius: theme.radius.full,
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: 4,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
   },
   selectedTagText: {
-    fontFamily: theme.fontFamily.bodyBold,
-    fontSize: 10,
+    fontFamily: theme.fontFamily.bodySemiBold,
+    fontSize: 11,
     color: theme.colors.onDark,
   },
   ingredientGrid: {
-    paddingHorizontal: 20,
+    marginHorizontal: 20,
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: theme.spacing.sm,
-    marginBottom: theme.spacing.xl,
+    gap: 8,
+    marginBottom: 18,
   },
   ingredientChip: {
     paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: theme.radius.full,
-    borderWidth: 1.5,
+    paddingVertical: 9,
+    borderRadius: 999,
+    borderWidth: 1,
     borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: theme.colors.card,
   },
   selectedIngredientChip: {
-    borderColor: theme.colors.orange,
-    backgroundColor: theme.colors.orange,
+    borderColor: theme.colors.navy,
+    backgroundColor: theme.colors.navy,
   },
   ingredientChipText: {
-    fontFamily: theme.fontFamily.bodyBold,
-    fontSize: 12,
-    color: theme.colors.textMedium,
+    fontFamily: theme.fontFamily.bodyMedium,
+    fontSize: 13,
+    color: theme.colors.text,
   },
   selectedIngredientChipText: {
-    color: theme.colors.white,
+    color: theme.colors.onDark,
   },
   findButton: {
     marginHorizontal: 20,
     minHeight: 48,
-    borderRadius: theme.radius.md,
+    borderRadius: 999,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: theme.spacing.sm,
     backgroundColor: theme.colors.navy,
-    marginBottom: theme.spacing.xl,
+    marginBottom: 20,
   },
   findButtonText: {
-    fontFamily: theme.fontFamily.bodyBold,
-    fontSize: 14,
+    fontFamily: theme.fontFamily.bodySemiBold,
+    fontSize: 15,
     color: theme.colors.onDark,
   },
   disabledButton: {
     opacity: 0.45,
   },
   pressed: {
-    opacity: 0.82,
-    transform: [{ scale: 0.98 }],
+    opacity: 0.9,
   },
-  results: {
-    paddingHorizontal: 20,
-  },
-  resultsLabel: {
-    fontFamily: theme.fontFamily.bodyBold,
-    fontSize: 10,
-    color: theme.colors.textMuted,
-    letterSpacing: 1.5,
-    textTransform: "uppercase",
-    marginBottom: theme.spacing.md,
-  },
-  resultCard: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1.5,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.lg,
-    padding: theme.spacing.md,
-    marginBottom: theme.spacing.md,
+  changeIngredients: {
+    marginHorizontal: 20,
+    marginBottom: 16,
     flexDirection: "row",
     alignItems: "center",
-    gap: theme.spacing.md,
+    gap: 8,
   },
-  resultEmoji: {
-    fontSize: 28,
+  changeIngredientsText: {
+    fontFamily: theme.fontFamily.bodySemiBold,
+    fontSize: 13.5,
+    color: theme.colors.navy3,
+  },
+  results: {
+    marginHorizontal: 20,
+  },
+  resultsLabel: {
+    fontFamily: theme.fontFamily.monoBold,
+    fontSize: 12,
+    color: theme.colors.textMuted,
+    letterSpacing: 1,
+    textTransform: "uppercase",
+    marginBottom: 12,
+  },
+  resultCard: {
+    backgroundColor: theme.colors.card,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    shadowColor: theme.colors.text,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.14,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  resultThumb: {
+    width: 52,
+    height: 52,
+    borderRadius: 12,
   },
   resultInfo: {
     flex: 1,
+    minWidth: 0,
   },
   resultName: {
-    fontFamily: theme.fontFamily.bodyBold,
-    fontSize: 14,
-    color: theme.colors.navy,
+    fontFamily: theme.fontFamily.bodySemiBold,
+    fontSize: 15,
+    color: theme.colors.text,
   },
   resultMeta: {
-    fontFamily: theme.fontFamily.body,
-    fontSize: 11,
-    color: theme.colors.textMuted,
-    marginTop: 2,
+    fontFamily: theme.fontFamily.mono,
+    fontSize: 13,
+    color: theme.colors.textMedium,
+    marginTop: 3,
   },
   resultSubMeta: {
     fontFamily: theme.fontFamily.body,
-    fontSize: 10,
+    fontSize: 11,
     color: theme.colors.textMuted,
-    marginTop: 2,
+    marginTop: 3,
   },
   matchBadge: {
-    paddingHorizontal: theme.spacing.sm,
+    paddingHorizontal: 8,
     paddingVertical: 5,
-    borderRadius: theme.radius.sm,
-    backgroundColor: theme.colors.orangeDim,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#BEE0CD",
+    backgroundColor: "#E7F3EC",
   },
   matchBadgeText: {
-    fontFamily: theme.fontFamily.bodyBold,
-    fontSize: 11,
-    color: theme.colors.orange,
+    fontFamily: theme.fontFamily.monoBold,
+    fontSize: 12,
+    color: theme.colors.navy3,
+  },
+  emptyResults: {
+    alignItems: "center",
+    paddingVertical: 32,
+  },
+  emptyResultsIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 20,
+    backgroundColor: theme.colors.card2,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 14,
+  },
+  emptyResultsText: {
+    fontFamily: theme.fontFamily.body,
+    fontSize: 14,
+    lineHeight: 21,
+    color: theme.colors.textMedium,
+    textAlign: "center",
   },
 });

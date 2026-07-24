@@ -27,12 +27,12 @@ export function FilterChip({ label, active = false, onPress }: Props) {
 
 const styles = StyleSheet.create({
   chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderRadius: theme.radius.full,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: theme.colors.card,
   },
   activeChip: {
     borderColor: theme.colors.navy,
@@ -43,9 +43,9 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.97 }],
   },
   label: {
-    fontFamily: theme.fontFamily.bodyBold,
-    fontSize: 11,
-    color: theme.colors.textMuted,
+    fontFamily: theme.fontFamily.bodySemiBold,
+    fontSize: 13,
+    color: theme.colors.text,
   },
   activeLabel: {
     color: theme.colors.onDark,

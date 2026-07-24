@@ -1,44 +1,68 @@
 // app/_layout.tsx
 
 import {
-  PlayfairDisplay_700Bold,
-  useFonts as usePlayfairFonts,
-} from "@expo-google-fonts/playfair-display";
+  BricolageGrotesque_500Medium,
+  BricolageGrotesque_600SemiBold,
+  BricolageGrotesque_700Bold,
+  BricolageGrotesque_800ExtraBold,
+  useFonts as useBricolageFonts,
+} from "@expo-google-fonts/bricolage-grotesque";
 import {
-  PlusJakartaSans_400Regular,
-  PlusJakartaSans_500Medium,
-  PlusJakartaSans_600SemiBold,
-  PlusJakartaSans_700Bold,
-  useFonts as useJakartaFonts,
-} from "@expo-google-fonts/plus-jakarta-sans";
+  GeistMono_400Regular,
+  GeistMono_500Medium,
+  GeistMono_600SemiBold,
+  GeistMono_700Bold,
+  useFonts as useGeistMonoFonts,
+} from "@expo-google-fonts/geist-mono";
+import {
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+  useFonts as useInterFonts,
+} from "@expo-google-fonts/inter";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { SQLiteProvider } from "expo-sqlite";
 import { StatusBar } from "expo-status-bar";
 import { Suspense, useEffect } from "react";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { AppBootstrapGate } from "../src/components/bootstrap/AppBootstrapGate";
 import { PersistenceEffects } from "../src/components/bootstrap/PersistenceEffects";
+import { BottomSheetHost } from "../src/components/ui/BottomSheet";
+import { ProgressLoader } from "../src/components/ui/ProgressLoader";
+import { ToastHost } from "../src/components/ui/Toast";
 import { migrateDbIfNeeded } from "../src/db/migrations";
 import { queryClient } from "../src/lib/query/queryClient";
+import { setupNetworkStatusListener } from "../src/lib/query/networkStatus";
 import { theme } from "../src/theme/theme";
 
 SplashScreen.preventAutoHideAsync();
+setupNetworkStatusListener();
 
 export default function RootLayout() {
-  const [playfairLoaded] = usePlayfairFonts({
-    PlayfairDisplay_700Bold,
+  const [interLoaded] = useInterFonts({
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
   });
 
-  const [jakartaLoaded] = useJakartaFonts({
-    PlusJakartaSans_400Regular,
-    PlusJakartaSans_500Medium,
-    PlusJakartaSans_600SemiBold,
-    PlusJakartaSans_700Bold,
+  const [bricolageLoaded] = useBricolageFonts({
+    BricolageGrotesque_500Medium,
+    BricolageGrotesque_600SemiBold,
+    BricolageGrotesque_700Bold,
+    BricolageGrotesque_800ExtraBold,
   });
 
-  const fontsLoaded = playfairLoaded && jakartaLoaded;
+  const [geistMonoLoaded] = useGeistMonoFonts({
+    GeistMono_400Regular,
+    GeistMono_500Medium,
+    GeistMono_600SemiBold,
+    GeistMono_700Bold,
+  });
+
+  const fontsLoaded = interLoaded && bricolageLoaded && geistMonoLoaded;
 
   useEffect(() => {
     if (fontsLoaded) {
@@ -70,6 +94,9 @@ export default function RootLayout() {
                 },
               }}
             />
+
+            <ToastHost />
+            <BottomSheetHost />
           </AppBootstrapGate>
         </SQLiteProvider>
       </Suspense>
@@ -78,18 +105,5 @@ export default function RootLayout() {
 }
 
 function RootLoading() {
-  return (
-    <View style={styles.loading}>
-      <ActivityIndicator color={theme.colors.primary} />
-    </View>
-  );
+  return <ProgressLoader variant="screen" message="Preparing Sustena..." />;
 }
-
-const styles = StyleSheet.create({
-  loading: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: theme.colors.background,
-  },
-});

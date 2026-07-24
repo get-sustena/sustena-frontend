@@ -36,7 +36,7 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: theme.fontFamily.bodyBold,
     fontSize: 15,
-    color: theme.colors.cream,
+    color: theme.colors.navy,
     marginBottom: theme.spacing.xs,
   },
   message: {

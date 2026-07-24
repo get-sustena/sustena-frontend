@@ -4,14 +4,14 @@ import { ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
 import { theme } from "../../theme/theme";
 import { AppText } from "../ui/AppText";
+import { Icon, IconName } from "../ui/Icon";
 import { Screen } from "../ui/Screen";
 
 type Props = {
   stepLabel: string;
   title: string;
   subtitle: string;
-  heroEmoji: string;
-  heroIcon: string;
+  heroIcon: IconName;
   children: ReactNode;
   footer: ReactNode;
   activeStep: 1 | 2;
@@ -21,7 +21,6 @@ export function OnboardingLayout({
   stepLabel,
   title,
   subtitle,
-  heroEmoji,
   heroIcon,
   children,
   footer,
@@ -29,14 +28,11 @@ export function OnboardingLayout({
 }: Props) {
   return (
     <Screen>
-      <View style={styles.hero}>
-        <AppText style={styles.heroEmoji}>{heroEmoji}</AppText>
-        <View style={styles.heroIcon}>
-          <AppText style={styles.heroIconText}>{heroIcon}</AppText>
-        </View>
-      </View>
-
       <View style={styles.body}>
+        <View style={styles.heroIconWrap}>
+          <Icon name={heroIcon} size={26} color={theme.colors.navy} />
+        </View>
+
         <AppText style={styles.step}>{stepLabel}</AppText>
         <AppText style={styles.title}>{title}</AppText>
         <AppText style={styles.subtitle}>{subtitle}</AppText>
@@ -55,55 +51,42 @@ export function OnboardingLayout({
 }
 
 const styles = StyleSheet.create({
-  hero: {
-    height: 220,
+  body: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 60,
+    paddingBottom: theme.spacing["2xl"],
+  },
+  heroIconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
     backgroundColor: theme.colors.card2,
     alignItems: "center",
     justifyContent: "center",
-    overflow: "hidden",
-  },
-  heroEmoji: {
-    position: "absolute",
-    fontSize: 90,
-    opacity: 0.15,
-  },
-  heroIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 22,
-    backgroundColor: theme.colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  heroIconText: {
-    fontSize: 36,
-  },
-  body: {
-    flex: 1,
-    paddingHorizontal: theme.spacing["2xl"],
-    paddingTop: theme.spacing["3xl"],
-    paddingBottom: theme.spacing["2xl"],
+    marginBottom: 20,
   },
   step: {
-    fontFamily: theme.fontFamily.bodyBold,
-    fontSize: 11,
-    color: theme.colors.primary,
-    letterSpacing: 2,
+    fontFamily: theme.fontFamily.monoBold,
+    fontSize: 12,
+    color: theme.colors.textMuted,
+    letterSpacing: 1.2,
     textTransform: "uppercase",
     marginBottom: 10,
   },
   title: {
     fontFamily: theme.fontFamily.display,
     fontSize: 28,
-    lineHeight: 34,
-    color: theme.colors.cream,
-    marginBottom: 6,
+    lineHeight: 33,
+    letterSpacing: -0.3,
+    color: theme.colors.navy,
+    marginBottom: 8,
   },
   subtitle: {
     fontFamily: theme.fontFamily.body,
-    fontSize: 13,
-    lineHeight: 20,
-    color: theme.colors.textMuted,
+    fontSize: 14.5,
+    lineHeight: 22,
+    color: theme.colors.textMedium,
     marginBottom: theme.spacing["3xl"],
   },
   content: {
@@ -123,6 +106,6 @@ const styles = StyleSheet.create({
   },
   activeDot: {
     width: 20,
-    backgroundColor: theme.colors.primary,
+    backgroundColor: theme.colors.navy,
   },
 });

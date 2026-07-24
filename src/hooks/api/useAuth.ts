@@ -63,3 +63,21 @@ export function useLogoutAllMutation() {
     },
   });
 }
+
+export function useForgotPasswordMutation() {
+  return useMutation({
+    mutationFn: authApi.forgotPassword,
+  });
+}
+
+export function useVerifyResetCodeMutation() {
+  return useMutation({
+    mutationFn: authApi.verifyResetCode,
+  });
+}
+
+export function useResetPasswordMutation() {
+  return useMutation({
+    mutationFn: authApi.resetPassword,
+  });
+}
