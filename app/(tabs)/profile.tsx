@@ -7,9 +7,23 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  TextInput,
   View,
 } from "react-native";
+import Animated, {
+  FadeInDown,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Svg, {
+  Circle,
+  Defs,
+  RadialGradient as SvgRadialGradient,
+  Stop,
+} from "react-native-svg";
 import { SettingsRow } from "../../src/components/profile/SettingsRow";
 import { AppText } from "../../src/components/ui/AppText";
 import { Icon } from "../../src/components/ui/Icon";
@@ -21,7 +35,10 @@ import {
   useUpdatePreferencesMutation,
 } from "../../src/hooks/api/usePreferences";
 import { useAuthStore } from "../../src/store/authStore";
-import { useProfileAnswersQuery } from "../../src/hooks/api/useProfileAnswers";
+import {
+  useProfileAnswersQuery,
+  useUpdateProfileAnswersMutation,
+} from "../../src/hooks/api/useProfileAnswers";
 import {
   PROFILE_COMPLETION_FIELD_COUNT,
   countAnsweredProfileFields,
@@ -50,6 +67,18 @@ export default function ProfileScreen() {
   const logoutMutation = useLogoutMutation();
   const { favoriteRecipes } = useFavoriteRecipes();
   const updatePreferencesMutation = useUpdatePreferencesMutation();
+  const updateProfileAnswersMutation = useUpdateProfileAnswersMutation();
+  const setProfileAnswers = useProfileAnswersStore(
+    (state) => state.setProfileAnswers
+  );
+  const screenProgress = useSharedValue(1);
+  const screenAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: screenProgress.value,
+    transform: [
+      { translateY: (1 - screenProgress.value) * 12 },
+      { scale: 0.985 + screenProgress.value * 0.015 },
+    ],
+  }));
   usePreferencesQuery();
   useProfileAnswersQuery();
 
@@ -133,30 +162,22 @@ export default function ProfileScreen() {
   }
 
   function openProfileDetailsSheet() {
-    const birthday =
-      profileAnswers.birthdayMonth && profileAnswers.birthdayDay
-        ? `${profileAnswers.birthdayMonth}/${profileAnswers.birthdayDay}`
-        : "Not added";
-
     openSheet(
-      <View style={styles.sheetContent}>
-        <AppText style={styles.sheetTitle}>Profile Details</AppText>
-        <ProfileField label="Full Name" value={user?.fullName ?? "Sustena User"} />
-        <ProfileField
-          label="Email"
-          value={user?.email ?? "No email available"}
-        />
-        <ProfileField label="Date of Birth" value={birthday} />
-        <Pressable
-          onPress={() => {
-            closeSheet();
-            router.push("/profile-complete");
-          }}
-          style={styles.sheetPrimaryButton}
-        >
-          <AppText style={styles.sheetPrimaryButtonText}>Edit Details</AppText>
-        </Pressable>
-      </View>
+      <ProfileDetailsSheet
+        fullName={user?.fullName ?? "Sustena User"}
+        email={user?.email ?? "No email available"}
+        initialMonth={profileAnswers.birthdayMonth}
+        initialDay={profileAnswers.birthdayDay}
+        onSave={(birthdayMonth, birthdayDay) => {
+          setProfileAnswers({ birthdayMonth, birthdayDay });
+          updateProfileAnswersMutation.mutate({
+            birthdayMonth,
+            birthdayDay,
+          });
+          closeSheet();
+          showToast("Profile details saved", "success");
+        }}
+      />
     );
   }
 
@@ -167,13 +188,22 @@ export default function ProfileScreen() {
           Upload Profile Picture
         </AppText>
         <AppText style={styles.avatarSheetText}>
-          Profile photo uploads are coming soon.
+          Drag an image here, or click to browse.
         </AppText>
-        <View style={styles.avatarSheetPreview}>
-          <AppText style={styles.avatarSheetInitials}>
-            {getInitials(user?.fullName)}
+        <Pressable
+          onPress={() => showToast("Profile photo uploads are coming soon")}
+          style={({ pressed }) => [
+            styles.avatarSheetPreview,
+            pressed && styles.pressed,
+          ]}
+        >
+          <View style={styles.avatarSheetAddIcon}>
+            <Icon name="plus" size={22} color={theme.colors.textMedium} />
+          </View>
+          <AppText style={styles.avatarSheetAddText}>
+            Add photo
           </AppText>
-        </View>
+        </Pressable>
         <Pressable onPress={closeSheet} style={styles.sheetPrimaryButton}>
           <AppText style={styles.sheetPrimaryButtonText}>Done</AppText>
         </Pressable>
@@ -181,13 +211,27 @@ export default function ProfileScreen() {
     );
   }
 
-  async function handleSignOut() {
-    await logoutMutation.mutateAsync();
-    router.replace("/welcome");
+  async function finishSignOut() {
+    try {
+      await logoutMutation.mutateAsync();
+    } finally {
+      router.replace("/welcome");
+    }
+  }
+
+  function handleSignOut() {
+    screenProgress.value = withTiming(0, { duration: 240 }, (finished) => {
+      if (finished) {
+        runOnJS(finishSignOut)();
+      }
+    });
   }
 
   return (
-    <View style={styles.screen}>
+    <Animated.View
+      entering={FadeInDown.duration(320)}
+      style={[styles.screen, screenAnimatedStyle]}
+    >
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
@@ -292,44 +336,81 @@ export default function ProfileScreen() {
               />
             </Pressable>
           ) : (
-            <Pressable
-              onPress={() => router.push("/profile-complete")}
-              style={({ pressed }) => [
-                styles.completeCardPromo,
-                pressed && styles.pressed,
-              ]}
-            >
-              <LinearGradient
-                colors={["#1D3327", "#152119"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={StyleSheet.absoluteFillObject}
-              />
-
-              <View style={styles.completeCardPromoHeader}>
-                <AppText style={styles.completeCardPromoTitle}>
-                  Complete your profile
-                </AppText>
-                <Icon name="chevronRight" size={17} color="#9FB0A3" />
-              </View>
-
-              <AppText style={styles.completeCardPromoSubtitle}>
-                Better suggestions with every answer.
-              </AppText>
-
-              <View style={styles.completeCardPromoTrack}>
-                <View
-                  style={[
-                    styles.completeCardPromoFill,
-                    { width: `${profileCompletionPercent}%` },
-                  ]}
+            <View style={styles.completeCardPromoShadow}>
+              <Pressable
+                onPress={() => router.push("/profile-complete")}
+                style={({ pressed }) => [
+                  styles.completeCardPromo,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <LinearGradient
+                  colors={["#1D3327", "#152119"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={StyleSheet.absoluteFillObject}
                 />
-              </View>
+                <Svg
+                  pointerEvents="none"
+                  width={150}
+                  height={150}
+                  style={styles.completeCardPromoGlow}
+                >
+                  <Defs>
+                    <SvgRadialGradient
+                      id="profileCompletionGlow"
+                      cx="50%"
+                      cy="50%"
+                      r="50%"
+                    >
+                      <Stop
+                        offset="0%"
+                        stopColor="#40C982"
+                        stopOpacity={0.25}
+                      />
+                      <Stop
+                        offset="72%"
+                        stopColor="#34B673"
+                        stopOpacity={0}
+                      />
+                    </SvgRadialGradient>
+                  </Defs>
+                  <Circle
+                    cx={75}
+                    cy={75}
+                    r={75}
+                    fill="url(#profileCompletionGlow)"
+                  />
+                </Svg>
 
-              <AppText style={styles.completeCardPromoLabel}>
-                {answeredFieldCount} of {PROFILE_COMPLETION_FIELD_COUNT} answered
-              </AppText>
-            </Pressable>
+                <View style={styles.completeCardPromoContent}>
+                  <View style={styles.completeCardPromoHeader}>
+                    <AppText style={styles.completeCardPromoTitle}>
+                      Complete your profile
+                    </AppText>
+                    <Icon name="chevronRight" size={17} color="#9FB0A3" />
+                  </View>
+
+                  <AppText style={styles.completeCardPromoSubtitle}>
+                    Better suggestions with every answer.
+                  </AppText>
+
+                  <View style={styles.completeCardPromoTrack}>
+                    <View
+                      style={[
+                        styles.completeCardPromoFill,
+                        { width: `${profileCompletionPercent}%` },
+                      ]}
+                    />
+                  </View>
+
+                  <AppText style={styles.completeCardPromoLabel}>
+                    {answeredFieldCount} of {PROFILE_COMPLETION_FIELD_COUNT}{" "}
+                    answered
+                  </AppText>
+                </View>
+              </Pressable>
+            </View>
           )}
         </View>
 
@@ -418,6 +499,103 @@ export default function ProfileScreen() {
           </Pressable>
         </View>
       </ScrollView>
+    </Animated.View>
+  );
+}
+
+const MONTHS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+function ProfileDetailsSheet({
+  fullName,
+  email,
+  initialMonth,
+  initialDay,
+  onSave,
+}: {
+  fullName: string;
+  email: string;
+  initialMonth: number | null;
+  initialDay: number | null;
+  onSave: (month: number, day: number) => void;
+}) {
+  const [month, setMonth] = useState(
+    initialMonth ? MONTHS[initialMonth - 1] : "January"
+  );
+  const [day, setDay] = useState(String(initialDay ?? 1));
+
+  function save() {
+    const monthNumber = MONTHS.findIndex(
+      (candidate) => candidate.toLowerCase() === month.trim().toLowerCase()
+    );
+    const dayNumber = Number(day);
+
+    if (monthNumber < 0 || dayNumber < 1 || dayNumber > 31) {
+      showToast("Enter a valid month and day", "danger");
+      return;
+    }
+
+    onSave(monthNumber + 1, dayNumber);
+  }
+
+  return (
+    <View style={styles.sheetContent}>
+      <AppText style={styles.sheetTitle}>Profile Details</AppText>
+      <ProfileField label="Full Name" value={fullName} />
+      <ProfileField label="Email" value={email} />
+
+      <View style={styles.profileField}>
+        <AppText style={styles.profileFieldLabel}>Date of Birth</AppText>
+        <View style={styles.dateFieldRow}>
+          <View style={[styles.dateInputWrap, styles.monthInput]}>
+            <TextInput
+              value={month}
+              onChangeText={setMonth}
+              placeholder="January"
+              placeholderTextColor={theme.colors.textMuted}
+              autoCapitalize="words"
+              style={styles.dateInput}
+            />
+            <Icon
+              name="chevronDown"
+              size={14}
+              color={theme.colors.textMuted}
+            />
+          </View>
+          <View style={styles.dateInputWrap}>
+            <TextInput
+              value={day}
+              onChangeText={setDay}
+              placeholder="1"
+              placeholderTextColor={theme.colors.textMuted}
+              keyboardType="number-pad"
+              maxLength={2}
+              style={styles.dateInput}
+            />
+            <Icon
+              name="chevronDown"
+              size={14}
+              color={theme.colors.textMuted}
+            />
+          </View>
+        </View>
+      </View>
+
+      <Pressable onPress={save} style={styles.sheetPrimaryButton}>
+        <AppText style={styles.sheetPrimaryButtonText}>Save</AppText>
+      </Pressable>
     </View>
   );
 }
@@ -706,16 +884,28 @@ const styles = StyleSheet.create({
     color: theme.colors.textMedium,
     marginTop: 2,
   },
-  completeCardPromo: {
+  completeCardPromoShadow: {
     borderRadius: 18,
-    padding: 18,
-    paddingBottom: 16,
-    overflow: "hidden",
     shadowColor: theme.colors.navy,
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.22,
     shadowRadius: 13,
     elevation: 4,
+  },
+  completeCardPromo: {
+    borderRadius: 18,
+    padding: 18,
+    paddingBottom: 16,
+    overflow: "hidden",
+  },
+  completeCardPromoGlow: {
+    position: "absolute",
+    top: -38,
+    right: -30,
+  },
+  completeCardPromoContent: {
+    position: "relative",
+    zIndex: 1,
   },
   completeCardPromoHeader: {
     flexDirection: "row",
@@ -804,6 +994,32 @@ const styles = StyleSheet.create({
     fontSize: 14.5,
     lineHeight: 20,
     color: theme.colors.text,
+  },
+  dateFieldRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  dateInputWrap: {
+    flex: 1,
+    minHeight: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.card2,
+    paddingHorizontal: 12,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  dateInput: {
+    flex: 1,
+    minWidth: 0,
+    paddingVertical: 0,
+    fontFamily: theme.fontFamily.body,
+    fontSize: 14.5,
+    color: theme.colors.text,
+  },
+  monthInput: {
+    flex: 1.4,
   },
   sheetPrimaryButton: {
     width: "100%",
@@ -901,10 +1117,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 20,
+    gap: 8,
   },
-  avatarSheetInitials: {
-    fontFamily: theme.fontFamily.display,
-    fontSize: 36,
-    color: theme.colors.navy,
+  avatarSheetAddIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: theme.colors.card,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarSheetAddText: {
+    fontFamily: theme.fontFamily.bodySemiBold,
+    fontSize: 13,
+    color: theme.colors.textMedium,
   },
 });

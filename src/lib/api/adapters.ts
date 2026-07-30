@@ -9,6 +9,7 @@ import {
 import { ShoppingListItem } from "../../types/shoppingList";
 import { capitalizeWords } from "../textFormatters";
 import { API_BASE_URL } from "./config";
+import { isSelectableIngredientUnit } from "../unitConversion";
 
 export function apiRecipeToLocalRecipe(
   recipe: RecipeListItem | RecipeDetail
@@ -46,7 +47,7 @@ export function apiRecipeToLocalRecipe(
     ingredients,
     steps:
       "instructions" in recipe
-        ? recipe.instructions
+        ? [...recipe.instructions]
             .sort((a, b) => a.stepNumber - b.stepNumber)
             .map((instruction) => instruction.text)
         : [],
@@ -85,8 +86,7 @@ function apiIngredientToLocalIngredient(ingredient: RecipeIngredient) {
   const amount = {
     metric: amountLabel,
     cups:
-      findUnitLabel(ingredient, "cup") ??
-      ingredient.availableUnits[1]?.label ??
+      findNigerianUnitLabel(ingredient) ??
       amountLabel,
     imperial:
       findUnitLabel(ingredient, "ounce") ??
@@ -116,6 +116,21 @@ function findUnitLabel(ingredient: RecipeIngredient, unitNeedle: string) {
   return ingredient.availableUnits.find((unit) =>
     unit.unit?.toLowerCase().includes(unitNeedle)
   )?.label;
+}
+
+function findNigerianUnitLabel(ingredient: RecipeIngredient) {
+  const nigerianUnitIds = ["milk_cup", "derica", "congo"];
+
+  return nigerianUnitIds
+    .map(
+      (unitId) =>
+        ingredient.availableUnits.find(
+          (unit) =>
+            isSelectableIngredientUnit(unit.unit) &&
+            unit.unit?.toLowerCase().includes(unitId)
+        )?.label
+    )
+    .find(Boolean);
 }
 
 function getRecipeFilters(recipe: RecipeListItem | RecipeDetail) {

@@ -37,6 +37,7 @@ import { formatNaira } from "../../src/lib/formatters";
 import {
   createInitialIngredientUnitSelections,
 } from "../../src/lib/ingredientUnits";
+import { formatScaledInstruction } from "../../src/lib/instructionScaling";
 import { scaleAmountText, scaleCost } from "../../src/lib/scaling";
 import {
   generateShoppingListItemsFromRecipe,
@@ -44,13 +45,13 @@ import {
 } from "../../src/lib/shoppingListGenerator";
 import { capitalizeWords } from "../../src/lib/textFormatters";
 import {
+  buildScaleUnitOptions,
   buildIngredientLookup,
   buildUnitLookup,
   convertIngredientQuantity,
-  formatConvertedQuantity,
-  getAvailableModesForContext,
   getIngredientConversionContext,
-  getUnitDisplayLabel,
+  getUnitModeForUnitId,
+  isSelectableIngredientUnit,
   UnitMode,
 } from "../../src/lib/unitConversion";
 import { useFavoritesStore } from "../../src/store/favoritesStore";
@@ -58,6 +59,10 @@ import { usePreferencesStore } from "../../src/store/preferencesStore";
 import { useShoppingListStore } from "../../src/store/shoppingListStore";
 import { closeSheet, openSheet } from "../../src/store/uiStore";
 import { theme } from "../../src/theme/theme";
+import type {
+  RecipeDetail as ApiRecipeDetail,
+  RecipeIngredient as ApiRecipeIngredient,
+} from "../../src/types/api";
 import { DEFAULT_SHOPPING_LIST_ID } from "../../src/types/shoppingList";
 
 export default function RecipeDetailScreen() {
@@ -120,6 +125,156 @@ export default function RecipeDetailScreen() {
     [ingredientCatalogQuery.data]
   );
   const canConvertUnits = unitsById.size > 0;
+  const unitCatalog = unitsQuery.data ?? [];
+
+  function getApiIngredientOptions(apiIngredient: ApiRecipeIngredient) {
+    const ingredientContext = getIngredientConversionContext(
+      apiIngredient.ingredientId
+        ? ingredientsById.get(apiIngredient.ingredientId)
+        : undefined
+    );
+    const storedQuantity =
+      apiIngredient.quantity !== null && apiIngredient.quantity !== undefined
+        ? Number(apiIngredient.quantity)
+        : null;
+    const baseServings =
+      Number.isFinite(recipe?.baseServings) && (recipe?.baseServings ?? 0) > 0
+        ? recipe!.baseServings
+        : 1;
+    const servingFactor = servings / baseServings;
+    const modesToTry: UnitMode[] =
+      globalUnitMode === "cups" ? ["cups", "metric"] : [globalUnitMode];
+    let effectiveMode = globalUnitMode;
+    let scaleOptions: IngredientUnitOption[] = [];
+
+    if (
+      canConvertUnits &&
+      storedQuantity !== null &&
+      Number.isFinite(storedQuantity) &&
+      apiIngredient.unit
+    ) {
+      for (const mode of modesToTry) {
+        scaleOptions = buildScaleUnitOptions({
+          units: unitCatalog,
+          quantity: storedQuantity,
+          fromUnit: apiIngredient.unit,
+          context: ingredientContext,
+          mode,
+          servingFactor,
+        }).map((option) => ({
+          value: option.unit,
+          unit: option.unit,
+          label: option.label,
+          preview: option.preview,
+        }));
+
+        if (scaleOptions.length > 0) {
+          effectiveMode = mode;
+          break;
+        }
+      }
+    }
+
+    if (scaleOptions.length > 0) {
+      return {
+        options: scaleOptions,
+        ingredientContext,
+        storedQuantity,
+        effectiveMode,
+      };
+    }
+
+    let availableOptions: IngredientUnitOption[] = [];
+
+    for (const mode of modesToTry) {
+      availableOptions = apiIngredient.availableUnits
+        .map((unit, unitIndex) => ({ unit, unitIndex }))
+        .filter(
+          ({ unit }) =>
+            isSelectableIngredientUnit(unit.unit) &&
+            getUnitModeForUnitId(unit.unit) === mode
+        )
+        .map(({ unit, unitIndex }) => ({
+          value: `available:${unitIndex}`,
+          unit: unit.unit,
+          label: getAvailableUnitName(unit.unit, unitIndex),
+          preview: scaleAmountText({
+            amount: unit.label,
+            baseServings,
+            selectedServings: servings,
+          }),
+        }));
+
+      if (availableOptions.length > 0) {
+        effectiveMode = mode;
+        break;
+      }
+    }
+
+    return {
+      options: availableOptions,
+      ingredientContext,
+      storedQuantity,
+      effectiveMode,
+    };
+  }
+
+  function getSelectedApiIngredientOption(apiIngredient: ApiRecipeIngredient) {
+    const { options, ingredientContext, storedQuantity, effectiveMode } =
+      getApiIngredientOptions(apiIngredient);
+    const rawSelection =
+      ingredientUnitSelections[apiIngredient.id] ?? globalUnitMode;
+    let selectedValue = String(rawSelection);
+
+    if (
+      isUnitMode(rawSelection) &&
+      storedQuantity !== null &&
+      apiIngredient.unit
+    ) {
+      const baseServings =
+        Number.isFinite(recipe?.baseServings) && (recipe?.baseServings ?? 0) > 0
+          ? recipe!.baseServings
+          : 1;
+      const preferred = convertIngredientQuantity({
+        unitsById,
+        quantity: storedQuantity * (servings / baseServings),
+        fromUnit: apiIngredient.unit,
+        context: ingredientContext,
+        mode: rawSelection === "cups" ? effectiveMode : rawSelection,
+      });
+
+      if (preferred) {
+        const preferredUnit = unitsById.get(preferred.unit);
+        const equivalentOption = preferredUnit
+          ? options.find((option) => {
+              if (!option.unit) return false;
+              const optionUnit = unitsById.get(option.unit);
+
+              return (
+                optionUnit?.baseUnit === preferredUnit.baseUnit &&
+                Number(optionUnit.baseFactorMin) ===
+                  Number(preferredUnit.baseFactorMin) &&
+                Number(optionUnit.baseFactorMax) ===
+                  Number(preferredUnit.baseFactorMax)
+              );
+            })
+          : undefined;
+
+        selectedValue = equivalentOption?.value ?? preferred.unit;
+      }
+    }
+
+    const selectedOption =
+      options.find((option) => option.value === selectedValue) ??
+      options.find((option) => option.unit === apiIngredient.unit) ??
+      options[0];
+
+    return {
+      options,
+      selectedOption,
+      selectedValue: selectedOption?.value ?? "",
+    };
+  }
 
   const scaledCost = recipe
     ? scaleCost({
@@ -132,6 +287,27 @@ export default function RecipeDetailScreen() {
     scaledCost !== null && servings > 0
       ? Math.round(scaledCost / servings)
       : null;
+  const selectedInstructionUnits = new Map(
+    (recipeDetail?.ingredients ?? []).flatMap((ingredient) => {
+      const selectedUnit =
+        getSelectedApiIngredientOption(ingredient).selectedOption?.unit;
+
+      return selectedUnit ? [[ingredient.id, selectedUnit] as const] : [];
+    })
+  );
+  const instructions = [...(recipeDetail?.instructions ?? [])]
+    .sort((left, right) => left.stepNumber - right.stepNumber)
+    .map((instruction) => ({
+      ...instruction,
+      displayText: formatScaledInstruction({
+        instruction,
+        baseServings: recipeDetail?.baseServings ?? null,
+        selectedServings: servings,
+        unitsById,
+        selectedUnitByIngredientId: selectedInstructionUnits,
+      }),
+    }));
+  const displayTags = getRecipeDetailTags(recipeDetail, recipe?.tags ?? []);
 
   async function handleFavoritePress() {
     if (!recipe) return;
@@ -203,7 +379,7 @@ export default function RecipeDetailScreen() {
     options: IngredientUnitOption[],
     selectedValue: string
   ) {
-    if (options.length < 2) {
+    if (options.length === 0) {
       return;
     }
 
@@ -230,10 +406,28 @@ export default function RecipeDetailScreen() {
   async function handleAddToShoppingList() {
     if (!recipe) return;
 
+    const ingredientAmountOverrides = recipeDetail
+      ? Object.fromEntries(
+          recipeDetail.ingredients.map((ingredient) => [
+            ingredient.id,
+            getSelectedApiIngredientOption(ingredient).selectedOption
+              ?.preview ??
+              scaleAmountText({
+                amount:
+                  ingredient.displayText ??
+                  ingredient.quantityText ??
+                  ingredient.rawText,
+                baseServings: recipe.baseServings,
+                selectedServings: servings,
+              }),
+          ])
+        )
+      : undefined;
     const items = generateShoppingListItemsFromRecipe({
       recipe,
       selectedServings: servings,
       ingredientUnitSelections,
+      ingredientAmountOverrides,
     });
 
     let itemsToPersist = items;
@@ -243,12 +437,9 @@ export default function RecipeDetailScreen() {
         isPurchasableRecipeIngredient
       );
       const itemPayloads = apiIngredients.map((ingredient) => {
-        const selectedIndex = Number(
-          ingredientUnitSelections[ingredient.id] ?? 0
-        );
-        const selectedUnit =
-          ingredient.availableUnits[selectedIndex] ??
-          ingredient.availableUnits[0];
+        const selectedUnit = getSelectedApiIngredientOption(
+          ingredient
+        ).selectedOption;
 
         return {
           recipeId: recipeDetail.id,
@@ -259,7 +450,7 @@ export default function RecipeDetailScreen() {
           canonicalIngredientName: ingredient.canonicalIngredientName,
           emoji: null,
           quantity:
-            selectedUnit?.label ??
+            selectedUnit?.preview ??
             ingredient.displayText ??
             ingredient.quantityText ??
             ingredient.rawText,
@@ -404,7 +595,7 @@ export default function RecipeDetailScreen() {
       >
         <View style={styles.titleBlock}>
           <View style={styles.tagRow}>
-            {recipe.tags.map((tag) => (
+            {displayTags.map((tag) => (
               <View key={tag} style={styles.tag}>
                 <AppText style={styles.tagText}>{tag}</AppText>
               </View>
@@ -420,14 +611,6 @@ export default function RecipeDetailScreen() {
               label="Time"
               borderRight
             />
-            {recipe.calories !== null ? (
-              <StatCell
-                icon="chart"
-                value={`${recipe.calories} kcal`}
-                label="Calories"
-                borderRight
-              />
-            ) : null}
             <StatCell
               icon="chefHat"
               value={recipe.difficulty}
@@ -512,78 +695,11 @@ export default function RecipeDetailScreen() {
               );
 
               if (apiIngredient) {
-                const ingredientContext = getIngredientConversionContext(
-                  apiIngredient.ingredientId
-                    ? ingredientsById.get(apiIngredient.ingredientId)
-                    : undefined
-                );
-                const availableModes = canConvertUnits
-                  ? getAvailableModesForContext(ingredientContext)
-                  : [];
-
-                const storedQuantity =
-                  apiIngredient.quantity !== null &&
-                  apiIngredient.quantity !== undefined
-                    ? Number(apiIngredient.quantity)
-                    : null;
-
-                const baseServings =
-                  Number.isFinite(recipe.baseServings) &&
-                  recipe.baseServings > 0
-                    ? recipe.baseServings
-                    : 1;
-                const rawSelection = ingredientUnitSelections[ingredient.id];
-                const conversionOptions: IngredientUnitOption[] =
-                  storedQuantity !== null && apiIngredient.unit
-                    ? availableModes.flatMap((mode) => {
-                        const converted = convertIngredientQuantity({
-                          unitsById,
-                          quantity: storedQuantity,
-                          fromUnit: apiIngredient.unit!,
-                          context: ingredientContext,
-                          mode,
-                        });
-
-                        if (!converted) return [];
-
-                        const preview = `${
-                          converted.isApproximate ? "≈" : ""
-                        }${formatConvertedQuantity(
-                          converted.quantity * (servings / baseServings),
-                          mode
-                        )} ${getUnitDisplayLabel(unitsById, converted.unit)}`;
-
-                        return [
-                          {
-                            value: mode,
-                            label: getUnitModeName(mode),
-                            preview,
-                          },
-                        ];
-                      })
-                    : [];
-                const availableUnitOptions: IngredientUnitOption[] =
-                  apiIngredient.availableUnits.map((unit, unitIndex) => ({
-                    value: String(unitIndex),
-                    label: getAvailableUnitName(unit.unit, unitIndex),
-                    preview: scaleAmountText({
-                      amount: unit.label,
-                      baseServings: recipe.baseServings,
-                      selectedServings: servings,
-                    }),
-                  }));
-                const unitOptions =
-                  conversionOptions.length > 0
-                    ? conversionOptions
-                    : availableUnitOptions;
-                const selectedValue = unitOptions.some(
-                  (option) => option.value === rawSelection
-                )
-                  ? String(rawSelection)
-                  : unitOptions[0]?.value ?? "";
-                const selectedOption = unitOptions.find(
-                  (option) => option.value === selectedValue
-                );
+                const {
+                  options: unitOptions,
+                  selectedOption,
+                  selectedValue,
+                } = getSelectedApiIngredientOption(apiIngredient);
                 const displayAmount =
                   selectedOption?.preview ??
                   scaleAmountText({
@@ -609,7 +725,7 @@ export default function RecipeDetailScreen() {
                       {capitalizeWords(ingredient.name)}
                     </AppText>
 
-                    {unitOptions.length > 1 ? (
+                    {unitOptions.length > 0 ? (
                       <Pressable
                         onPress={() =>
                           openIngredientUnitSheet(
@@ -649,11 +765,29 @@ export default function RecipeDetailScreen() {
               }
 
               const selectedUnitMode =
-                ingredientUnitSelections[ingredient.id] ?? defaultUnitMode;
+                ingredientUnitSelections[ingredient.id] ?? globalUnitMode;
+              const modeCandidates: UnitMode[] =
+                globalUnitMode === "cups"
+                  ? ["cups", "metric"]
+                  : [globalUnitMode];
+              const availableUnitsWithIndexes =
+                ingredient.availableUnits?.map((unit, unitIndex) => ({
+                  unit,
+                  unitIndex,
+                })) ?? [];
+              const compatibleAvailableUnits =
+                modeCandidates
+                  .map((mode) =>
+                    availableUnitsWithIndexes.filter(
+                      ({ unit }) =>
+                        isSelectableIngredientUnit(unit.unit) &&
+                        getUnitModeForUnitId(unit.unit) === mode
+                    )
+                  )
+                  .find((options) => options.length > 0) ?? [];
               const localUnitOptions: IngredientUnitOption[] =
-                ingredient.availableUnits &&
-                ingredient.availableUnits.length > 1
-                  ? ingredient.availableUnits.map((unit, unitIndex) => ({
+                compatibleAvailableUnits.length > 0
+                  ? compatibleAvailableUnits.map(({ unit, unitIndex }) => ({
                       value: String(unitIndex),
                       label: getAvailableUnitName(unit.unit, unitIndex),
                       preview: scaleAmountText({
@@ -662,17 +796,17 @@ export default function RecipeDetailScreen() {
                         selectedServings: servings,
                       }),
                     }))
-                  : (["metric", "imperial", "cups"] as UnitMode[]).map(
-                      (mode) => ({
-                        value: mode,
-                        label: getUnitModeName(mode),
+                  : [
+                      {
+                        value: globalUnitMode,
+                        label: getUnitModeName(globalUnitMode),
                         preview: scaleAmountText({
-                          amount: ingredient.amount[mode],
+                          amount: ingredient.amount[globalUnitMode],
                           baseServings: recipe.baseServings,
                           selectedServings: servings,
                         }),
-                      })
-                    );
+                      },
+                    ];
               const selectedValue = localUnitOptions.some(
                 (option) => option.value === selectedUnitMode
               )
@@ -685,7 +819,7 @@ export default function RecipeDetailScreen() {
                 selectedValue === "imperial"
                   ? ingredient.amount[selectedValue]
                   : ingredient.availableUnits?.[Number(selectedValue)]
-                      ?.label ?? ingredient.amount[defaultUnitMode];
+                      ?.label ?? ingredient.amount[globalUnitMode];
 
               const scaledAmount = scaleAmountText({
                 amount: originalAmount,
@@ -762,13 +896,17 @@ export default function RecipeDetailScreen() {
           <View style={styles.stepsCard}>
             <View style={styles.stepsLine} />
 
-            {recipe.steps.map((step, index) => (
-              <View key={`${step}-${index}`} style={styles.stepItem}>
+            {instructions.map((instruction) => (
+              <View key={instruction.id} style={styles.stepItem}>
                 <View style={styles.stepNumber}>
-                  <AppText style={styles.stepNumberText}>{index + 1}</AppText>
+                  <AppText style={styles.stepNumberText}>
+                    {instruction.stepNumber}
+                  </AppText>
                 </View>
 
-                <AppText style={styles.stepText}>{step}</AppText>
+                <AppText style={styles.stepText}>
+                  {instruction.displayText}
+                </AppText>
               </View>
             ))}
           </View>
@@ -847,6 +985,7 @@ export default function RecipeDetailScreen() {
 
 type IngredientUnitOption = {
   value: string;
+  unit?: string | null;
   label: string;
   preview: string;
 };
@@ -869,37 +1008,44 @@ function IngredientUnitSheet({
       </AppText>
       <AppText style={styles.unitSheetTitle}>Choose a unit</AppText>
 
-      {options.map((option, index) => {
-        const selected = option.value === selectedValue;
+      <ScrollView
+        style={styles.unitSheetOptions}
+        contentContainerStyle={styles.unitSheetOptionsContent}
+        showsVerticalScrollIndicator={options.length > 6}
+        nestedScrollEnabled
+      >
+        {options.map((option, index) => {
+          const selected = option.value === selectedValue;
 
-        return (
-          <Pressable
-            key={option.value}
-            onPress={() => onSelect(option.value)}
-            style={[
-              styles.unitSheetOption,
-              index === options.length - 1 && styles.unitSheetOptionLast,
-            ]}
-          >
-            <AppText
+          return (
+            <Pressable
+              key={option.value}
+              onPress={() => onSelect(option.value)}
               style={[
-                styles.unitSheetOptionName,
-                selected && styles.unitSheetOptionNameSelected,
+                styles.unitSheetOption,
+                index === options.length - 1 && styles.unitSheetOptionLast,
               ]}
             >
-              {option.label}
-            </AppText>
-            <View style={styles.unitSheetOptionRight}>
-              <AppText style={styles.unitSheetPreview}>
-                {option.preview}
+              <AppText
+                style={[
+                  styles.unitSheetOptionName,
+                  selected && styles.unitSheetOptionNameSelected,
+                ]}
+              >
+                {option.label}
               </AppText>
-              {selected ? (
-                <Icon name="check" size={17} color={theme.colors.green} />
-              ) : null}
-            </View>
-          </Pressable>
-        );
-      })}
+              <View style={styles.unitSheetOptionRight}>
+                <AppText style={styles.unitSheetPreview}>
+                  {option.preview}
+                </AppText>
+                {selected ? (
+                  <Icon name="check" size={17} color={theme.colors.green} />
+                ) : null}
+              </View>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
     </View>
   );
 }
@@ -910,13 +1056,69 @@ function getUnitModeName(mode: UnitMode) {
   return "Nigerian Units";
 }
 
+function isUnitMode(value: string): value is UnitMode {
+  return value === "metric" || value === "imperial" || value === "cups";
+}
+
+function getRecipeDetailTags(
+  recipe: ApiRecipeDetail | undefined,
+  fallbackTags: string[]
+) {
+  const candidates = [
+    ...(recipe?.tags ?? fallbackTags),
+    ...(recipe?.dietaryTags ?? []),
+    ...(recipe?.cuisine ? [recipe.cuisine] : []),
+  ].filter(Boolean);
+  const uniqueCandidates = candidates.filter(
+    (tag, index, tags) =>
+      tags.findIndex(
+        (candidate) => normalizeTag(candidate) === normalizeTag(tag)
+      ) === index
+  );
+  const selected: string[] = [];
+
+  const takeFirstMatching = (pattern: RegExp) => {
+    const match = uniqueCandidates.find(
+      (tag) =>
+        !selected.includes(tag) && pattern.test(normalizeTag(tag))
+    );
+
+    if (match) {
+      selected.push(match);
+    }
+  };
+
+  takeFirstMatching(/\b(breakfast|brunch|lunch|dinner|snack)\b/);
+  takeFirstMatching(
+    /\b(low budget|budget|main dish|side dish|soup|stew|salad|dessert|drink|beverage|porridge|rice dish|pasta|swallow)\b/
+  );
+  takeFirstMatching(
+    /\b(nigerian|west african|african|south east|south west|north east|north west|north central|yoruba|igbo|hausa|calabar|akwa ibom|delta|edo)\b/
+  );
+
+  return selected.slice(0, 3).map((tag) =>
+    capitalizeWords(tag.replace(/_/g, " "))
+  );
+}
+
+function normalizeTag(value: string) {
+  return value.toLowerCase().replace(/[-_]+/g, " ").replace(/\s+/g, " ").trim();
+}
+
 function getAvailableUnitName(unit: string | null, index: number) {
   if (!unit) return `Option ${index + 1}`;
 
   const normalized = unit.toLowerCase();
-  if (normalized.includes("derica")) return "Derica";
+  if (normalized === "metric_cup" || normalized === "flour_metric_cup") {
+    return "Metric Cup";
+  }
+  if (normalized === "us_cup") return "U.S. Cup";
+  if (normalized === "imperial_cup") return "Imperial Cup";
+  if (normalized.includes("milk_cup")) return "Milk Cup";
+  if (normalized.includes("derica_large")) return "Large Derica Cup";
+  if (normalized.includes("derica")) return "Small Derica Cup";
+  if (normalized.includes("congo")) return "Congo (Kongo)";
   if (normalized.includes("mudu")) return "Mudu";
-  if (normalized.includes("paint")) return "Paint Rubber";
   if (normalized.includes("floz")) return "Fluid Ounces";
   if (normalized.includes("ounce") || normalized.endsWith("_oz") || normalized === "oz") {
     return "Ounces";
@@ -940,7 +1142,7 @@ function getAvailableUnitName(unit: string | null, index: number) {
   if (normalized.includes("teaspoon") || normalized === "tsp") {
     return "Teaspoons";
   }
-  if (normalized.includes("cup")) return "Cups";
+  if (normalized.includes("cup")) return "Cup (Unspecified)";
 
   return capitalizeWords(unit.replace(/[_-]+/g, " "));
 }
@@ -1468,6 +1670,12 @@ const styles = StyleSheet.create({
     fontSize: 19,
     color: theme.colors.text,
     marginBottom: 14,
+  },
+  unitSheetOptions: {
+    maxHeight: 360,
+  },
+  unitSheetOptionsContent: {
+    flexGrow: 0,
   },
   unitSheetOption: {
     minHeight: 52,

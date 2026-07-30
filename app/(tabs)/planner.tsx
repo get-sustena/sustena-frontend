@@ -1,16 +1,9 @@
 import { useLocalSearchParams } from "expo-router";
-import { useEffect, useRef, useState } from "react";
-import {
-  ScrollView,
-  StyleSheet,
-  View,
-} from "react-native";
-import type {
-  NativeScrollEvent,
-  NativeSyntheticEvent,
-} from "react-native";
+import { useEffect, useState } from "react";
+import { ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, {
+  FadeInDown,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
@@ -45,8 +38,6 @@ export default function PlannerScreen() {
   const requestedTab = isPlannerTab(tab) ? tab : "budget";
   const [activeTab, setActiveTab] = useState<PlannerTab>(requestedTab);
   const [trackWidth, setTrackWidth] = useState(0);
-  const [kitchenLoadMoreSignal, setKitchenLoadMoreSignal] = useState(0);
-  const didLoadDuringScrollGesture = useRef(false);
   const activeIndex = Math.max(
     0,
     PLANNER_TABS.findIndex((tab) => tab.value === activeTab)
@@ -69,22 +60,11 @@ export default function PlannerScreen() {
     transform: [{ translateX: indicatorPosition.value }],
   }));
 
-  function handleScrollEnd(event: NativeSyntheticEvent<NativeScrollEvent>) {
-    if (activeTab !== "kitchen") {
-      return;
-    }
-
-    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
-    const distanceFromEnd =
-      contentSize.height - (contentOffset.y + layoutMeasurement.height);
-    if (distanceFromEnd < 120 && !didLoadDuringScrollGesture.current) {
-      didLoadDuringScrollGesture.current = true;
-      setKitchenLoadMoreSignal((current) => current + 1);
-    }
-  }
-
   return (
-    <View style={styles.screen}>
+    <Animated.View
+      entering={FadeInDown.duration(320)}
+      style={styles.screen}
+    >
       <View
         style={[styles.header, { paddingTop: Math.max(insets.top, 52) }]}
       >
@@ -93,11 +73,6 @@ export default function PlannerScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        onScrollBeginDrag={() => {
-          didLoadDuringScrollGesture.current = false;
-        }}
-        onScrollEndDrag={handleScrollEnd}
-        onMomentumScrollEnd={handleScrollEnd}
         contentContainerStyle={[
           styles.scrollContent,
           { paddingBottom: Math.max(insets.bottom, 16) + 100 },
@@ -127,13 +102,10 @@ export default function PlannerScreen() {
         {activeTab === "budget" ? <BudgetPlannerPane /> : null}
 
         {activeTab === "kitchen" ? (
-          <KitchenPlannerPane
-            initialCategory={category}
-            loadMoreSignal={kitchenLoadMoreSignal}
-          />
+          <KitchenPlannerPane initialCategory={category} />
         ) : null}
       </ScrollView>
-    </View>
+    </Animated.View>
   );
 }
 

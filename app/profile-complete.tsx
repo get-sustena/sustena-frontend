@@ -20,7 +20,7 @@ import {
   countAnsweredProfileFields,
 } from "../src/lib/profileCompletion";
 import { useProfileAnswersStore } from "../src/store/profileAnswersStore";
-import { closeSheet, openSheet } from "../src/store/uiStore";
+import { closeSheet, openSheet, showToast } from "../src/store/uiStore";
 import { theme } from "../src/theme/theme";
 import { ProfileAnswers } from "../src/types/profileAnswers";
 
@@ -123,6 +123,7 @@ export default function ProfileCompleteScreen() {
     // below is best-effort and never blocks or reverts the local change.
     setProfileAnswers(partial);
     closeSheet();
+    showToast(getProfileSaveToast(partial, next), "success");
 
     try {
       await updateProfileAnswersMutation.mutateAsync(next);
@@ -266,7 +267,7 @@ export default function ProfileCompleteScreen() {
         </Pressable>
 
         <AppText style={styles.headerTitle}>Complete Profile</AppText>
-        <View style={styles.backButton} />
+        <View style={styles.headerSpacer} />
       </View>
 
       <View style={styles.progressWrap}>
@@ -655,6 +656,29 @@ function BirthdaySheet({
   );
 }
 
+function getProfileSaveToast(
+  partial: Partial<ProfileAnswers>,
+  next: ProfileAnswers
+) {
+  if ("experience" in partial) {
+    return "We'll match recipes to your comfort level";
+  }
+
+  if ("habitWho" in partial) {
+    return "Default serving size updated";
+  }
+
+  if ("birthdayMonth" in partial || "birthdayDay" in partial) {
+    return "Date of birth updated";
+  }
+
+  if ("nickname" in partial) {
+    return next.nickname ? `Hi, ${next.nickname}!` : "Saved";
+  }
+
+  return "Saved";
+}
+
 const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 20,
@@ -673,6 +697,10 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
     alignItems: "center",
     justifyContent: "center",
+  },
+  headerSpacer: {
+    width: 44,
+    height: 44,
   },
   headerTitle: {
     flex: 1,

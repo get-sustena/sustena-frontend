@@ -11,6 +11,7 @@ type GenerateShoppingListItemsArgs = {
   selectedServings: number;
   unitMode?: UnitMode;
   ingredientUnitSelections?: IngredientUnitSelections;
+  ingredientAmountOverrides?: Record<string, string>;
 };
 
 const PREPARED_COMPONENT_CATEGORY_PATTERN =
@@ -23,6 +24,7 @@ export function generateShoppingListItemsFromRecipe({
   selectedServings,
   unitMode = "metric",
   ingredientUnitSelections,
+  ingredientAmountOverrides,
 }: GenerateShoppingListItemsArgs): ShoppingListItem[] {
   const now = new Date().toISOString();
   const purchasableIngredients = recipe.ingredients.filter(
@@ -32,17 +34,18 @@ export function generateShoppingListItemsFromRecipe({
   return purchasableIngredients.map((ingredient) => {
     const selectedUnitMode =
       ingredientUnitSelections?.[ingredient.id] ?? unitMode;
-    const baseAmount = getIngredientAmount({
-      ingredient,
-      selectedUnitMode,
-      fallbackUnitMode: unitMode,
-    });
-
-    const scaledAmount = scaleAmountText({
-      amount: baseAmount,
-      baseServings: recipe.baseServings,
-      selectedServings,
-    });
+    const amountOverride = ingredientAmountOverrides?.[ingredient.id];
+    const scaledAmount =
+      amountOverride ??
+      scaleAmountText({
+        amount: getIngredientAmount({
+          ingredient,
+          selectedUnitMode,
+          fallbackUnitMode: unitMode,
+        }),
+        baseServings: recipe.baseServings,
+        selectedServings,
+      });
 
     const estimatedPrice =
       recipe.cost === null

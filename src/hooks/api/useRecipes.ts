@@ -1,6 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { useSQLiteContext } from "expo-sqlite";
-import { getLocalRecipeById, getLocalRecipes } from "../../db/recipeRepository";
+import {
+  cacheRecipeDetail,
+  getLocalRecipeById,
+  getLocalRecipes,
+} from "../../db/recipeRepository";
 import { recipesApi } from "../../lib/api";
 import { queryKeys } from "../../lib/query/queryKeys";
 import { RecipeSearchParams } from "../../types/api";
@@ -43,9 +47,19 @@ export function useRecipesWithLocalFallback(params?: RecipeSearchParams) {
 }
 
 export function useRecipeDetailQuery(recipeId?: string) {
+  const db = useSQLiteContext();
+
   return useQuery({
     queryKey: queryKeys.recipes.detail(recipeId ?? ""),
-    queryFn: () => recipesApi.getRecipeById(recipeId ?? ""),
+    queryFn: async () => {
+      const recipe = await recipesApi.getRecipeById(recipeId ?? "");
+
+      await cacheRecipeDetail(db, recipe).catch((error) => {
+        console.error("Failed to cache recipe detail locally", error);
+      });
+
+      return recipe;
+    },
     enabled: Boolean(recipeId),
   });
 }

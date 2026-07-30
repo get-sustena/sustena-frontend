@@ -61,7 +61,7 @@ export default function AuthScreen() {
 
     try {
       await loginMutation.mutateAsync({ email: trimmedEmail, password });
-      showToast("Welcome back to Sustena.", "success");
+      showToast("You're in — we'll personalize as you go.", "success");
       continueAfterAuth();
     } catch (error) {
       setFormError(getApiErrorMessage(error));

@@ -18,65 +18,69 @@ export interface ConvertedQuantity {
   isApproximate: boolean;
 }
 
+export interface ScaleUnitOption extends ConvertedQuantity {
+  label: string;
+  preview: string;
+}
+
 interface ContextUnitMap {
   metricSmall: string | null;
   metricLarge: string | null;
-  cup: string | null;
+  nigerianDefault: string | null;
   imperialSmall: string | null;
   imperialLarge: string | null;
 }
 
-// Ingredient-specific "cup"/oz/lb equivalents only exist for rice, plain flour, millet, and
-// sorghum in the unit catalog -- everything else measured by mass (meat, vegetables, etc.) has
-// no defined cup conversion, so "cups" mode is intentionally unavailable for it rather than
-// guessing at a "1 cup ≈ 125g" rule of thumb that isn't backed by real data.
+// Ingredient-specific Nigerian market equivalents only exist for rice, plain flour, millet, and
+// sorghum in the unit catalog. Generic mass ingredients intentionally have no Nigerian default
+// rather than applying a guessed cup-to-gram rule that is not backed by ingredient density data.
 const CONTEXT_UNITS: Record<IngredientConversionContext, ContextUnitMap> = {
   mass: {
     metricSmall: "g",
     metricLarge: "kg",
-    cup: null,
+    nigerianDefault: null,
     imperialSmall: "oz",
     imperialLarge: "lb",
   },
   volume: {
     metricSmall: "mL",
     metricLarge: "L",
-    cup: "metric_cup",
+    nigerianDefault: "milk_cup",
     imperialSmall: "us_floz",
     imperialLarge: "us_cup",
   },
   rice: {
     metricSmall: "rice_g",
     metricLarge: "rice_kg",
-    cup: "rice_derica_small",
+    nigerianDefault: "rice_derica_small",
     imperialSmall: "rice_oz",
     imperialLarge: "rice_lb",
   },
   plain_flour: {
     metricSmall: "flour_g",
     metricLarge: "flour_kg",
-    cup: "flour_metric_cup",
+    nigerianDefault: "flour_milk_cup",
     imperialSmall: "flour_oz",
     imperialLarge: "flour_lb",
   },
   millet: {
     metricSmall: "millet_g",
     metricLarge: "millet_kg",
-    cup: "millet_derica_small",
+    nigerianDefault: "millet_milk_cup",
     imperialSmall: "millet_oz",
     imperialLarge: "millet_lb",
   },
   sorghum: {
     metricSmall: "sorghum_g",
     metricLarge: "sorghum_kg",
-    cup: "sorghum_derica_small",
+    nigerianDefault: "sorghum_milk_cup",
     imperialSmall: "sorghum_oz",
     imperialLarge: "sorghum_lb",
   },
   count: {
     metricSmall: null,
     metricLarge: null,
-    cup: null,
+    nigerianDefault: null,
     imperialSmall: null,
     imperialLarge: null,
   },
@@ -133,11 +137,173 @@ export function convertQuantity({
 }
 
 /**
+ * Returns the concrete units that are sensible for one ingredient measurement.
+ *
+ * Generic mass/volume units are valid for their matching ingredient-specific contexts, while
+ * context-specific units (for example a rice Derica) never leak into unrelated ingredients.
+ * Units with identical factors are collapsed so users do not see duplicate "Grams" rows.
+ */
+export function getCompatibleScaleUnits({
+  units,
+  fromUnit,
+  context,
+}: {
+  units: Unit[];
+  fromUnit: string;
+  context: IngredientConversionContext;
+}): Unit[] {
+  const source = units.find((unit) => unit.id === fromUnit);
+
+  if (!source) {
+    return [];
+  }
+
+  const genericContext =
+    source.baseUnit === "g"
+      ? "mass"
+      : source.baseUnit === "mL"
+        ? "volume"
+        : "count";
+  const allowedContexts = new Set([genericContext, context]);
+  const compatible = units.filter(
+    (unit) =>
+      unit.baseUnit === source.baseUnit &&
+      allowedContexts.has(unit.context) &&
+      isSelectableIngredientUnit(unit.id)
+  );
+  const byFactor = new Map<string, Unit>();
+
+  compatible.forEach((unit) => {
+    const factorKey = `${unit.baseFactorMin}:${unit.baseFactorMax}`;
+    const current = byFactor.get(factorKey);
+
+    if (!current || unit.id === fromUnit) {
+      byFactor.set(factorKey, unit);
+    }
+  });
+
+  return [...byFactor.values()].sort(
+    (left, right) =>
+      averageUnitFactor(left) - averageUnitFactor(right) ||
+      left.name.localeCompare(right.name)
+  );
+}
+
+export function buildScaleUnitOptions({
+  units,
+  quantity,
+  fromUnit,
+  context,
+  mode,
+  servingFactor = 1,
+}: {
+  units: Unit[];
+  quantity: number;
+  fromUnit: string;
+  context: IngredientConversionContext;
+  mode?: UnitMode;
+  servingFactor?: number;
+}): ScaleUnitOption[] {
+  const unitsById = buildUnitLookup(units);
+
+  return getCompatibleScaleUnits({ units, fromUnit, context })
+    .filter((unit) => !mode || getUnitModeForUnitId(unit.id) === mode)
+    .flatMap((unit) => {
+      const converted = convertQuantity({
+        unitsById,
+        quantity: quantity * servingFactor,
+        fromUnit,
+        toUnit: unit.id,
+      });
+
+      if (!converted) {
+        return [];
+      }
+
+      const unitLabel = getUnitDisplayLabel(unitsById, unit.id);
+
+      return [
+        {
+          ...converted,
+          label: getUnitPickerLabel(unit),
+          preview: `${converted.isApproximate ? "≈" : ""}${formatScaleQuantity(
+            converted.quantity
+          )} ${unitLabel}`,
+        },
+      ];
+    });
+}
+
+export function getUnitModeForUnitId(unitId: string | null): UnitMode | null {
+  if (!unitId) {
+    return null;
+  }
+
+  const normalized = unitId.toLowerCase();
+
+  if (
+    normalized.includes("milk_cup") ||
+    normalized.includes("derica") ||
+    normalized.includes("congo") ||
+    normalized.includes("paint_rubber") ||
+    normalized.includes("_bag_")
+  ) {
+    return "cups";
+  }
+
+  if (
+    normalized === "oz" ||
+    normalized === "lb" ||
+    normalized === "tsp" ||
+    normalized === "tbsp" ||
+    normalized.startsWith("us_") ||
+    normalized.startsWith("imp_") ||
+    normalized.startsWith("imperial_") ||
+    normalized.endsWith("_oz") ||
+    normalized.endsWith("_lb")
+  ) {
+    return "imperial";
+  }
+
+  if (
+    normalized === "mg" ||
+    normalized === "g" ||
+    normalized === "kg" ||
+    normalized === "ml" ||
+    normalized === "cl" ||
+    normalized === "dl" ||
+    normalized === "l" ||
+    normalized.startsWith("metric_") ||
+    normalized.endsWith("_mg") ||
+    normalized.endsWith("_g") ||
+    normalized.endsWith("_kg")
+  ) {
+    return "metric";
+  }
+
+  return null;
+}
+
+export function isSelectableIngredientUnit(unitId: string | null) {
+  if (!unitId) {
+    return true;
+  }
+
+  const normalized = unitId.toLowerCase();
+
+  return !(
+    normalized.includes("half_milk_cup") ||
+    normalized.includes("paint_rubber") ||
+    normalized.includes("custard_rubber")
+  );
+}
+
+/**
  * Converts a recipe ingredient's stored quantity/unit into the unit appropriate for a display
- * mode (metric/cups/imperial), auto-switching between the small/large metric or imperial unit
+ * mode (metric/Nigerian/imperial), auto-switching between the small/large metric or imperial unit
  * (e.g. g <-> kg, oz <-> lb) once the small-unit reading would cross the large unit's own size.
  * Returns null when this mode has no valid unit for the ingredient's conversionContext (e.g.
- * "cups" for a generic mass ingredient, or any mode for a count-based ingredient).
+ * Nigerian mode for a generic mass ingredient, or any mode for a count-based ingredient).
  */
 export function convertIngredientQuantity({
   unitsById,
@@ -155,11 +321,16 @@ export function convertIngredientQuantity({
   const contextUnits = CONTEXT_UNITS[context];
 
   if (mode === "cups") {
-    if (!contextUnits.cup) {
+    if (!contextUnits.nigerianDefault) {
       return null;
     }
 
-    return convertQuantity({ unitsById, quantity, fromUnit, toUnit: contextUnits.cup });
+    return convertQuantity({
+      unitsById,
+      quantity,
+      fromUnit,
+      toUnit: contextUnits.nigerianDefault,
+    });
   }
 
   const smallUnit = mode === "metric" ? contextUnits.metricSmall : contextUnits.imperialSmall;
@@ -197,7 +368,7 @@ export function getAvailableModesForContext(
   const modes: UnitMode[] = [];
 
   if (contextUnits.metricSmall) modes.push("metric");
-  if (contextUnits.cup) modes.push("cups");
+  if (contextUnits.nigerianDefault) modes.push("cups");
   if (contextUnits.imperialSmall) modes.push("imperial");
 
   return modes;
@@ -209,8 +380,8 @@ export function getIngredientConversionContext(
   return ingredient?.conversionContext ?? "mass";
 }
 
-// "Cups" reads naturally as a fraction (e.g. "¾ cup"); metric/imperial mass and volume read
-// more naturally as a rounded decimal (e.g. "127.5 g", not "127⅛ g").
+// Nigerian market units read naturally as fractions (e.g. "¾ milk cup"); metric/imperial mass
+// and volume read more naturally as rounded decimals (e.g. "127.5 g", not "127⅛ g").
 export function formatConvertedQuantity(quantity: number, mode: UnitMode): string {
   if (!Number.isFinite(quantity) || quantity <= 0) {
     return "0";
@@ -231,22 +402,81 @@ export function getUnitDisplayLabel(unitsById: Map<string, Unit>, unitId: string
     return unitId;
   }
 
-  // Ingredient-specific unit names are long ("Small Derica cup, level rice") -- the catalog id
-  // suffix reads better as a compact pill label than the full descriptive name.
+  // Keep standard units compact; custom market measures retain the meaningful size/name while
+  // dropping the catalog's explanatory suffix after the comma.
   const shortLabels: Record<string, string> = {
+    mg: "mg",
     g: "g",
     kg: "kg",
     oz: "oz",
     lb: "lb",
     mL: "mL",
+    cL: "cL",
+    dL: "dL",
     L: "L",
-    metric_cup: "cup",
+    tsp: "tsp",
+    tbsp: "tbsp",
+    metric_cup: "metric cup",
     us_floz: "fl oz",
-    us_cup: "cup",
+    us_cup: "U.S. cup",
+    imperial_cup: "Imperial cup",
+    imp_floz: "fl oz",
   };
+
+  const contextualShortLabel = unitId.match(/_(mg|kg|oz|lb|g)$/i)?.[1];
 
   return (
     shortLabels[unitId] ??
-    unit.name.replace(/^(Small|Large) /, "").replace(/,.*$/, "")
+    contextualShortLabel ??
+    unit.name.replace(/,.*$/, "")
   );
+}
+
+export function getUnitPickerLabel(unit: Unit): string {
+  const unitId = unit.id.toLowerCase();
+
+  if (unitId === "mg" || unitId.endsWith("_mg")) return "Milligrams";
+  if (unitId === "g" || unitId.endsWith("_g")) return "Grams";
+  if (unitId === "kg" || unitId.endsWith("_kg")) return "Kilograms";
+  if (unitId === "oz" || unitId.endsWith("_oz")) return "Ounces";
+  if (unitId === "lb" || unitId.endsWith("_lb")) return "Pounds";
+  if (unitId === "ml" || unitId.endsWith("_ml")) return "Millilitres";
+  if (unitId === "cl" || unitId.endsWith("_cl")) return "Centilitres";
+  if (unitId === "dl" || unitId.endsWith("_dl")) return "Decilitres";
+  if (unitId === "l" || unitId.endsWith("_l")) return "Litres";
+  if (unitId === "tsp") return "Teaspoons";
+  if (unitId === "tbsp") return "Tablespoons";
+  if (unitId.includes("floz")) return "Fluid Ounces";
+  if (unitId === "metric_cup" || unitId === "flour_metric_cup") {
+    return "Metric Cup";
+  }
+  if (unitId === "us_cup") return "U.S. Cup";
+  if (unitId === "imperial_cup") return "Imperial Cup";
+  if (
+    unitId.includes("derica") ||
+    unitId.includes("congo") ||
+    unitId.includes("paint_rubber") ||
+    unitId.includes("milk_cup")
+  ) {
+    return unit.name.replace(/,.*$/, "");
+  }
+  if (unitId.includes("cup")) return "Cups";
+  if (unitId === "item") return "Pieces";
+
+  return unit.name;
+}
+
+function averageUnitFactor(unit: Unit) {
+  return (Number(unit.baseFactorMin) + Number(unit.baseFactorMax)) / 2;
+}
+
+function formatScaleQuantity(quantity: number) {
+  if (!Number.isFinite(quantity) || quantity <= 0) {
+    return "0";
+  }
+
+  const decimalPlaces =
+    quantity >= 100 ? 0 : quantity >= 10 ? 1 : quantity >= 1 ? 2 : 3;
+
+  return String(Number(quantity.toFixed(decimalPlaces)));
 }

@@ -1,14 +1,10 @@
-// app/shopping/[id].tsx
-//
-// List detail. The default list (id === "default") is the one list wired to
-// the real backend + sync queue, exactly as before the redesign. Every other
-// list is a real synced resource via /shopping-lists, created from the
-// "Your Lists" overview.
-
+import { useFocusEffect } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
+import * as Sharing from "expo-sharing";
 import { useSQLiteContext } from "expo-sqlite";
 import { useCallback, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -17,8 +13,6 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import ViewShot from "react-native-view-shot";
-import * as Sharing from "expo-sharing";
-import { useFocusEffect } from "@react-navigation/native";
 import { ShoppingListSection } from "../../src/components/shopping/ShoppingListSection";
 import { AppText } from "../../src/components/ui/AppText";
 import { Button } from "../../src/components/ui/Button";
@@ -39,6 +33,7 @@ import {
   renameShoppingList as renameShoppingListLocal,
 } from "../../src/db/shoppingListsRepository";
 import { enqueueSyncOperation } from "../../src/db/syncQueueRepository";
+import { useIngredientCatalogQuery } from "../../src/hooks/api/useIngredients";
 import {
   useAddShoppingListItemMutation,
   useClearCheckedShoppingListItemsMutation,
@@ -50,12 +45,12 @@ import {
   useRenameShoppingListMutation,
 } from "../../src/hooks/api/useShoppingLists";
 import { useIsOnline } from "../../src/hooks/useIsOnline";
+import { shoppingListsApi } from "../../src/lib/api";
 import { apiShoppingItemToLocalItem } from "../../src/lib/api/adapters";
 import { getApiErrorMessage } from "../../src/lib/api/errors";
-import { shoppingListsApi } from "../../src/lib/api";
-import { createLocalId } from "../../src/lib/id";
 import { formatNaira } from "../../src/lib/formatters";
 import { groupShoppingListItems } from "../../src/lib/groupShoppingListItems";
+import { createLocalId } from "../../src/lib/id";
 import { formatShoppingQuantity } from "../../src/lib/textFormatters";
 import { useShoppingListStore } from "../../src/store/shoppingListStore";
 import { useShoppingListsStore } from "../../src/store/shoppingListsStore";
@@ -70,7 +65,11 @@ export default function ShoppingListDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const isDefaultList = id === DEFAULT_SHOPPING_LIST_ID;
 
-  return isDefaultList ? <DefaultListDetail /> : <LocalListDetail listId={id} />;
+  return isDefaultList ? (
+    <DefaultListDetail />
+  ) : (
+    <LocalListDetail listId={id} />
+  );
 }
 
 function ListHeader({
@@ -85,18 +84,10 @@ function ListHeader({
   const insets = useSafeAreaInsets();
 
   return (
-    <View
-      style={[
-        styles.header,
-        { paddingTop: Math.max(52, insets.top + 5) },
-      ]}
-    >
+    <View style={[styles.header, { paddingTop: Math.max(52, insets.top + 5) }]}>
       <Pressable
         onPress={() => router.back()}
-        style={({ pressed }) => [
-          styles.iconButton,
-          pressed && styles.pressed,
-        ]}
+        style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
         accessibilityRole="button"
         accessibilityLabel="Back to shopping lists"
       >
@@ -109,10 +100,7 @@ function ListHeader({
 
       <Pressable
         onPress={onAddPress}
-        style={({ pressed }) => [
-          styles.iconButton,
-          pressed && styles.pressed,
-        ]}
+        style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
         accessibilityRole="button"
         accessibilityLabel="Add ingredients"
       >
@@ -201,9 +189,7 @@ function SummaryCard({
       </View>
 
       <View style={styles.summaryProgressTrack}>
-        <View
-          style={[styles.summaryProgressFill, { width: `${pct}%` }]}
-        />
+        <View style={[styles.summaryProgressFill, { width: `${pct}%` }]} />
       </View>
 
       <View style={styles.summaryFooterRow}>
@@ -215,7 +201,9 @@ function SummaryCard({
           onPress={onToggleSelectAll}
           disabled={itemCount === 0}
           accessibilityRole="button"
-          accessibilityLabel={allChecked ? "Deselect all items" : "Select all items"}
+          accessibilityLabel={
+            allChecked ? "Deselect all items" : "Select all items"
+          }
         >
           <AppText
             style={[
@@ -258,8 +246,8 @@ function ShoppingEmptyState({ onAddPress }: { onAddPress: () => void }) {
 
 function CheckoutButton() {
   function handleCheckout() {
-    showToast("Connecting to checkout...");
-    setTimeout(() => showToast("Cart sent! Redirecting..."), 1600);
+    showToast("Connecting to checkout…");
+    setTimeout(() => showToast("Cart sent! Redirecting…"), 1600);
   }
 
   return (
@@ -333,9 +321,7 @@ function ShareCard({
             </View>
           ) : null}
 
-          <AppText style={styles.shareCardFooter}>
-            Made with Sustena
-          </AppText>
+          <AppText style={styles.shareCardFooter}>Made with Sustena</AppText>
         </View>
       </ViewShot>
     </View>
@@ -356,7 +342,7 @@ async function shareViewShot(shotRef: React.RefObject<ViewShot | null>) {
     await Sharing.shareAsync(uri, { mimeType: "image/png" });
   } catch (error) {
     console.error("Failed to share shopping list", error);
-    showToast("Could not create share image", "danger");
+    showToast("Could not generate image", "danger");
   }
 }
 
@@ -379,7 +365,10 @@ function DefaultListDetail() {
   const visibleItems = apiItems.length > 0 ? apiItems : items;
 
   const visibleItemCount = visibleItems.length;
-  const visibleCheckedCount = visibleItems.filter((item) => item.checked).length;
+  const visibleListName = shoppingListQuery.data?.name ?? "My Shopping List";
+  const visibleCheckedCount = visibleItems.filter(
+    (item) => item.checked
+  ).length;
   const visibleTotalEstimatedCost = visibleItems.reduce(
     (total, item) => total + item.estimatedPrice,
     0
@@ -421,9 +410,8 @@ function DefaultListDetail() {
       (item) => item.checked !== nextChecked
     );
 
-    await Promise.all(
-      itemsToFlip.map((item) => handleToggleItem(item.id))
-    );
+    await Promise.all(itemsToFlip.map((item) => handleToggleItem(item.id)));
+    showToast(allChecked ? "All items deselected" : "All items selected");
   }
 
   async function handleClearCheckedItems() {
@@ -435,13 +423,17 @@ function DefaultListDetail() {
     try {
       await clearCheckedMutation.mutateAsync();
     } catch (error) {
-      console.error("Failed to sync shopping list clear, queuing for retry", error);
+      console.error(
+        "Failed to sync shopping list clear, queuing for retry",
+        error
+      );
       await enqueueSyncOperation(db, "shopping_clear_checked", {}).catch(
         (queueError) => {
           console.error("Failed to queue shopping list clear", queueError);
         }
       );
     }
+    showToast("Checked items removed", "success");
   }
 
   async function handleAddItem(name: string, quantity: string) {
@@ -464,8 +456,6 @@ function DefaultListDetail() {
 
     useShoppingListStore.getState().addItems([newItem]);
     await insertShoppingListItem(db, newItem);
-    closeSheet();
-
     try {
       const created = await addShoppingItemMutation.mutateAsync({
         name: trimmedName,
@@ -491,20 +481,82 @@ function DefaultListDetail() {
   }
 
   function openAddItemSheet() {
-    openSheet(<AddItemSheet onAdd={handleAddItem} />);
+    openSheet(
+      <AddItemSheet
+        listName={visibleListName}
+        existingItems={visibleItems.map((item) => item.name)}
+        onAdd={handleAddItem}
+      />
+    );
+  }
+
+  function openRenameSheet() {
+    openSheet(
+      <RenameListSheet
+        initialName={visibleListName}
+        onRename={async (name) => {
+          const shoppingListId = shoppingListQuery.data?.id;
+          if (!shoppingListId) return;
+
+          try {
+            await shoppingListsApi.updateShoppingListById(shoppingListId, {
+              name: name.trim(),
+            });
+            closeSheet();
+            await shoppingListQuery.refetch();
+            showToast("List renamed", "success");
+          } catch (error) {
+            showToast(getApiErrorMessage(error), "danger");
+          }
+        }}
+      />
+    );
+  }
+
+  function openDeleteSheet() {
+    openSheet(
+      <DeleteListSheet
+        listName={visibleListName}
+        onDelete={async () => {
+          const shoppingListId = shoppingListQuery.data?.id;
+          if (!shoppingListId) return;
+
+          try {
+            await shoppingListsApi.deleteShoppingListById(shoppingListId);
+            await Promise.all(
+              visibleItems.map(async (item) => {
+                removeItemLocal(item.id);
+                await deleteShoppingListItem(db, item.id);
+              })
+            );
+            closeSheet();
+            router.back();
+            showToast("Shopping list deleted", "success");
+          } catch (error) {
+            showToast(getApiErrorMessage(error), "danger");
+          }
+        }}
+      />
+    );
   }
 
   function openMenuSheet() {
     openSheet(
-      <View style={styles.sheetContent}>
-        <AppText style={styles.sheetTitle}>Shopping List</AppText>
-
+      <View style={styles.menuSheet}>
         <MenuSheetRow
           icon="check"
           label="Clear Checked Items"
           onPress={() => {
             closeSheet();
             handleClearCheckedItems();
+          }}
+        />
+        <MenuSheetRow
+          icon="pencil"
+          label="Rename Shopping List"
+          onPress={() => {
+            closeSheet();
+            openRenameSheet();
           }}
         />
         <MenuSheetRow
@@ -515,6 +567,15 @@ function DefaultListDetail() {
             shareViewShot(shotRef);
           }}
         />
+        <MenuSheetRow
+          icon="trash"
+          label="Delete Shopping List"
+          destructive
+          onPress={() => {
+            closeSheet();
+            openDeleteSheet();
+          }}
+        />
       </View>
     );
   }
@@ -522,7 +583,7 @@ function DefaultListDetail() {
   return (
     <View style={styles.screen}>
       <ListHeader
-        title="My Shopping List"
+        title={visibleListName}
         onAddPress={openAddItemSheet}
         onMenuPress={openMenuSheet}
       />
@@ -534,13 +595,13 @@ function DefaultListDetail() {
       >
         <ShareCard
           shotRef={shotRef}
-          title="My Shopping List"
+          title={visibleListName}
           items={visibleItems}
           totalEstimatedCost={visibleTotalEstimatedCost}
         />
 
         <SummaryCard
-          listName="My Shopping List"
+          listName={visibleListName}
           total={visibleTotalEstimatedCost}
           itemCount={visibleItemCount}
           checkedCount={visibleCheckedCount}
@@ -553,7 +614,7 @@ function DefaultListDetail() {
           ) : shoppingListQuery.isError && visibleItemCount === 0 ? (
             <View style={styles.errorState}>
               <EmptyState
-                icon="⚠️"
+                iconName="offline"
                 title="Could not load list"
                 message={getApiErrorMessage(shoppingListQuery.error)}
               />
@@ -673,10 +734,13 @@ function LocalListDetail({ listId }: { listId: string }) {
     const itemsToFlip = items.filter((item) => item.checked !== nextChecked);
 
     await Promise.all(itemsToFlip.map((item) => handleToggleItem(item.id)));
+    showToast(allChecked ? "All items deselected" : "All items selected");
   }
 
   async function handleClearChecked() {
-    const checkedIds = items.filter((item) => item.checked).map((item) => item.id);
+    const checkedIds = items
+      .filter((item) => item.checked)
+      .map((item) => item.id);
     setItems((current) => current.filter((item) => !item.checked));
 
     await Promise.all(
@@ -686,7 +750,10 @@ function LocalListDetail({ listId }: { listId: string }) {
         try {
           await shoppingListsApi.deleteShoppingListItemFromList(listId, itemId);
         } catch (error) {
-          console.error("Failed to sync item removal, queuing for retry", error);
+          console.error(
+            "Failed to sync item removal, queuing for retry",
+            error
+          );
           await enqueueSyncOperation(db, "shopping_list_item_remove", {
             listId,
             itemId,
@@ -696,6 +763,7 @@ function LocalListDetail({ listId }: { listId: string }) {
         }
       })
     );
+    showToast("Checked items removed", "success");
   }
 
   async function handleAddItem(name: string, quantity: string) {
@@ -720,8 +788,6 @@ function LocalListDetail({ listId }: { listId: string }) {
     // then best-effort create it server-side and adopt the real id.
     await insertShoppingListItem(db, newItem);
     setItems((current) => [...current, newItem]);
-    closeSheet();
-
     try {
       const created = await shoppingListsApi.addShoppingListItemToList(listId, {
         name: trimmedName,
@@ -769,6 +835,7 @@ function LocalListDetail({ listId }: { listId: string }) {
       await renameShoppingListLocal(db, listId, trimmed);
       renameListInStore(listId, trimmed);
       closeSheet();
+      showToast("List renamed", "success");
     } catch (error) {
       closeSheet();
       showToast(getApiErrorMessage(error), "danger");
@@ -788,7 +855,7 @@ function LocalListDetail({ listId }: { listId: string }) {
       removeListInStore(listId);
       closeSheet();
       router.back();
-      showToast("List deleted", "success");
+      showToast("Shopping list deleted", "success");
     } catch (error) {
       closeSheet();
       showToast(getApiErrorMessage(error), "danger");
@@ -796,7 +863,13 @@ function LocalListDetail({ listId }: { listId: string }) {
   }
 
   function openAddItemSheet() {
-    openSheet(<AddItemSheet onAdd={handleAddItem} />);
+    openSheet(
+      <AddItemSheet
+        listName={list?.name ?? "Shopping List"}
+        existingItems={items.map((item) => item.name)}
+        onAdd={handleAddItem}
+      />
+    );
   }
 
   function openRenameSheet() {
@@ -807,9 +880,7 @@ function LocalListDetail({ listId }: { listId: string }) {
 
   function openMenuSheet() {
     openSheet(
-      <View style={styles.sheetContent}>
-        <AppText style={styles.sheetTitle}>{list?.name ?? "List"}</AppText>
-
+      <View style={styles.menuSheet}>
         <MenuSheetRow
           icon="check"
           label="Clear Checked Items"
@@ -838,7 +909,15 @@ function LocalListDetail({ listId }: { listId: string }) {
           icon="trash"
           label="Delete Shopping List"
           destructive
-          onPress={handleDelete}
+          onPress={() => {
+            closeSheet();
+            openSheet(
+              <DeleteListSheet
+                listName={list?.name ?? "Shopping List"}
+                onDelete={handleDelete}
+              />
+            );
+          }}
         />
       </View>
     );
@@ -896,45 +975,166 @@ function LocalListDetail({ listId }: { listId: string }) {
 }
 
 function AddItemSheet({
+  listName,
+  existingItems,
   onAdd,
 }: {
-  onAdd: (name: string, quantity: string) => void;
+  listName: string;
+  existingItems: string[];
+  onAdd: (name: string, quantity: string) => Promise<void>;
 }) {
-  const [name, setName] = useState("");
-  const [quantity, setQuantity] = useState("");
+  const ingredientsQuery = useIngredientCatalogQuery();
+  const [search, setSearch] = useState("");
+  const [addedItems, setAddedItems] = useState(
+    () => new Set(existingItems.map((item) => item.toLowerCase()))
+  );
+  const [pendingItem, setPendingItem] = useState<string | null>(null);
+  const normalizedSearch = search.trim().toLowerCase();
+  const ingredients = (ingredientsQuery.data ?? []).filter((ingredient) =>
+    normalizedSearch
+      ? [
+          ingredient.displayName,
+          ingredient.canonicalName,
+          ...ingredient.aliases,
+        ]
+          .join(" ")
+          .toLowerCase()
+          .includes(normalizedSearch)
+      : true
+  );
+
+  async function addItem(name: string) {
+    const trimmedName = name.trim();
+    const normalizedName = trimmedName.toLowerCase();
+
+    if (!trimmedName || addedItems.has(normalizedName) || pendingItem) {
+      return;
+    }
+
+    setPendingItem(normalizedName);
+    try {
+      await onAdd(trimmedName, "1");
+      setAddedItems((current) => new Set(current).add(normalizedName));
+      setSearch("");
+    } finally {
+      setPendingItem(null);
+    }
+  }
 
   return (
-    <View style={styles.sheetContent}>
-      <AppText style={styles.sheetTitle}>Add Item</AppText>
+    <View style={styles.addItemSheet}>
+      <AppText style={styles.addItemTitle}>Add Items</AppText>
+      <AppText style={styles.addItemSubtitle}>to {listName}</AppText>
 
-      <TextInput
-        value={name}
-        onChangeText={setName}
-        placeholder="Item name"
-        placeholderTextColor={theme.colors.textMuted}
-        style={styles.sheetInput}
-        autoFocus
-      />
+      <View style={styles.addItemInputRow}>
+        <TextInput
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Search or type a new item…"
+          placeholderTextColor={theme.colors.textMuted}
+          style={styles.addItemInput}
+          autoFocus
+          returnKeyType="done"
+          onSubmitEditing={() => addItem(search)}
+        />
+        <Pressable
+          onPress={() => addItem(search)}
+          disabled={!search.trim() || Boolean(pendingItem)}
+          style={({ pressed }) => [
+            styles.addItemPlus,
+            (!search.trim() || pendingItem) &&
+              styles.sheetPrimaryButtonDisabled,
+            pressed && styles.pressed,
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel="Add typed item"
+        >
+          {pendingItem === search.trim().toLowerCase() ? (
+            <ActivityIndicator size="small" color={theme.colors.onDark} />
+          ) : (
+            <Icon name="plus" size={20} color={theme.colors.onDark} />
+          )}
+        </Pressable>
+      </View>
 
-      <TextInput
-        value={quantity}
-        onChangeText={setQuantity}
-        placeholder="Quantity (e.g. 2 cups)"
-        placeholderTextColor={theme.colors.textMuted}
-        style={styles.sheetInput}
-        returnKeyType="done"
-        onSubmitEditing={() => onAdd(name, quantity)}
-      />
+      <ScrollView
+        style={styles.addItemGridScroll}
+        contentContainerStyle={styles.addItemGrid}
+        showsVerticalScrollIndicator={false}
+        nestedScrollEnabled
+        keyboardShouldPersistTaps="handled"
+      >
+        {ingredientsQuery.isLoading ? (
+          <View style={styles.addItemLoading}>
+            <ActivityIndicator size="small" color={theme.colors.green} />
+          </View>
+        ) : ingredients.length === 0 ? (
+          <AppText style={styles.addItemEmpty}>No ingredients found</AppText>
+        ) : (
+          ingredients.map((ingredient) => {
+            const normalizedName = ingredient.displayName.toLowerCase();
+            const selected = addedItems.has(normalizedName);
+            const pending = pendingItem === normalizedName;
+
+            return (
+              <Pressable
+                key={ingredient.id}
+                onPress={() => addItem(ingredient.displayName)}
+                disabled={selected || Boolean(pendingItem)}
+                style={({ pressed }) => [
+                  styles.addItemChip,
+                  selected && styles.addItemChipSelected,
+                  pressed && styles.pressed,
+                ]}
+              >
+                {selected ? (
+                  <Icon name="check" size={12} color={theme.colors.onDark} />
+                ) : null}
+                <AppText
+                  style={[
+                    styles.addItemChipText,
+                    selected && styles.addItemChipTextSelected,
+                  ]}
+                >
+                  {ingredient.displayName}
+                </AppText>
+                {pending ? (
+                  <ActivityIndicator
+                    size="small"
+                    color={theme.colors.textMuted}
+                  />
+                ) : null}
+              </Pressable>
+            );
+          })
+        )}
+      </ScrollView>
 
       <Pressable
-        onPress={() => onAdd(name, quantity)}
-        disabled={!name.trim()}
-        style={[
-          styles.sheetPrimaryButton,
-          !name.trim() && styles.sheetPrimaryButtonDisabled,
-        ]}
+        onPress={closeSheet}
+        style={({ pressed }) => [styles.addItemDone, pressed && styles.pressed]}
       >
-        <AppText style={styles.sheetPrimaryButtonText}>Add to List</AppText>
+        <AppText style={styles.addItemDoneText}>Done</AppText>
+      </Pressable>
+    </View>
+  );
+}
+
+function DeleteListSheet({
+  listName,
+  onDelete,
+}: {
+  listName: string;
+  onDelete: () => void | Promise<void>;
+}) {
+  return (
+    <View style={styles.sheetContent}>
+      <AppText style={styles.sheetTitle}>Delete Shopping List?</AppText>
+      <AppText style={styles.deleteSheetText}>
+        {listName} and all its items will be permanently deleted.
+      </AppText>
+      <Pressable onPress={onDelete} style={styles.deleteConfirmButton}>
+        <AppText style={styles.deleteConfirmButtonText}>Delete List</AppText>
       </Pressable>
     </View>
   );
@@ -1034,12 +1234,12 @@ const styles = StyleSheet.create({
   summaryCard: {
     marginHorizontal: 20,
     marginBottom: 18,
-    backgroundColor: theme.colors.navy,
+    backgroundColor: "#17291E",
     borderRadius: 20,
     padding: 20,
     shadowColor: theme.colors.navy,
     shadowOffset: { width: 0, height: 22 },
-    shadowOpacity: 0.24,
+    shadowOpacity: 0.32,
     shadowRadius: 24,
     elevation: 8,
   },
@@ -1200,6 +1400,9 @@ const styles = StyleSheet.create({
     paddingBottom: theme.spacing.xl,
     gap: theme.spacing.md,
   },
+  menuSheet: {
+    paddingBottom: theme.spacing.xl,
+  },
   sheetTitle: {
     fontFamily: theme.fontFamily.display,
     fontSize: 19,
@@ -1228,6 +1431,126 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   sheetPrimaryButtonText: {
+    fontFamily: theme.fontFamily.bodySemiBold,
+    fontSize: 14,
+    color: theme.colors.onDark,
+  },
+  addItemSheet: {
+    paddingBottom: theme.spacing.xl,
+  },
+  addItemTitle: {
+    fontFamily: theme.fontFamily.display,
+    fontSize: 19,
+    color: theme.colors.text,
+    marginBottom: 4,
+  },
+  addItemSubtitle: {
+    fontFamily: theme.fontFamily.body,
+    fontSize: 13,
+    color: theme.colors.textMedium,
+    marginBottom: 14,
+  },
+  addItemInputRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 14,
+  },
+  addItemInput: {
+    flex: 1,
+    minWidth: 0,
+    height: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.card2,
+    paddingHorizontal: 16,
+    fontFamily: theme.fontFamily.body,
+    fontSize: 14.5,
+    color: theme.colors.text,
+  },
+  addItemPlus: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: theme.colors.navy,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  addItemGridScroll: {
+    maxHeight: 260,
+    marginBottom: 16,
+  },
+  addItemGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    paddingBottom: 2,
+  },
+  addItemLoading: {
+    width: "100%",
+    minHeight: 80,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  addItemEmpty: {
+    width: "100%",
+    paddingVertical: 24,
+    textAlign: "center",
+    fontFamily: theme.fontFamily.body,
+    fontSize: 13.5,
+    color: theme.colors.textMedium,
+  },
+  addItemChip: {
+    minHeight: 38,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.onDark,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  addItemChipSelected: {
+    borderColor: theme.colors.navy,
+    backgroundColor: theme.colors.navy,
+  },
+  addItemChipText: {
+    fontFamily: theme.fontFamily.bodyMedium,
+    fontSize: 13,
+    color: theme.colors.text,
+  },
+  addItemChipTextSelected: {
+    color: theme.colors.onDark,
+  },
+  addItemDone: {
+    width: "100%",
+    minHeight: 48,
+    borderRadius: 999,
+    backgroundColor: theme.colors.text,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  addItemDoneText: {
+    fontFamily: theme.fontFamily.bodySemiBold,
+    fontSize: 15,
+    color: theme.colors.onDark,
+  },
+  deleteSheetText: {
+    fontFamily: theme.fontFamily.body,
+    fontSize: 14,
+    lineHeight: 20,
+    color: theme.colors.textMedium,
+  },
+  deleteConfirmButton: {
+    minHeight: 48,
+    borderRadius: 999,
+    backgroundColor: theme.colors.red,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  deleteConfirmButtonText: {
     fontFamily: theme.fontFamily.bodySemiBold,
     fontSize: 14,
     color: theme.colors.onDark,

@@ -16,6 +16,10 @@ import {
   saveStoredPreferences,
 } from "../db/preferencesRepository";
 import {
+  getStoredPlannerSettings,
+  mapStoredPlannerSettings,
+} from "../db/plannerSettingsRepository";
+import {
   getStoredShoppingListItems,
   mapShoppingListRowToItem,
 } from "../db/shoppingListRepository";
@@ -26,6 +30,7 @@ import {
 import { seedPublishedRecipesIfNeeded } from "../db/recipeRepository";
 import { useFavoritesStore } from "../store/favoritesStore";
 import { usePreferencesStore } from "../store/preferencesStore";
+import { usePlannerStore } from "../store/plannerStore";
 import { useProfileAnswersStore } from "../store/profileAnswersStore";
 import { useShoppingListStore } from "../store/shoppingListStore";
 import { useShoppingListsStore } from "../store/shoppingListsStore";
@@ -48,6 +53,7 @@ export function useAppBootstrap() {
   const hydrateProfileAnswers = useProfileAnswersStore(
     (state) => state.hydrateProfileAnswers
   );
+  const hydratePlanSetup = usePlannerStore((state) => state.hydratePlanSetup);
   const hydrateShoppingLists = useShoppingListsStore(
     (state) => state.hydrateLists
   );
@@ -96,6 +102,14 @@ export function useAppBootstrap() {
           hydrateProfileAnswers(storedProfileAnswers);
         }
 
+        const storedPlannerSettings = mapStoredPlannerSettings(
+          await getStoredPlannerSettings(db)
+        );
+
+        if (storedPlannerSettings) {
+          hydratePlanSetup(storedPlannerSettings);
+        }
+
         const storedShoppingLists = await getStoredShoppingLists(db);
         hydrateShoppingLists(storedShoppingLists.map(mapShoppingListRowToMeta));
       } catch (error) {
@@ -120,6 +134,7 @@ export function useAppBootstrap() {
     db,
     hydrateFavorites,
     hydratePreferences,
+    hydratePlanSetup,
     hydrateProfileAnswers,
     hydrateShoppingItems,
     hydrateShoppingLists,

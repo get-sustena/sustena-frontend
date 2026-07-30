@@ -12,7 +12,14 @@ import {
   StyleSheet,
   View,
 } from "react-native";
+import Animated, { FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Svg, {
+  Circle,
+  Defs,
+  Stop,
+  RadialGradient as SvgRadialGradient,
+} from "react-native-svg";
 import {
   QuickRecipeCardsSkeleton,
   RecommendationCardSkeleton,
@@ -81,10 +88,8 @@ export default function HomeScreen() {
     : getGreeting();
 
   return (
-    <View style={styles.screen}>
-      <View
-        style={[styles.header, { paddingTop: Math.max(insets.top, 44) }]}
-      >
+    <Animated.View entering={FadeInDown.duration(320)} style={styles.screen}>
+      <View style={[styles.header, { paddingTop: Math.max(insets.top, 44) }]}>
         <Pressable
           onPress={() => router.push("/(tabs)/profile")}
           accessibilityRole="button"
@@ -119,50 +124,69 @@ export default function HomeScreen() {
           <Pressable
             onPress={() => openPlanner("kitchen")}
             style={({ pressed }) => [
-              styles.kitchenCard,
+              styles.kitchenCardPressable,
               pressed && styles.pressed,
             ]}
             accessibilityRole="button"
             accessibilityLabel="Open What's in My Kitchen"
           >
-            <LinearGradient
-              colors={["#1D3327", "#152119"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={StyleSheet.absoluteFillObject}
-            />
-            <View style={styles.kitchenGlow} />
+            <View style={styles.kitchenCard}>
+              <LinearGradient
+                colors={["#1D3327", "#152119"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFillObject}
+              />
+              <Svg
+                pointerEvents="none"
+                width={240}
+                height={240}
+                style={styles.kitchenGlow}
+              >
+                <Defs>
+                  <SvgRadialGradient id="kitchenGlow" cx="50%" cy="50%" r="50%">
+                    <Stop offset="0%" stopColor="#40C982" stopOpacity={0.24} />
+                    <Stop offset="72%" stopColor="#34B673" stopOpacity={0} />
+                  </SvgRadialGradient>
+                </Defs>
+                <Circle cx={120} cy={120} r={120} fill="url(#kitchenGlow)" />
+              </Svg>
 
-            <View style={styles.kitchenIconWrap}>
-              <Icon name="cook" size={22} color={theme.colors.green} />
-            </View>
+              <View style={styles.kitchenContent}>
+                <View style={styles.kitchenIconWrap}>
+                  <Icon name="cook" size={22} color={theme.colors.green} />
+                </View>
 
-            <AppText style={styles.kitchenTitle}>
-              What&apos;s in My Kitchen?
-            </AppText>
-            <AppText style={styles.kitchenSubtitle}>
-              Tell us what you&apos;ve got, and we&apos;ll match it to recipes
-              you can cook right now.
-            </AppText>
+                <AppText style={styles.kitchenTitle}>
+                  What&apos;s in My Kitchen?
+                </AppText>
+                <AppText style={styles.kitchenSubtitle}>
+                  Tell us what you&apos;ve got, and we&apos;ll match it to
+                  recipes you can cook right now.
+                </AppText>
 
-            <View style={styles.kitchenPillRow}>
-              {KITCHEN_QUICK_CATEGORIES.map((category) => (
-                <Pressable
-                  key={category}
-                  onPress={(event) => {
-                    event.stopPropagation();
-                    openPlanner("kitchen", category);
-                  }}
-                  style={({ pressed }) => [
-                    styles.kitchenPill,
-                    pressed && styles.kitchenPillPressed,
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Browse ${category.toLowerCase()}`}
-                >
-                  <AppText style={styles.kitchenPillText}>{category}</AppText>
-                </Pressable>
-              ))}
+                <View style={styles.kitchenPillRow}>
+                  {KITCHEN_QUICK_CATEGORIES.map((category) => (
+                    <Pressable
+                      key={category}
+                      onPress={(event) => {
+                        event.stopPropagation();
+                        openPlanner("kitchen", category);
+                      }}
+                      style={({ pressed }) => [
+                        styles.kitchenPill,
+                        pressed && styles.kitchenPillPressed,
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Browse ${category.toLowerCase()}`}
+                    >
+                      <AppText style={styles.kitchenPillText}>
+                        {category}
+                      </AppText>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
             </View>
           </Pressable>
 
@@ -271,7 +295,7 @@ export default function HomeScreen() {
           )}
         </View>
       </ScrollView>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -473,25 +497,28 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: theme.colors.linkGreen,
   },
+  kitchenCardPressable: {
+    borderRadius: 20,
+    marginBottom: 10,
+    shadowColor: theme.colors.navy,
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.28,
+    shadowRadius: 15,
+    elevation: 6,
+  },
   kitchenCard: {
     borderRadius: 20,
     padding: 20,
     overflow: "hidden",
-    marginBottom: 10,
-    shadowColor: theme.colors.navy,
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.24,
-    shadowRadius: 18,
-    elevation: 6,
   },
   kitchenGlow: {
     position: "absolute",
-    top: -30,
-    right: -30,
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    backgroundColor: "rgba(52,182,115,0.2)",
+    top: -54,
+    right: -42,
+  },
+  kitchenContent: {
+    position: "relative",
+    zIndex: 1,
   },
   kitchenIconWrap: {
     width: 42,

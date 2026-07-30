@@ -11,6 +11,7 @@ export type SyncQueueKind =
   | "shopping_add"
   | "shopping_remove"
   | "profile_answers_update"
+  | "planner_settings_update"
   | "shopping_list_item_add"
   | "shopping_list_item_toggle"
   | "shopping_list_item_remove";

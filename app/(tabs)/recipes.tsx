@@ -8,7 +8,6 @@ import { Button } from "../../src/components/ui/Button";
 import { EmptyState } from "../../src/components/ui/EmptyState";
 import { FilterChip } from "../../src/components/ui/FilterChip";
 import { Icon } from "../../src/components/ui/Icon";
-import { ProgressLoader } from "../../src/components/ui/ProgressLoader";
 import { SearchInput } from "../../src/components/ui/SearchInput";
 import { RECIPE_FILTERS } from "../../src/data/recipeFilters";
 import type { Recipe } from "../../src/data/recipes";
@@ -52,7 +51,7 @@ export default function RecipesScreen() {
     [activeFilter, page, search]
   );
   const recipesQuery = useRecipesWithLocalFallback(recipeParams);
-  const recipes = useMemo(
+  const storedRecipes = useMemo(
     () =>
       Object.keys(recipePages)
         .map(Number)
@@ -60,6 +59,13 @@ export default function RecipesScreen() {
         .flatMap((pageNumber) => recipePages[pageNumber]),
     [recipePages]
   );
+  const recipes = useMemo(() => {
+    if (storedRecipes.length > 0 || !recipesQuery.data) {
+      return storedRecipes;
+    }
+
+    return recipesQuery.data.items.map(apiRecipeToLocalRecipe);
+  }, [recipesQuery.data, storedRecipes]);
   const totalRecipes = recipesQuery.data?.total ?? recipes.length;
   const totalPages = Math.max(1, Math.ceil(totalRecipes / PAGE_SIZE));
   const canLoadMore = page < totalPages;
@@ -169,11 +175,11 @@ export default function RecipesScreen() {
         onEndReachedThreshold={0.55}
         ListEmptyComponent={
           recipesQuery.isLoading ? (
-            <ProgressLoader message="Fetching the latest recipes for you..." />
+            <RecipeGridSkeleton rows={3} />
           ) : recipesQuery.isError ? (
             <View style={styles.errorState}>
               <EmptyState
-                icon="⚠️"
+                iconName="offline"
                 title="Could not load recipes"
                 message={getApiErrorMessage(recipesQuery.error)}
               />
@@ -181,7 +187,7 @@ export default function RecipesScreen() {
             </View>
           ) : (
             <EmptyState
-              icon="🍲"
+              iconName="chefHat"
               title="No recipes found"
               message="Try another search or clear your selected filter."
             />
@@ -189,7 +195,7 @@ export default function RecipesScreen() {
         }
         ListFooterComponent={
           recipes.length > 0 && recipesQuery.isFetching ? (
-            <RecipeGridSkeleton />
+            <RecipeGridSkeleton rows={1} />
           ) : recipes.length > 0 && !canLoadMore ? (
             <AppText style={styles.endOfList}>You&apos;re all caught up.</AppText>
           ) : null
@@ -199,14 +205,18 @@ export default function RecipesScreen() {
   );
 }
 
-function RecipeGridSkeleton() {
+function RecipeGridSkeleton({ rows = 1 }: { rows?: number }) {
   return (
-    <View style={styles.skeletonRow} accessibilityLabel="Loading more recipes">
-      {[0, 1].map((item) => (
-        <View key={item} style={styles.skeletonCard}>
-          <View style={styles.skeletonImage} />
-          <View style={styles.skeletonLineWide} />
-          <View style={styles.skeletonLineShort} />
+    <View accessibilityLabel="Loading recipes">
+      {Array.from({ length: rows }, (_, row) => (
+        <View key={row} style={styles.skeletonRow}>
+          {[0, 1].map((column) => (
+            <View key={column} style={styles.skeletonCard}>
+              <View style={styles.skeletonImage} />
+              <View style={styles.skeletonLineWide} />
+              <View style={styles.skeletonLineShort} />
+            </View>
+          ))}
         </View>
       ))}
     </View>

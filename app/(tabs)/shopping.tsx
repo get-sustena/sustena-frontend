@@ -18,6 +18,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Animated, { FadeInDown } from "react-native-reanimated";
 import { AppText } from "../../src/components/ui/AppText";
 import { Icon } from "../../src/components/ui/Icon";
 import {
@@ -149,6 +150,7 @@ export default function ShoppingListsScreen() {
       await upsertShoppingList(db, list);
       addList(list);
       closeSheet();
+      showToast("List created", "success");
     } catch (error) {
       closeSheet();
       showToast(getApiErrorMessage(error), "danger");
@@ -177,6 +179,7 @@ export default function ShoppingListsScreen() {
       await renameShoppingListLocal(db, list.id, trimmed);
       renameListInStore(list.id, trimmed);
       closeSheet();
+      showToast("List renamed", "success");
     } catch (error) {
       closeSheet();
       showToast(getApiErrorMessage(error), "danger");
@@ -196,7 +199,7 @@ export default function ShoppingListsScreen() {
       await deleteShoppingList(db, list.id);
       removeListInStore(list.id);
       closeSheet();
-      showToast("List deleted", "success");
+      showToast("Shopping list deleted", "success");
     } catch (error) {
       closeSheet();
       showToast(getApiErrorMessage(error), "danger");
@@ -214,7 +217,10 @@ export default function ShoppingListsScreen() {
   }
 
   return (
-    <View style={styles.screen}>
+    <Animated.View
+      entering={FadeInDown.duration(320)}
+      style={styles.screen}
+    >
       <View
         style={[
           styles.header,
@@ -361,7 +367,7 @@ export default function ShoppingListsScreen() {
           </View>
         )}
       </ScrollView>
-    </View>
+    </Animated.View>
   );
 }
 

@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useIngredientCatalogQuery } from "../../hooks/api/useIngredients";
 import { useKitchenPlannerMutation } from "../../hooks/api/usePlanner";
@@ -33,30 +33,21 @@ const CATEGORY_NEEDLES: Record<string, string[]> = {
   Dairy: ["dairy", "eggs", "alternatives"],
 };
 
-const INITIAL_INGREDIENT_COUNT = 50;
-const INGREDIENT_BATCH_SIZE = 10;
+const ALL_CATEGORY_LIMIT = 10;
 
 const EMPTY_CATALOG: Ingredient[] = [];
 
 type Props = {
   initialCategory?: string;
-  loadMoreSignal?: number;
 };
 
-export function KitchenPlannerPane({
-  initialCategory,
-  loadMoreSignal = 0,
-}: Props) {
+export function KitchenPlannerPane({ initialCategory }: Props) {
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState<string>(ALL_CATEGORY);
-  const [visibleIngredientCount, setVisibleIngredientCount] = useState(
-    INITIAL_INGREDIENT_COUNT
-  );
   const [selectedIngredientIds, setSelectedIngredientIds] = useState<string[]>(
     []
   );
   const [hasSearched, setHasSearched] = useState(false);
-  const previousLoadMoreSignal = useRef(loadMoreSignal);
   const kitchenPlannerMutation = useKitchenPlannerMutation();
 
   const catalogQuery = useIngredientCatalogQuery();
@@ -90,42 +81,36 @@ export function KitchenPlannerPane({
   const normalizedSearch = search.trim().toLowerCase();
 
   const filteredIngredients = useMemo(() => {
-    return catalog.filter((ingredient) => {
-      const matchesCategory =
-        activeCategory === ALL_CATEGORY ||
-        matchesKitchenCategory(ingredient, activeCategory);
-
-      if (!matchesCategory) {
-        return false;
-      }
-
-      if (normalizedSearch.length === 0) {
-        return true;
-      }
-
-      return matchesIngredientSearch(ingredient, normalizedSearch);
-    });
-  }, [catalog, activeCategory, normalizedSearch]);
-
-  const visibleIngredients = filteredIngredients.slice(
-    0,
-    visibleIngredientCount
-  );
-
-  useEffect(() => {
-    setVisibleIngredientCount(INITIAL_INGREDIENT_COUNT);
-  }, [activeCategory, normalizedSearch]);
-
-  useEffect(() => {
-    if (previousLoadMoreSignal.current === loadMoreSignal) {
-      return;
+    if (normalizedSearch.length > 0) {
+      return catalog.filter((ingredient) =>
+        matchesIngredientSearch(ingredient, normalizedSearch)
+      );
     }
 
-    previousLoadMoreSignal.current = loadMoreSignal;
-    setVisibleIngredientCount((current) =>
-      Math.min(current + INGREDIENT_BATCH_SIZE, filteredIngredients.length)
+    if (activeCategory === ALL_CATEGORY && normalizedSearch.length === 0) {
+      const seenIngredientIds = new Set<string>();
+
+      return KITCHEN_CATEGORIES.filter(
+        (category) => category !== ALL_CATEGORY
+      ).flatMap((category) =>
+        catalog
+          .filter(
+            (ingredient) =>
+              matchesKitchenCategory(ingredient, category) &&
+              !seenIngredientIds.has(ingredient.id)
+          )
+          .slice(0, ALL_CATEGORY_LIMIT)
+          .map((ingredient) => {
+            seenIngredientIds.add(ingredient.id);
+            return ingredient;
+          })
+      );
+    }
+
+    return catalog.filter((ingredient) =>
+      matchesKitchenCategory(ingredient, activeCategory)
     );
-  }, [filteredIngredients.length, loadMoreSignal]);
+  }, [catalog, activeCategory, normalizedSearch]);
 
   const matches = useMemo(() => {
     return (
@@ -134,6 +119,10 @@ export function KitchenPlannerPane({
         .map((match) => ({
           recipe: apiRecipeToLocalRecipe(match.recipe),
           score: match.score,
+          rankingScore: match.rankingScore,
+          matchedIngredientCount: match.matchedIngredientCount,
+          totalRequiredIngredientCount: match.totalRequiredIngredientCount,
+          missingIngredientCount: match.missingIngredientCount,
           matchedIngredients: match.matchedIngredients,
           missingIngredients: match.missingIngredients,
         })) ?? []
@@ -184,49 +173,85 @@ export function KitchenPlannerPane({
 
               <View style={styles.selectedTags}>
                 {selectedIngredients.map((ingredient) => (
-                  <View key={ingredient.id} style={styles.selectedTag}>
+                  <Pressable
+                    key={ingredient.id}
+                    onPress={() => toggleIngredient(ingredient)}
+                    style={({ pressed }) => [
+                      styles.selectedTag,
+                      pressed && styles.selectedTagPressed,
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Remove ${ingredient.displayName}`}
+                  >
                     <AppText style={styles.selectedTagText}>
                       {ingredient.displayName}
                     </AppText>
-                  </View>
+                    <Icon
+                      name="close"
+                      size={11}
+                      color={theme.colors.onDark}
+                      strokeWidth={2.2}
+                    />
+                  </Pressable>
                 ))}
               </View>
             </View>
           ) : null}
 
-          <View style={styles.ingredientGrid}>
-            {visibleIngredients.map((ingredient) => {
-              const isSelected = selectedIngredientIds.includes(ingredient.id);
+          {catalogQuery.isPending ? (
+            <ProgressLoader message="Loading ingredients..." />
+          ) : catalogQuery.isError ? (
+            <EmptyState
+              iconName="offline"
+              title="Could not load ingredients"
+              message={getApiErrorMessage(catalogQuery.error)}
+            />
+          ) : filteredIngredients.length === 0 ? (
+            <View style={styles.ingredientEmpty}>
+              <Icon
+                name="pantry"
+                size={26}
+                color={theme.colors.textMutedAlt}
+              />
+              <AppText style={styles.ingredientEmptyText}>
+                No ingredients found
+              </AppText>
+            </View>
+          ) : (
+            <View style={styles.ingredientGrid}>
+              {filteredIngredients.map((ingredient) => {
+                const isSelected = selectedIngredientIds.includes(
+                  ingredient.id
+                );
 
-              return (
-                <Pressable
-                  key={ingredient.id}
-                  onPress={() => toggleIngredient(ingredient)}
-                  style={[
-                    styles.ingredientChip,
-                    isSelected && styles.selectedIngredientChip,
-                  ]}
-                >
-                  <AppText
+                return (
+                  <Pressable
+                    key={ingredient.id}
+                    onPress={() => toggleIngredient(ingredient)}
                     style={[
-                      styles.ingredientChipText,
-                      isSelected && styles.selectedIngredientChipText,
+                      styles.ingredientChip,
+                      isSelected && styles.selectedIngredientChip,
                     ]}
                   >
-                    {ingredient.displayName}
-                  </AppText>
-                </Pressable>
-              );
-            })}
-          </View>
+                    <AppText
+                      style={[
+                        styles.ingredientChipText,
+                        isSelected && styles.selectedIngredientChipText,
+                      ]}
+                    >
+                      {ingredient.displayName}
+                    </AppText>
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
 
           <Pressable
             onPress={() => {
               setHasSearched(true);
               kitchenPlannerMutation.mutate({
-                ingredients: selectedIngredients.map(
-                  (ingredient) => ingredient.canonicalName
-                ),
+                ingredientIds: selectedIngredientIds,
               });
             }}
             style={({ pressed }) => [
@@ -266,7 +291,7 @@ export function KitchenPlannerPane({
 
           {kitchenPlannerMutation.isError ? (
           <EmptyState
-            icon="⚠️"
+            iconName="offline"
             title="Could not find matches"
             message={getApiErrorMessage(kitchenPlannerMutation.error)}
           />
@@ -318,7 +343,17 @@ export function KitchenPlannerPane({
                       : ""}
                   </AppText>
 
-                  <AppText style={styles.resultSubMeta} numberOfLines={1}>
+                  <AppText style={styles.resultSubMeta}>
+                    Uses {match.matchedIngredientCount} of your ingredients
+                    {match.missingIngredientCount === 0
+                      ? " · Ready to cook"
+                      : ` · ${match.missingIngredientCount} more needed`}
+                  </AppText>
+
+                  <AppText
+                    style={styles.resultIngredientMeta}
+                    numberOfLines={1}
+                  >
                     Have: {match.matchedIngredients.join(", ")}
                   </AppText>
                 </View>
@@ -327,6 +362,7 @@ export function KitchenPlannerPane({
                   <AppText style={styles.matchBadgeText}>
                     {Math.round(match.score)}%
                   </AppText>
+                  <AppText style={styles.matchBadgeLabel}>ready</AppText>
                 </View>
               </Pressable>
             ))}
@@ -407,7 +443,13 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.navy,
     borderRadius: 999,
     paddingHorizontal: 10,
-    paddingVertical: 3,
+    paddingVertical: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  selectedTagPressed: {
+    opacity: 0.78,
   },
   selectedTagText: {
     fontFamily: theme.fontFamily.bodySemiBold,
@@ -420,6 +462,19 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: 8,
     marginBottom: 18,
+  },
+  ingredientEmpty: {
+    minHeight: 140,
+    marginHorizontal: 20,
+    marginBottom: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+  },
+  ingredientEmptyText: {
+    fontFamily: theme.fontFamily.bodyMedium,
+    fontSize: 14,
+    color: theme.colors.textMuted,
   },
   ingredientChip: {
     paddingHorizontal: 14,
@@ -523,10 +578,16 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
   resultSubMeta: {
+    fontFamily: theme.fontFamily.bodySemiBold,
+    fontSize: 11,
+    color: theme.colors.navy3,
+    marginTop: 4,
+  },
+  resultIngredientMeta: {
     fontFamily: theme.fontFamily.body,
     fontSize: 11,
     color: theme.colors.textMuted,
-    marginTop: 3,
+    marginTop: 2,
   },
   matchBadge: {
     paddingHorizontal: 8,
@@ -535,11 +596,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#BEE0CD",
     backgroundColor: "#E7F3EC",
+    alignItems: "center",
   },
   matchBadgeText: {
     fontFamily: theme.fontFamily.monoBold,
     fontSize: 12,
     color: theme.colors.navy3,
+  },
+  matchBadgeLabel: {
+    fontFamily: theme.fontFamily.mono,
+    fontSize: 8,
+    color: theme.colors.navy3,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
   emptyResults: {
     alignItems: "center",

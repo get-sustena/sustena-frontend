@@ -4,27 +4,20 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { theme } from "../../theme/theme";
+import type { PlanMealSlot, PlanSetupValue } from "../../types/planner";
 import { AppText } from "../ui/AppText";
 import { Icon } from "../ui/Icon";
-
-export type PlanMealSlot = "breakfast" | "lunch" | "dinner";
-
-export type PlanSetupValue = {
-  days: number;
-  mealsPerDay: number;
-  mealSlots: PlanMealSlot[];
-};
 
 type PlanStep = "days" | "meals" | "selection" | "summary";
 
 type Props = {
   visible: boolean;
   initialValue: PlanSetupValue;
-  intent: "create" | "edit";
   onClose: () => void;
   onComplete: (value: PlanSetupValue) => void;
 };
@@ -49,11 +42,12 @@ const MEAL_PAIRS: PlanMealSlot[][] = [
 export function PlanSetupModal({
   visible,
   initialValue,
-  intent,
   onClose,
   onComplete,
 }: Props) {
   const insets = useSafeAreaInsets();
+  const { width: windowWidth } = useWindowDimensions();
+  const dayTileSize = (windowWidth - 48 - 30) / 4;
   const [stepIndex, setStepIndex] = useState(0);
   const [draft, setDraft] = useState(initialValue);
   const steps = useMemo<PlanStep[]>(
@@ -64,6 +58,9 @@ export function PlanSetupModal({
     [draft.mealsPerDay]
   );
   const activeStep = steps[Math.min(stepIndex, steps.length - 1)];
+  const canContinue =
+    activeStep !== "selection" ||
+    draft.mealSlots.length === draft.mealsPerDay;
 
   useEffect(() => {
     if (!visible) {
@@ -84,6 +81,10 @@ export function PlanSetupModal({
   }
 
   function handleNext() {
+    if (!canContinue) {
+      return;
+    }
+
     if (stepIndex < steps.length - 1) {
       setStepIndex((current) => current + 1);
       return;
@@ -99,13 +100,9 @@ export function PlanSetupModal({
       mealSlots:
         mealsPerDay === 3
           ? ["breakfast", "lunch", "dinner"]
-          : mealsPerDay === 2
-            ? current.mealSlots.length === 2
-              ? current.mealSlots
-              : ["breakfast", "lunch"]
-            : current.mealSlots.length === 1
-              ? current.mealSlots
-              : ["breakfast"],
+          : current.mealSlots.length === mealsPerDay
+            ? current.mealSlots
+            : [],
     }));
   }
 
@@ -192,7 +189,9 @@ export function PlanSetupModal({
                     }
                     style={({ pressed }) => [
                       styles.dayTile,
+                      { width: dayTileSize, height: dayTileSize },
                       isSelected && styles.optionSelected,
+                      isSelected && styles.dayTileSelected,
                       pressed && styles.pressed,
                     ]}
                   >
@@ -244,6 +243,7 @@ export function PlanSetupModal({
                     setDraft((current) => ({
                       ...current,
                       mealSlots: [meal],
+                      mealsPerDay: 1,
                     }))
                   }
                 />
@@ -252,20 +252,22 @@ export function PlanSetupModal({
 
           {activeStep === "selection" && draft.mealsPerDay === 2
             ? MEAL_PAIRS.map((pair) => {
-                const key = pair.join("+");
-                const selected = pair.every((meal) =>
-                  draft.mealSlots.includes(meal)
-                );
+                const selected =
+                  draft.mealSlots.length === 2 &&
+                  pair.every(
+                    (meal, index) => draft.mealSlots[index] === meal
+                  );
 
                 return (
                   <PlanOption
-                    key={key}
+                    key={pair.join("+")}
                     label={`${capitalize(pair[0])} + ${capitalize(pair[1])}`}
                     selected={selected}
                     onPress={() =>
                       setDraft((current) => ({
                         ...current,
                         mealSlots: pair,
+                        mealsPerDay: 2,
                       }))
                     }
                   />
@@ -284,18 +286,16 @@ export function PlanSetupModal({
         >
           <Pressable
             onPress={handleNext}
+            disabled={!canContinue}
             style={({ pressed }) => [
               styles.nextButton,
+              !canContinue && styles.nextButtonDisabled,
               pressed && styles.nextButtonPressed,
             ]}
             accessibilityRole="button"
           >
             <AppText style={styles.nextButtonText}>
-              {activeStep === "summary"
-                ? intent === "create"
-                  ? "Create My Meal Plan"
-                  : "Save"
-                : "Next"}
+              {activeStep === "summary" ? "Save" : "Next"}
             </AppText>
           </Pressable>
         </View>
@@ -508,8 +508,6 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   dayTile: {
-    width: "22%",
-    aspectRatio: 1,
     borderRadius: 16,
     borderWidth: 1.5,
     borderColor: theme.colors.border,
@@ -517,17 +515,24 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  dayTileSelected: {
+    transform: [{ scale: 1.05 }, { translateY: -1 }],
+  },
   dayNumber: {
     fontFamily: theme.fontFamily.display,
     fontSize: 19,
+    lineHeight: 23,
     color: theme.colors.text,
+    includeFontPadding: false,
   },
   dayLabel: {
     fontFamily: theme.fontFamily.mono,
     fontSize: 11,
+    lineHeight: 14,
     color: theme.colors.textMuted,
     marginTop: 2,
     textTransform: "uppercase",
+    includeFontPadding: false,
   },
   optionRow: {
     minHeight: 58,
@@ -634,6 +639,9 @@ const styles = StyleSheet.create({
   nextButtonPressed: {
     opacity: 0.9,
     transform: [{ scale: 0.98 }],
+  },
+  nextButtonDisabled: {
+    opacity: 0.4,
   },
   nextButtonText: {
     fontFamily: theme.fontFamily.bodySemiBold,

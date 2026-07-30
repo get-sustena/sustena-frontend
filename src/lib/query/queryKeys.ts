@@ -37,6 +37,7 @@ export const queryKeys = {
     all: ["shopping-lists"] as const,
   },
   planner: {
+    settings: ["planner", "settings"] as const,
     budget: (payload: unknown) => ["planner", "budget", payload] as const,
     kitchen: (payload: unknown) => ["planner", "kitchen", payload] as const,
     timetable: (payload: unknown) =>

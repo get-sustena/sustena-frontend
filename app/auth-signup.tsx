@@ -101,7 +101,7 @@ export default function AuthSignupScreen() {
         email: trimmedEmail,
         password,
       });
-      showToast("Your Sustena account is ready.", "success");
+      showToast("You're in — we'll personalize as you go.", "success");
       continueAfterAuth();
     } catch (error) {
       setFormError(getApiErrorMessage(error));

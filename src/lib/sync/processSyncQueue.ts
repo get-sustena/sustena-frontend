@@ -7,10 +7,17 @@ import {
   incrementSyncAttempt,
   SyncQueueOperation,
 } from "../../db/syncQueueRepository";
-import { favoritesApi, profileAnswersApi, shoppingListApi, shoppingListsApi } from "../api";
+import {
+  favoritesApi,
+  plannerApi,
+  profileAnswersApi,
+  shoppingListApi,
+  shoppingListsApi,
+} from "../api";
 import { isApiClientError } from "../api/errors";
 import {
   ShoppingListItemCreateRequest,
+  PlannerSettingsUpdateRequest,
   UserProfileAnswersUpdateRequest,
 } from "../../types/api";
 
@@ -26,7 +33,7 @@ export async function processSyncQueue(db: SQLiteDatabase) {
     } catch (error) {
       if (isUnrecoverable(error) || operation.attempts + 1 >= MAX_ATTEMPTS) {
         console.warn(
-          "Dropping shopping/favorite change that could not be synced",
+          "Dropping queued change that could not be synced",
           operation.kind,
           error
         );
@@ -83,6 +90,13 @@ async function runOperation(operation: SyncQueueOperation) {
     case "profile_answers_update": {
       await profileAnswersApi.updateProfileAnswers(
         operation.payload as UserProfileAnswersUpdateRequest
+      );
+      return;
+    }
+
+    case "planner_settings_update": {
+      await plannerApi.updatePlannerSettings(
+        operation.payload as PlannerSettingsUpdateRequest
       );
       return;
     }

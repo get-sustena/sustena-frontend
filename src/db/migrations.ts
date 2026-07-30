@@ -6,7 +6,7 @@ import {
   runWithSqliteRetry,
 } from "./sqliteGuards";
 
-const DATABASE_VERSION = 6;
+const DATABASE_VERSION = 8;
 let migrationQueue = Promise.resolve();
 
 export async function migrateDbIfNeeded(db: SQLiteDatabase) {
@@ -267,6 +267,34 @@ async function runMigrations(db: SQLiteDatabase) {
       UPDATE shopping_list_items SET list_id = '${defaultListId}' WHERE list_id IS NULL;
 
       PRAGMA user_version = 6;
+    `);
+  }
+
+  const versionAfterShoppingLists =
+    versionAfterProfileAnswers < 6 ? 6 : versionAfterProfileAnswers;
+
+  if (versionAfterShoppingLists < 7) {
+    await db.execAsync(`
+      ALTER TABLE recipe_instructions ADD COLUMN segments_json TEXT NOT NULL DEFAULT '[]';
+
+      PRAGMA user_version = 7;
+    `);
+  }
+
+  const versionAfterInstructionSegments =
+    versionAfterShoppingLists < 7 ? 7 : versionAfterShoppingLists;
+
+  if (versionAfterInstructionSegments < 8) {
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS local_planner_settings (
+        id TEXT PRIMARY KEY NOT NULL,
+        days INTEGER NOT NULL,
+        meal_slots_json TEXT NOT NULL,
+        meals_per_day INTEGER NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      PRAGMA user_version = 8;
     `);
   }
 }

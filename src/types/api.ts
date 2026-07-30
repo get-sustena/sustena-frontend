@@ -15,6 +15,7 @@ export type DietaryPreference =
   | "keto"
   | "high_protein";
 export type MealSlot = "breakfast" | "lunch" | "dinner" | "snack";
+export type BudgetMealSlot = "breakfast" | "lunch" | "dinner";
 export type UnitOptionSource =
   | "explicit"
   | "converted"
@@ -124,6 +125,18 @@ export interface UserPreferences {
   defaultServingSize: number;
   createdAt: ISODateTimeString;
   updatedAt: ISODateTimeString;
+}
+
+export interface PlannerSettings {
+  days: number;
+  mealSlots: BudgetMealSlot[];
+  mealsPerDay: number;
+}
+
+export interface PlannerSettingsUpdateRequest {
+  days: number;
+  mealSlots: BudgetMealSlot[];
+  mealsPerDay: number;
 }
 
 export interface UserProfileAnswers {
@@ -265,11 +278,31 @@ export interface RecipeIngredient {
   parseWarnings: string[];
 }
 
+export interface RecipeInstructionTextSegment {
+  type: "text";
+  text: string;
+}
+
+export interface RecipeInstructionQuantitySegment {
+  type: "quantity";
+  text: string;
+  recipeIngredientId: UUIDString | null;
+  ingredientPosition: number;
+  baseQuantity: DecimalString;
+  unit: string | null;
+  scalesWithServings: true;
+}
+
+export type RecipeInstructionSegment =
+  | RecipeInstructionTextSegment
+  | RecipeInstructionQuantitySegment;
+
 export interface RecipeInstruction {
   id: UUIDString;
   stepNumber: number;
   text: string;
   type: string;
+  segments: RecipeInstructionSegment[];
 }
 
 export interface RecipeNote {
@@ -347,7 +380,13 @@ export interface PlannerMeal {
 
 export interface KitchenPlannerMatch {
   recipe: RecipeListItem;
+  /** Percentage of the recipe's required ingredients the user has. */
   score: number;
+  /** Backend ordering score: 50% recipe readiness and 50% pantry utilization. */
+  rankingScore: number;
+  matchedIngredientCount: number;
+  totalRequiredIngredientCount: number;
+  missingIngredientCount: number;
   matchedIngredients: string[];
   missingIngredients: string[];
 }
@@ -355,8 +394,14 @@ export interface KitchenPlannerMatch {
 export interface BudgetPlannerResponse {
   meals: PlannerMeal[];
   matches: [];
+  days: number;
+  mealSlots: BudgetMealSlot[];
+  requestedMealCount: number;
+  generatedMealCount: number;
+  dailyBudget: number;
+  totalBudget: number;
   totalEstimatedCost: number;
-  message: string;
+  message: string | null;
 }
 
 export interface KitchenPlannerResponse {
@@ -477,15 +522,19 @@ export interface ShoppingListUpdateRequest {
 
 export interface BudgetPlannerRequest {
   budget: number;
+  days?: number;
+  mealSlots?: BudgetMealSlot[];
+  mealsPerDay?: number;
   servingSize?: number;
-  maxTotalTimeMinutes?: number | null;
+  maxTotalTimeMinutes?: number;
   dietaryPreference?: DietaryPreference;
   healthConditions?: string[];
   allowUnknownCost?: boolean;
+  avoidRecipeIds?: string[];
 }
 
 export interface KitchenPlannerRequest {
-  ingredients: string[];
+  ingredientIds: string[];
 }
 
 export interface TimetablePlannerRequest {

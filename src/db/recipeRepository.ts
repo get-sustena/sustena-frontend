@@ -109,6 +109,22 @@ export async function getLocalRecipeById(db: SQLiteDatabase, recipeId: string) {
   return row ? parseRecipeRow(row) : null;
 }
 
+export async function cacheRecipeDetail(
+  db: SQLiteDatabase,
+  recipe: RecipeDetail
+) {
+  const now = new Date().toISOString();
+
+  await runWithSqliteRetry(() =>
+    db.withExclusiveTransactionAsync(async (txn) => {
+      const transactionDb = txn as unknown as SQLiteDatabase;
+
+      await upsertRecipe(transactionDb, recipe, now);
+      await replaceRecipeChildren(transactionDb, recipe);
+    })
+  );
+}
+
 async function upsertRecipe(
   db: SQLiteDatabase,
   recipe: RecipeDetail,
@@ -256,9 +272,10 @@ async function replaceRecipeChildren(db: SQLiteDatabase, recipe: RecipeDetail) {
         recipe_id,
         step_number,
         text,
-        type
+        type,
+        segments_json
       )
-      VALUES (?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?)
       `,
       [
         instruction.id,
@@ -266,6 +283,7 @@ async function replaceRecipeChildren(db: SQLiteDatabase, recipe: RecipeDetail) {
         instruction.stepNumber,
         instruction.text,
         instruction.type,
+        JSON.stringify(instruction.segments ?? []),
       ]
     );
   }
@@ -448,6 +466,10 @@ function mapSeedRecipe(seedRecipe: SeedRecipe, fallbackDate: string): RecipeDeta
         "type" in instruction && typeof instruction.type === "string"
           ? instruction.type
           : "instruction",
+      segments:
+        "segments" in instruction && Array.isArray(instruction.segments)
+          ? instruction.segments
+          : [],
     })),
     notes: seedRecipe.notes.map((note, index) => ({
       id:

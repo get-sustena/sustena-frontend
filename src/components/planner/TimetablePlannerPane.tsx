@@ -49,7 +49,7 @@ export function TimetablePlannerPane() {
     <View style={styles.container}>
       {mealPlanMutation.isError ? (
         <EmptyState
-          icon="⚠️"
+          iconName="offline"
           title="Could not generate meal plan"
           message={getApiErrorMessage(mealPlanMutation.error)}
         />
@@ -57,7 +57,7 @@ export function TimetablePlannerPane() {
         <ProgressLoader messages={MEAL_PLAN_LOADING_MESSAGES} />
       ) : groupedMeals.length === 0 ? (
         <EmptyState
-          icon="📅"
+          iconName="plan"
           title="No meal plan yet"
           message="Generate a weekly plan to see 21 meals grouped by day."
         />
