@@ -13,7 +13,7 @@ const HOW_TO = [
   {
     question: "Generate a budget meal plan",
     answer:
-      'Go to the Planner tab, set your daily budget, and tap "Generate My Plan". Tap the plan summary card first if you want to change the number of days or which meals are included.',
+      'Go to the Planner tab, set the total budget for the complete plan, and tap "Generate My Plan". Tap the plan summary card first if you want to change the number of days or which meals are included.',
   },
   {
     question: "Swap a meal in your plan",

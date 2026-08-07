@@ -186,6 +186,7 @@ export interface RecipeListItem {
   tags: string[];
   dietaryTags: string[];
   estimatedCost: number | null;
+  baseServings: number | null;
   caloriesPerServing: number | null;
   totalTimeMinutes: number | null;
   difficulty: Difficulty | null;
@@ -313,7 +314,6 @@ export interface RecipeNote {
 
 export interface RecipeDetail extends RecipeListItem {
   description: string | null;
-  baseServings: number | null;
   baseServingsSource: MetadataSource | null;
   prepTimeMinutes: number | null;
   cookTimeMinutes: number | null;

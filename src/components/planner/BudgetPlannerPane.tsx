@@ -251,7 +251,7 @@ export function BudgetPlannerPane() {
     Keyboard.dismiss();
 
     if (numericBudget < 1000) {
-      showToast("Enter a daily budget to continue");
+      showToast("Enter a total plan budget to continue");
       return;
     }
 
@@ -403,7 +403,7 @@ export function BudgetPlannerPane() {
         </View>
       </Pressable>
 
-      <AppText style={styles.inputLabel}>Daily Budget</AppText>
+      <AppText style={styles.inputLabel}>Total Plan Budget</AppText>
 
       <View style={styles.inputRow}>
         <AppText style={styles.naira}>₦</AppText>
@@ -511,7 +511,7 @@ export function BudgetPlannerPane() {
           title="No meals found"
           message={
             budgetPlannerMutation.data.message ??
-            "No meals matched this plan setup and daily budget."
+            "No meals matched this setup and total plan budget."
           }
         />
       ) : (

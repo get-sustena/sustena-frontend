@@ -437,6 +437,7 @@ function toRecipeListItem(recipe: RecipeDetail): RecipeListItem {
     tags: recipe.tags,
     dietaryTags: recipe.dietaryTags,
     estimatedCost: recipe.estimatedCost,
+    baseServings: recipe.baseServings,
     caloriesPerServing: recipe.caloriesPerServing,
     totalTimeMinutes: recipe.totalTimeMinutes,
     difficulty: recipe.difficulty,

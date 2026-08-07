@@ -35,7 +35,7 @@ import { theme } from "../src/theme/theme";
 type ForgotStep = "email" | "code" | "password" | "done";
 
 const OTP_LENGTH = 6;
-const RESEND_SECONDS = 45;
+const RESEND_SECONDS = 60;
 
 export default function AuthForgotScreen() {
   const [step, setStep] = useState<ForgotStep>("email");
@@ -103,6 +103,8 @@ export default function AuthForgotScreen() {
 
     try {
       await forgotPasswordMutation.mutateAsync({ email: trimmedEmail });
+      setOtp(Array(OTP_LENGTH).fill(""));
+      setResetToken(null);
       setResendSecondsLeft(RESEND_SECONDS);
     } catch (resendError) {
       setError(getApiErrorMessage(resendError));

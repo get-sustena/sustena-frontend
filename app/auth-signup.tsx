@@ -101,7 +101,10 @@ export default function AuthSignupScreen() {
         email: trimmedEmail,
         password,
       });
-      showToast("You're in — we'll personalize as you go.", "success");
+      showToast(
+        "You're in. We've sent a verification email so you can verify your account.",
+        "success"
+      );
       continueAfterAuth();
     } catch (error) {
       setFormError(getApiErrorMessage(error));
