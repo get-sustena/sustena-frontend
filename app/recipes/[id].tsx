@@ -1,10 +1,10 @@
 // app/recipes/[id].tsx
 
 import * as Haptics from "expo-haptics";
-import { router, useLocalSearchParams } from "expo-router";
+import { Image } from "expo-image";
+import { Href, router, useLocalSearchParams } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
 import { useMemo, useState } from "react";
-import { LinearGradient } from "expo-linear-gradient";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { RecipePhoto } from "../../src/components/recipe/RecipePhoto";
@@ -25,7 +25,9 @@ import {
   useRemoveFavoriteMutation,
 } from "../../src/hooks/api/useFavorites";
 import { useIngredientCatalogQuery } from "../../src/hooks/api/useIngredients";
-import { useRecipeDetailWithLocalFallback } from "../../src/hooks/api/useRecipes";
+import {
+  useRecipeDetailWithLocalFallback,
+} from "../../src/hooks/api/useRecipes";
 import { useAddShoppingListItemMutation } from "../../src/hooks/api/useShoppingList";
 import { useUnitsQuery } from "../../src/hooks/api/useUnits";
 import {
@@ -551,39 +553,25 @@ export default function RecipeDetailScreen() {
 
   return (
     <View style={styles.root}>
-      <View style={styles.headerBlock}>
-        <RecipePhoto
-          imageUrl={recipe.imageUrl}
-          fallbackLabel="recipe photo"
-          style={styles.photo}
-        />
+      <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
+        <Pressable onPress={() => router.back()} style={styles.topBarButton}>
+          <Icon name="chevronLeft" size={24} color={theme.colors.text} />
+        </Pressable>
 
-        <View
+        <Pressable
+          onPress={handleFavoritePress}
           style={[
-            styles.photoButtons,
-            { top: Math.max(52, insets.top + 5) },
+            styles.topBarButton,
+            isFavorite && styles.favoriteButtonActive,
           ]}
         >
-          <Pressable onPress={() => router.back()} style={styles.roundButton}>
-            <Icon name="chevronLeft" size={20} color={theme.colors.text} />
-          </Pressable>
-
-          <Pressable
-            onPress={handleFavoritePress}
-            style={[
-              styles.roundButton,
-              isFavorite && styles.favoriteButtonActive,
-            ]}
-          >
-            <Icon
-              name="bookmark"
-              size={22}
-              color={isFavorite ? theme.colors.onDark : theme.colors.text}
-              filled={isFavorite}
-            />
-          </Pressable>
-        </View>
-
+          <Icon
+            name="bookmark"
+            size={22}
+            color={isFavorite ? theme.colors.onDark : theme.colors.text}
+            filled={isFavorite}
+          />
+        </Pressable>
       </View>
 
       <ScrollView
@@ -593,6 +581,12 @@ export default function RecipeDetailScreen() {
         automaticallyAdjustContentInsets={false}
         contentInsetAdjustmentBehavior="never"
       >
+        <RecipePhoto
+          imageUrl={recipe.imageUrl}
+          fallbackLabel="recipe photo"
+          style={styles.photo}
+        />
+
         <View style={styles.titleBlock}>
           <View style={styles.tagRow}>
             {displayTags.map((tag) => (
@@ -604,11 +598,61 @@ export default function RecipeDetailScreen() {
 
           <AppText style={styles.heroTitle}>{recipe.name}</AppText>
 
+          <Pressable
+            disabled={!recipeDetail?.creator}
+            onPress={() => {
+              if (!recipeDetail?.creator) return;
+              router.push(
+                `/creators/${encodeURIComponent(recipeDetail.creator.handle)}` as Href
+              );
+            }}
+            style={({ pressed }) => [
+              styles.creatorRow,
+              pressed && styles.pressed,
+            ]}
+            accessibilityRole={recipeDetail?.creator ? "button" : undefined}
+            accessibilityLabel={
+              recipeDetail?.creator
+                ? `Open ${recipeDetail.creator.displayName}'s profile`
+                : undefined
+            }
+          >
+            {recipeDetail?.creator?.avatarUrl ? (
+              <Image
+                source={{ uri: recipeDetail.creator.avatarUrl }}
+                contentFit="cover"
+                style={styles.creatorAvatar}
+              />
+            ) : (
+              <View style={[styles.creatorAvatar, styles.creatorAvatarFallback]}>
+                <AppText style={styles.creatorInitials}>
+                  {recipeDetail?.creator
+                    ? getInitials(recipeDetail.creator.displayName)
+                    : "SK"}
+                </AppText>
+              </View>
+            )}
+            <View style={styles.creatorCopy}>
+              <AppText numberOfLines={1} style={styles.creatorName}>
+                {recipeDetail?.creator?.displayName ?? "Sustena Kitchen"}
+              </AppText>
+              <AppText style={styles.creatorHandle}>
+                @{recipeDetail?.creator?.handle ?? "sustenakitchen"}
+              </AppText>
+            </View>
+          </Pressable>
+
           <View style={styles.statsCard}>
             <StatCell
               icon="timer"
               value={recipe.time}
               label="Time"
+              borderRight
+            />
+            <StatCell
+              icon="star"
+              value={recipeDetail?.averageRating?.toFixed(1) ?? "0.0"}
+              label="Rating"
               borderRight
             />
             <StatCell
@@ -655,7 +699,7 @@ export default function RecipeDetailScreen() {
             {[
               { value: "metric" as const, label: "Metric" },
               { value: "imperial" as const, label: "Imperial" },
-              { value: "cups" as const, label: "Nigerian Units" },
+              { value: "cups" as const, label: "Nigerian" },
             ].map((option) => {
               const selected = globalUnitMode === option.value;
 
@@ -912,37 +956,33 @@ export default function RecipeDetailScreen() {
           </View>
 
           {recipe.tools.length > 0 ? (
-            <>
-              <SectionHeader title="Helpful Tools" />
+            <View style={styles.toolSection}>
+              <AppText style={styles.toolSectionTitle}>
+                Need this tool?
+              </AppText>
 
-              <View style={styles.toolSection}>
-                <AppText style={styles.toolSectionTitle}>
-                  Need This Tool?
-                </AppText>
-
-                {recipe.tools.map((tool, index) => (
-                  <View
-                    key={tool.id}
-                    style={[
-                      styles.toolItem,
-                      index === recipe.tools.length - 1 &&
-                        styles.toolItemLast,
-                    ]}
-                  >
-                    <View style={styles.toolInfo}>
-                      <AppText style={styles.toolName}>{tool.name}</AppText>
-                      <AppText style={styles.toolPrice}>
-                        {formatNaira(tool.price)} · GoLemon
-                      </AppText>
-                    </View>
-
-                    <Pressable style={styles.toolAddButton}>
-                      <AppText style={styles.toolAddText}>Add</AppText>
-                    </Pressable>
+              {recipe.tools.map((tool, index) => (
+                <View
+                  key={tool.id}
+                  style={[
+                    styles.toolItem,
+                    index === recipe.tools.length - 1 &&
+                      styles.toolItemLast,
+                  ]}
+                >
+                  <View style={styles.toolInfo}>
+                    <AppText style={styles.toolName}>{tool.name}</AppText>
+                    <AppText style={styles.toolPrice}>
+                      {formatNaira(tool.price)} · GoLemon
+                    </AppText>
                   </View>
-                ))}
-              </View>
-            </>
+
+                  <Pressable style={styles.toolAddButton}>
+                    <AppText style={styles.toolAddText}>Add</AppText>
+                  </Pressable>
+                </View>
+              ))}
+            </View>
           ) : null}
         </View>
       </ScrollView>
@@ -950,15 +990,9 @@ export default function RecipeDetailScreen() {
       <View
         style={[
           styles.ctaBar,
-          { paddingBottom: Math.max(24, insets.bottom + 8) },
+          { paddingBottom: insets.bottom + 14 },
         ]}
       >
-        <LinearGradient
-          colors={["rgba(255,255,255,0)", "#FFFFFF", "#FFFFFF"]}
-          locations={[0, 0.24, 1]}
-          style={StyleSheet.absoluteFillObject}
-        />
-
         {scaledCost !== null ? (
           <View style={styles.ctaCost}>
             <AppText style={styles.ctaCostLabel}>Total</AppText>
@@ -976,7 +1010,7 @@ export default function RecipeDetailScreen() {
           ]}
         >
           <Icon name="shop" size={18} color={theme.colors.onDark} />
-          <AppText style={styles.ctaButtonText}>Add to Shopping List</AppText>
+          <AppText style={styles.ctaButtonText}>Add to shopping list</AppText>
         </Pressable>
       </View>
     </View>
@@ -1153,14 +1187,19 @@ function StatCell({
   label,
   borderRight,
 }: {
-  icon: "timer" | "chefHat" | "chart";
+  icon: "timer" | "chefHat" | "star";
   value: string;
   label: string;
   borderRight?: boolean;
 }) {
   return (
     <View style={[styles.statCell, borderRight && styles.statCellBorder]}>
-      <Icon name={icon} size={15} color={theme.colors.textMutedAlt} />
+      <Icon
+        name={icon}
+        size={15}
+        color={icon === "star" ? theme.colors.orange : theme.colors.textMutedAlt}
+        filled={icon === "star"}
+      />
       <AppText style={styles.statCellValue}>{value}</AppText>
       <AppText style={styles.statCellLabel}>{label}</AppText>
     </View>
@@ -1192,6 +1231,15 @@ function getIngredientQuantityUnitLabel({
   return [quantity, unit]
     .filter((value) => value !== null && value !== undefined && value !== "")
     .join(" ");
+}
+
+function getInitials(value: string) {
+  return value
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
 }
 
 const styles = StyleSheet.create({
@@ -1226,34 +1274,25 @@ const styles = StyleSheet.create({
     width: "100%",
     paddingHorizontal: theme.spacing.xl,
   },
-  headerBlock: {
+  topBar: {
     flexShrink: 0,
+    paddingHorizontal: 12,
+    paddingBottom: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: theme.colors.white,
+    zIndex: 5,
   },
   photo: {
     height: 205,
   },
-  photoButtons: {
-    position: "absolute",
-    top: 52,
-    left: 20,
-    right: 20,
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  roundButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: theme.colors.card,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+  topBarButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: theme.colors.text,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 3,
   },
   favoriteButtonActive: {
     backgroundColor: theme.colors.navy,
@@ -1279,7 +1318,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#EAEDE6",
   },
   tagText: {
-    fontFamily: theme.fontFamily.body,
+    fontFamily: theme.fontFamily.bodySemiBold,
     fontSize: 11,
     letterSpacing: 0,
     textTransform: "uppercase",
@@ -1291,9 +1330,43 @@ const styles = StyleSheet.create({
     letterSpacing: 0,
     lineHeight: 30,
     color: theme.colors.navy,
-    marginBottom: 14,
+    marginBottom: 10,
+  },
+  creatorRow: {
+    marginBottom: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 9,
+  },
+  creatorAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+  },
+  creatorAvatarFallback: {
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.navy,
+  },
+  creatorInitials: {
+    fontFamily: theme.fontFamily.bodySemiBold,
+    fontSize: 11,
+    color: theme.colors.onDark,
+  },
+  creatorCopy: { minWidth: 0 },
+  creatorName: {
+    fontFamily: theme.fontFamily.bodySemiBold,
+    fontSize: 13,
+    lineHeight: 15.6,
+    color: theme.colors.navy,
+  },
+  creatorHandle: {
+    fontFamily: theme.fontFamily.body,
+    fontSize: 11.5,
+    color: theme.colors.textMedium,
   },
   statsCard: {
+    marginBottom: 8,
     flexDirection: "row",
     backgroundColor: theme.colors.background,
     borderWidth: 1,
@@ -1552,11 +1625,11 @@ const styles = StyleSheet.create({
     paddingTop: 3,
   },
   toolSection: {
-    backgroundColor: theme.colors.card,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    marginTop: 24,
+    backgroundColor: "#F5F8F1",
     borderRadius: 16,
-    padding: theme.spacing.lg,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
   },
   toolSectionTitle: {
     fontFamily: theme.fontFamily.bodySemiBold,
@@ -1607,41 +1680,30 @@ const styles = StyleSheet.create({
     bottom: 0,
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 14,
     paddingHorizontal: 20,
     paddingTop: 14,
-    paddingBottom: 24,
+    paddingBottom: 14,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.surface2,
+    backgroundColor: theme.colors.white,
   },
   ctaCost: {
-    minWidth: 74,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 16,
-    backgroundColor: theme.colors.card,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
-    height: 58,
-    shadowColor: theme.colors.text,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.14,
-    shadowRadius: 6,
-    elevation: 2,
+    flexShrink: 0,
   },
   ctaCostLabel: {
-    fontFamily: theme.fontFamily.mono,
-    fontSize: 12,
-    color: theme.colors.textMuted,
-    textTransform: "uppercase",
+    fontFamily: theme.fontFamily.body,
+    fontSize: 11.5,
+    color: theme.colors.textMedium,
   },
   ctaCostValue: {
-    fontFamily: theme.fontFamily.monoBold,
-    fontSize: 16,
-    color: theme.colors.navy3,
+    fontFamily: theme.fontFamily.display,
+    fontSize: 18,
+    color: theme.colors.navy,
   },
   ctaButton: {
     flex: 1,
-    height: 58,
+    height: 48,
     borderRadius: 999,
     backgroundColor: theme.colors.navy,
     flexDirection: "row",

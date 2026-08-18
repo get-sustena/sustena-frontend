@@ -3,9 +3,7 @@ export const API_BASE_URL =
 
 export const ACCESS_TOKEN_EXPIRED_STATUS = 401;
 
-// The production backend runs on a free-tier host that can take 30-50s to
-// wake up from a cold start after idling, so the timeout needs enough
-// headroom to survive the very first request rather than aborting into it.
+// Keep a bounded request timeout for slow or interrupted network connections.
 export const API_TIMEOUT_MS = 60_000;
 
 // Local API URL notes:

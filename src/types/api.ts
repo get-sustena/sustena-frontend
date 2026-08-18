@@ -16,6 +16,12 @@ export type DietaryPreference =
   | "high_protein";
 export type MealSlot = "breakfast" | "lunch" | "dinner" | "snack";
 export type BudgetMealSlot = "breakfast" | "lunch" | "dinner";
+export type RecipePublicationStatus = "draft" | "published" | "archived";
+export type RecipeModerationStatus =
+  | "pending"
+  | "approved"
+  | "hidden"
+  | "rejected";
 export type UnitOptionSource =
   | "explicit"
   | "converted"
@@ -69,8 +75,19 @@ export interface User {
   lastName: string;
   fullName: string;
   isActive: boolean;
+  emailVerifiedAt: ISODateTimeString | null;
   createdAt: ISODateTimeString;
   updatedAt: ISODateTimeString;
+}
+
+export interface CurrentUserUpdateRequest {
+  fullName: string;
+  email: string;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
 }
 
 export interface AuthResponse {
@@ -185,13 +202,24 @@ export interface RecipeListItem {
   cuisine: string | null;
   tags: string[];
   dietaryTags: string[];
+  categories: string[];
   estimatedCost: number | null;
   baseServings: number | null;
   caloriesPerServing: number | null;
   totalTimeMinutes: number | null;
   difficulty: Difficulty | null;
   reviewStatus: ReviewStatus;
+  creator: RecipeCreatorSummary | null;
+  averageRating: number | null;
+  ratingCount: number;
   isFavorited: boolean;
+}
+
+export interface RecipeCreatorSummary {
+  id: UUIDString;
+  displayName: string;
+  handle: string;
+  avatarUrl: string | null;
 }
 
 export interface IngredientAvailableUnit {
@@ -265,6 +293,8 @@ export interface RecipeIngredient {
   canonicalIngredientName: string | null;
   ingredientId: string | null;
   quantity: DecimalString | number | null;
+  quantityMax: DecimalString | number | null;
+  quantityMode: "exact" | "range" | "to_taste" | "as_needed";
   unit: string | null;
   quantityText: string | null;
   displayText: string | null;
@@ -272,6 +302,10 @@ export interface RecipeIngredient {
   alternateUnit: string | null;
   availableUnits: IngredientAvailableUnit[];
   preparationNote: string | null;
+  sizeNote: string | null;
+  customMeasurementBasis: "mass" | "liquid" | "item" | "bunch" | null;
+  isCustom: boolean;
+  sectionPosition: number | null;
   category: string | null;
   isCoreIngredient: boolean;
   isOptional: boolean;
@@ -301,9 +335,54 @@ export type RecipeInstructionSegment =
 export interface RecipeInstruction {
   id: UUIDString;
   stepNumber: number;
+  stepName: string | null;
   text: string;
+  commonMistake: string | null;
+  helpfulTip: string | null;
   type: string;
   segments: RecipeInstructionSegment[];
+  timers: RecipeInstructionTimer[];
+}
+
+export interface RecipeInstructionTimer {
+  id: UUIDString;
+  position: number;
+  label: string | null;
+  durationMinSeconds: number;
+  durationMaxSeconds: number | null;
+}
+
+export interface RecipeClassification {
+  kind:
+    | "category"
+    | "main_ingredient_base"
+    | "cuisine"
+    | "occasion"
+    | "cooking_method";
+  value: string;
+  position: number;
+}
+
+export interface RecipeIngredientSection {
+  id: UUIDString;
+  name: string;
+  position: number;
+}
+
+export interface RecipeServingSuggestion {
+  id: UUIDString;
+  relatedRecipeId: string | null;
+  label: string | null;
+  position: number;
+}
+
+export interface RecipeSubstitution {
+  id: UUIDString;
+  sourceRecipeIngredientId: UUIDString | null;
+  replacementIngredientId: string | null;
+  replacementName: string | null;
+  instruction: string | null;
+  position: number;
 }
 
 export interface RecipeNote {
@@ -330,6 +409,225 @@ export interface RecipeDetail extends RecipeListItem {
   instructions: RecipeInstruction[];
   notes: RecipeNote[];
   allergens: string[];
+  classifications: RecipeClassification[];
+  ingredientSections: RecipeIngredientSection[];
+  servingSuggestions: RecipeServingSuggestion[];
+  substitutions: RecipeSubstitution[];
+  storageInstructions: string | null;
+  viewCount: number;
+  currentUserRating: number | null;
+  canRate: boolean;
+  createdAt: ISODateTimeString;
+  updatedAt: ISODateTimeString;
+}
+
+export interface RecipeRatingResponse {
+  rating: number | null;
+  averageRating: number | null;
+  ratingCount: number;
+}
+
+export interface CreatorProfile {
+  id: UUIDString;
+  displayName: string;
+  handle: string;
+  bio: string | null;
+  avatarUrl: string | null;
+  coverUrl: string | null;
+  specialities: string[];
+  isOwner: boolean;
+  isSaved: boolean;
+  publishedRecipeCount: number;
+  totalRecipeSaves: number;
+  averageRating: number | null;
+  createdAt: ISODateTimeString;
+  updatedAt: ISODateTimeString;
+}
+
+export interface CreatorProfileWriteRequest {
+  displayName: string;
+  handle: string;
+  bio?: string | null;
+  avatarAssetId?: UUIDString | null;
+  coverAssetId?: UUIDString | null;
+  specialities: string[];
+}
+
+export interface CreatorHandleAvailability {
+  handle: string;
+  normalizedHandle: string;
+  available: boolean;
+  reason: "available" | "taken" | "reserved" | "invalid";
+}
+
+export interface CreatorReportRequest {
+  reason: "spam" | "misleading" | "inappropriate" | "other";
+  notes?: string | null;
+}
+
+export interface CreatorRecipeListParams {
+  search?: string;
+  category?: string;
+  sort?: "newest" | "top_rated";
+  page?: number;
+  pageSize?: number;
+}
+
+export interface MyRecipeListParams {
+  status?: RecipePublicationStatus;
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface RecipeClassificationInput {
+  kind: RecipeClassification["kind"];
+  value: string;
+  position: number;
+}
+
+export interface RecipeIngredientSectionInput {
+  name: string;
+  position: number;
+}
+
+export interface RecipeIngredientInput {
+  clientId?: string | null;
+  sectionPosition?: number | null;
+  position: number;
+  rawText?: string;
+  ingredientName?: string | null;
+  ingredientId?: string | null;
+  quantity?: string | null;
+  quantityMax?: string | null;
+  quantityMode?: "exact" | "range" | "to_taste" | "as_needed";
+  unit?: string | null;
+  preparationNote?: string | null;
+  sizeNote?: string | null;
+  customMeasurementBasis?: "mass" | "liquid" | "item" | "bunch" | null;
+  isCustom?: boolean;
+  isOptional?: boolean;
+}
+
+export interface RecipeTimerInput {
+  position: number;
+  label?: string | null;
+  durationMinSeconds: number;
+  durationMaxSeconds?: number | null;
+  sourceText?: string | null;
+  sourceStart?: number | null;
+  sourceEnd?: number | null;
+  resolutionStatus?: "detected" | "confirmed" | "ignored";
+}
+
+export interface RecipeInstructionInput {
+  clientId?: string | null;
+  stepNumber: number;
+  stepName?: string | null;
+  text: string;
+  commonMistake?: string | null;
+  helpfulTip?: string | null;
+  timers?: RecipeTimerInput[];
+}
+
+export interface RecipeServingSuggestionInput {
+  relatedRecipeId?: string | null;
+  label?: string | null;
+  position: number;
+}
+
+export interface RecipeSubstitutionInput {
+  sourceIngredientClientId?: string | null;
+  sourceIngredientPosition?: number | null;
+  replacementIngredientId?: string | null;
+  replacementName?: string | null;
+  instruction?: string | null;
+  position: number;
+}
+
+export interface RecipeDraftWriteRequest {
+  revision?: number | null;
+  name: string;
+  description?: string | null;
+  coverMediaId?: UUIDString | null;
+  classifications?: RecipeClassificationInput[];
+  difficulty?: Difficulty | null;
+  prepTimeMinutes?: number | null;
+  cookTimeMinutes?: number | null;
+  baseServings?: number | null;
+  estimatedCost?: number | null;
+  affordabilityBand?: "low" | "moderate" | "expensive" | null;
+  affordabilityBasis?: "meal" | "snack" | null;
+  ingredientSections?: RecipeIngredientSectionInput[];
+  ingredients?: RecipeIngredientInput[];
+  instructions?: RecipeInstructionInput[];
+  servingSuggestions?: RecipeServingSuggestionInput[];
+  substitutions?: RecipeSubstitutionInput[];
+  storageInstructions?: string | null;
+  editorStage?: number;
+}
+
+export interface RecipeDraftCreateRequest extends RecipeDraftWriteRequest {
+  id?: string;
+}
+
+export interface RecipeDraft extends Required<Omit<RecipeDraftWriteRequest, "revision">> {
+  id: string;
+  revision: number;
+  coverMediaUrl: string | null;
+  slug: string;
+  publicationStatus: RecipePublicationStatus;
+  moderationStatus: RecipeModerationStatus;
+  draftOfRecipeId: string | null;
+  publishedAt: ISODateTimeString | null;
+  deletedAt: ISODateTimeString | null;
+  viewCount: number;
+  createdAt: ISODateTimeString;
+  updatedAt: ISODateTimeString;
+}
+
+export interface RecipeVocabularyItem {
+  id: string;
+  label: string;
+  group: string | null;
+}
+
+export interface RecipeAuthoringVocabulary {
+  categories: RecipeVocabularyItem[];
+  mainIngredientBases: RecipeVocabularyItem[];
+  cuisines: RecipeVocabularyItem[];
+  occasions: RecipeVocabularyItem[];
+  cookingMethods: RecipeVocabularyItem[];
+}
+
+export interface MediaUploadCreateRequest {
+  purpose: "creator_avatar" | "creator_cover" | "recipe_cover";
+  contentType: "image/jpeg" | "image/png" | "image/webp";
+  originalFilename?: string | null;
+  byteSize: number;
+  checksumSha256: string;
+}
+
+export interface MediaUploadCompleteRequest {
+  width: number;
+  height: number;
+}
+
+export interface MediaAsset {
+  id: UUIDString;
+  purpose: string;
+  status: "pending" | "ready" | "failed";
+  storageKey: string;
+  uploadUrl: string | null;
+  uploadHeaders: Record<string, string>;
+  uploadExpiresIn: number | null;
+  publicUrl: string | null;
+  contentType: string | null;
+  originalFilename: string | null;
+  byteSize: number | null;
+  width: number | null;
+  height: number | null;
+  checksumSha256: string | null;
   createdAt: ISODateTimeString;
   updatedAt: ISODateTimeString;
 }
@@ -484,7 +782,6 @@ export interface RecipeSearchParams {
   maxTotalTimeMinutes?: number;
   page?: number;
   pageSize?: number;
-  includeNeedsReview?: boolean;
 }
 
 export interface ShoppingListItemCreateRequest {

@@ -66,6 +66,14 @@ export type Recipe = {
   notes?: string[];
   tools: RecipeTool[];
   baseServings: number;
+  creator?: {
+    id: string;
+    displayName: string;
+    handle: string;
+    avatarUrl: string | null;
+  } | null;
+  averageRating?: number | null;
+  ratingCount?: number;
 };
 
 // Production screens should use backend recipes with seeded SQLite fallback.

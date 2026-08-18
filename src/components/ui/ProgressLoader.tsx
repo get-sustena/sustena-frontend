@@ -123,7 +123,7 @@ export function ProgressLoader({
             animatedProps={logoAnimatedProps}
             d={LOGO_PATH_D}
             fill="none"
-            stroke={theme.colors.linkGreen}
+            stroke={theme.colors.navy}
             strokeWidth={isScreen ? 12 : 13}
             strokeLinecap="round"
             strokeLinejoin="round"

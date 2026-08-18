@@ -436,12 +436,18 @@ function toRecipeListItem(recipe: RecipeDetail): RecipeListItem {
     cuisine: recipe.cuisine,
     tags: recipe.tags,
     dietaryTags: recipe.dietaryTags,
+    categories: recipe.classifications
+      .filter((item) => item.kind === "category")
+      .map((item) => item.value),
     estimatedCost: recipe.estimatedCost,
     baseServings: recipe.baseServings,
     caloriesPerServing: recipe.caloriesPerServing,
     totalTimeMinutes: recipe.totalTimeMinutes,
     difficulty: recipe.difficulty,
     reviewStatus: recipe.reviewStatus,
+    creator: recipe.creator,
+    averageRating: recipe.averageRating,
+    ratingCount: recipe.ratingCount,
     isFavorited: recipe.isFavorited,
   };
 }
@@ -462,7 +468,20 @@ function mapSeedRecipe(seedRecipe: SeedRecipe, fallbackDate: string): RecipeDeta
           ? instruction.id
           : `${seedRecipe.id}-instruction-${instruction.stepNumber}`,
       stepNumber: instruction.stepNumber,
+      stepName:
+        "stepName" in instruction && typeof instruction.stepName === "string"
+          ? instruction.stepName
+          : null,
       text: instruction.text,
+      commonMistake:
+        "commonMistake" in instruction &&
+        typeof instruction.commonMistake === "string"
+          ? instruction.commonMistake
+          : null,
+      helpfulTip:
+        "helpfulTip" in instruction && typeof instruction.helpfulTip === "string"
+          ? instruction.helpfulTip
+          : null,
       type:
         "type" in instruction && typeof instruction.type === "string"
           ? instruction.type
@@ -470,6 +489,10 @@ function mapSeedRecipe(seedRecipe: SeedRecipe, fallbackDate: string): RecipeDeta
       segments:
         "segments" in instruction && Array.isArray(instruction.segments)
           ? instruction.segments
+          : [],
+      timers:
+        "timers" in instruction && Array.isArray(instruction.timers)
+          ? instruction.timers
           : [],
     })),
     notes: seedRecipe.notes.map((note, index) => ({

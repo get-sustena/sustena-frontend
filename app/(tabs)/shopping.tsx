@@ -131,7 +131,7 @@ export default function ShoppingListsScreen() {
 
     if (!isOnline) {
       closeSheet();
-      showToast("You're offline — connect to create a new list", "danger");
+      showToast("You're offline. Connect to create a new list", "danger");
       return;
     }
 
@@ -167,7 +167,7 @@ export default function ShoppingListsScreen() {
 
     if (!isOnline) {
       closeSheet();
-      showToast("You're offline — connect to rename this list", "danger");
+      showToast("You're offline. Connect to rename this list", "danger");
       return;
     }
 
@@ -189,7 +189,7 @@ export default function ShoppingListsScreen() {
   async function handleDeleteList(list: ShoppingListMeta) {
     if (!isOnline) {
       closeSheet();
-      showToast("You're offline — connect to delete this list", "danger");
+      showToast("You're offline. Connect to delete this list", "danger");
       return;
     }
 

@@ -59,6 +59,6 @@ const styles = StyleSheet.create({
     fontSize: 19,
     lineHeight: 19,
     letterSpacing: 0,
-    color: theme.colors.linkGreen,
+    color: theme.colors.navy,
   },
 });

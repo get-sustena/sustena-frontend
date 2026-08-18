@@ -272,7 +272,7 @@ export default function ProfileCompleteScreen() {
 
       <View style={styles.progressWrap}>
         <AppText style={styles.progressLabel}>
-          Answer anytime — the more we know, the better your suggestions.
+          Answer anytime. The more we know, the better your suggestions.
         </AppText>
 
         <View style={styles.progressTrack}>

@@ -44,7 +44,15 @@
       ],
       "expo-font",
       "expo-sqlite",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Sustena to access your photos so you can upload recipe and profile images.",
+          "cameraPermission": "Allow Sustena to use your camera so you can take recipe and profile photos.",
+          "microphonePermission": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

@@ -10,6 +10,22 @@ export function useMeQuery() {
   });
 }
 
+export function useUpdateMeMutation() {
+  const queryClient = useQueryClient();
+  const setUser = useAuthStore((state) => state.setUser);
+  return useMutation({
+    mutationFn: authApi.updateMe,
+    onSuccess: (user) => {
+      setUser(user);
+      queryClient.setQueryData(queryKeys.auth.me, user);
+    },
+  });
+}
+
+export function useChangePasswordMutation() {
+  return useMutation({ mutationFn: authApi.changePassword });
+}
+
 export function useSignupMutation() {
   const queryClient = useQueryClient();
   const setUser = useAuthStore((state) => state.setUser);

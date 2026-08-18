@@ -823,7 +823,7 @@ function LocalListDetail({ listId }: { listId: string }) {
 
     if (!isOnline) {
       closeSheet();
-      showToast("You're offline — connect to rename this list", "danger");
+      showToast("You're offline. Connect to rename this list", "danger");
       return;
     }
 
@@ -845,7 +845,7 @@ function LocalListDetail({ listId }: { listId: string }) {
   async function handleDelete() {
     if (!isOnline) {
       closeSheet();
-      showToast("You're offline — connect to delete this list", "danger");
+      showToast("You're offline. Connect to delete this list", "danger");
       return;
     }
 
@@ -1574,7 +1574,7 @@ const styles = StyleSheet.create({
   shareCardWordmark: {
     fontFamily: theme.fontFamily.displayExtraBold,
     fontSize: 18,
-    color: theme.colors.linkGreen,
+    color: theme.colors.navy,
   },
   shareCardTitle: {
     fontFamily: theme.fontFamily.display,

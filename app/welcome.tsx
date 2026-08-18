@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
     fontSize: 29,
     lineHeight: 34,
     letterSpacing: 0,
-    color: theme.colors.linkGreen,
+    color: theme.colors.navy,
   },
   missionWrap: {
     position: "absolute",

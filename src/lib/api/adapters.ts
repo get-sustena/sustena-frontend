@@ -53,6 +53,9 @@ export function apiRecipeToLocalRecipe(
         : [],
     notes: "notes" in recipe ? recipe.notes.map((note) => note.text) : [],
     tools: [],
+    creator: recipe.creator,
+    averageRating: recipe.averageRating,
+    ratingCount: recipe.ratingCount,
   };
 }
 

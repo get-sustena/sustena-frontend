@@ -2,6 +2,7 @@ import {
   PaginatedResponse,
   RecipeDetail,
   RecipeListItem,
+  RecipeRatingResponse,
   RecipeSearchParams,
 } from "../../types/api";
 import { apiRequest } from "./client";
@@ -32,6 +33,21 @@ export function getRecipeTags() {
   return apiRequest<string[]>({
     url: "/recipes/tags",
     method: "GET",
+  });
+}
+
+export function rateRecipe(recipeId: string, rating: number) {
+  return apiRequest<RecipeRatingResponse>({
+    url: `/recipes/${recipeId}/rating`,
+    method: "PUT",
+    data: { rating },
+  });
+}
+
+export function removeRecipeRating(recipeId: string) {
+  return apiRequest<RecipeRatingResponse>({
+    url: `/recipes/${recipeId}/rating`,
+    method: "DELETE",
   });
 }
 

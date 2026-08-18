@@ -1,0 +1,69 @@
+import { Pressable, StyleSheet } from "react-native";
+import { theme } from "../../../theme/theme";
+import { AppText } from "../../ui/AppText";
+import { Icon } from "../../ui/Icon";
+
+export function RecipeStepGuidanceButton({
+  kind,
+  full,
+  onPress,
+}: {
+  kind: "mistake" | "tip";
+  full?: boolean;
+  onPress: () => void;
+}) {
+  const mistake = kind === "mistake";
+  const color = mistake ? theme.colors.gold : theme.colors.navy3;
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={[
+        styles.button,
+        full && styles.full,
+        mistake ? styles.mistake : styles.tip,
+      ]}
+    >
+      <Icon
+        name={mistake ? "alertTriangle" : "bulb"}
+        size={15}
+        color={color}
+        strokeWidth={2}
+      />
+      <AppText style={[styles.text, { color }]}>
+        {mistake ? "Flag a common mistake" : "Add a helpful tip"}
+      </AppText>
+    </Pressable>
+  );
+}
+
+const styles = StyleSheet.create({
+  button: {
+    minHeight: 46,
+    flex: 1,
+    paddingHorizontal: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    borderWidth: 1.5,
+    borderStyle: "dashed",
+    borderRadius: 12,
+  },
+  full: { width: "100%", flex: 0 },
+  mistake: {
+    borderColor: "rgba(198,138,46,0.44)",
+    backgroundColor: "rgba(198,138,46,0.08)",
+  },
+  tip: {
+    borderColor: "rgba(31,112,72,0.44)",
+    backgroundColor: "rgba(31,112,72,0.08)",
+  },
+  text: {
+    flexShrink: 1,
+    textAlign: "center",
+    fontFamily: theme.fontFamily.bodySemiBold,
+    fontSize: 12.5,
+    lineHeight: 16,
+  },
+});

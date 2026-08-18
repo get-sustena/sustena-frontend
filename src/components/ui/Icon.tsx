@@ -4,7 +4,7 @@
 import { SvgXml } from "react-native-svg";
 import { theme } from "../../theme/theme";
 
-export type IconName = "discover" | "plan" | "cook" | "shop" | "profile" | "mail" | "lock" | "budget" | "ncd" | "bookmark" | "offline" | "timer" | "servings" | "market" | "notification" | "settings" | "help" | "swap" | "check" | "plus" | "minus" | "chevronDown" | "chevronRight" | "chevronLeft" | "close" | "spoon" | "chart" | "trash" | "home" | "moreH" | "pencil" | "share" | "star" | "chefHat" | "list" | "vegetarian" | "pantry" | "undecided" | "eye" | "eyeOff";
+export type IconName = "discover" | "plan" | "cook" | "shop" | "profile" | "mail" | "lock" | "budget" | "ncd" | "bookmark" | "offline" | "timer" | "servings" | "market" | "notification" | "settings" | "help" | "swap" | "check" | "plus" | "minus" | "chevronDown" | "chevronRight" | "chevronLeft" | "close" | "spoon" | "chart" | "trash" | "home" | "moreH" | "pencil" | "share" | "star" | "chefHat" | "list" | "vegetarian" | "pantry" | "undecided" | "eye" | "eyeOff" | "image" | "alertTriangle" | "bulb";
 
 const IP: Record<IconName, string> = {
   discover: "<circle cx=\"11\" cy=\"11\" r=\"6.5\"/><line x1=\"15.7\" y1=\"15.7\" x2=\"20\" y2=\"20\"/>",
@@ -47,6 +47,9 @@ const IP: Record<IconName, string> = {
   undecided: "<circle cx=\"12\" cy=\"12\" r=\"8.5\"/><path d=\"M9.3 9.8 A2.7 2.7 0 0 1 12 7.3 A2.7 2.7 0 0 1 13.6 12.2 C12.6 12.9 12 13.4 12 14.6\"/><circle cx=\"12\" cy=\"17.3\" r=\"0.9\" fill=\"currentColor\" stroke=\"none\"/>",
   eye: "<path d=\"M2.5 12 C5 6.5 9 4 12 4 C15 4 19 6.5 21.5 12 C19 17.5 15 20 12 20 C9 20 5 17.5 2.5 12 Z\"/><circle cx=\"12\" cy=\"12\" r=\"3.2\"/>",
   eyeOff: "<path d=\"M2.5 12 C5 6.5 9 4 12 4 C15 4 19 6.5 21.5 12 C19 17.5 15 20 12 20 C9 20 5 17.5 2.5 12 Z\"/><circle cx=\"12\" cy=\"12\" r=\"3.2\"/><line x1=\"3.5\" y1=\"20.5\" x2=\"20.5\" y2=\"3.5\"/>",
+  image: "<rect x=\"3\" y=\"3\" width=\"18\" height=\"18\" rx=\"2\"/><circle cx=\"8.5\" cy=\"8.5\" r=\"1.5\"/><path d=\"m21 15-5-5L5 21\"/>",
+  alertTriangle: "<path d=\"M12 3 L21 20 H3 Z\"/><line x1=\"12\" y1=\"9\" x2=\"12\" y2=\"14\"/><circle cx=\"12\" cy=\"17\" r=\"0.8\" fill=\"currentColor\" stroke=\"none\"/>",
+  bulb: "<path d=\"M8.5 15.5 C6.8 14.3 6 12.8 6 10.8 A6 6 0 0 1 18 10.8 C18 12.8 17.2 14.3 15.5 15.5 L15 17 H9 Z\"/><line x1=\"9.5\" y1=\"20\" x2=\"14.5\" y2=\"20\"/>",
 };
 
 type IconProps = {

@@ -36,10 +36,9 @@ export function useAuthBootstrap() {
           }
         } catch (error) {
           // Only a genuine 401 means the tokens are actually invalid.
-          // Network/timeout/5xx errors (e.g. a cold Render.com instance)
-          // must not sign the user out — keep the tokens and let the app
-          // work offline until a real authenticated request confirms
-          // the session is gone.
+          // Network, timeout, and 5xx errors must not sign the user out. Keep
+          // the tokens and let the app work offline until a real authenticated
+          // request confirms the session is gone.
           if (isApiClientError(error) && error.status === 401) {
             await clearAuthTokens();
 

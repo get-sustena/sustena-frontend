@@ -61,7 +61,7 @@ export default function AuthScreen() {
 
     try {
       await loginMutation.mutateAsync({ email: trimmedEmail, password });
-      showToast("You're in — we'll personalize as you go.", "success");
+      showToast("You're in. We'll personalize as you go.", "success");
       continueAfterAuth();
     } catch (error) {
       setFormError(getApiErrorMessage(error));

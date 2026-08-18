@@ -6,7 +6,7 @@ import {
   runWithSqliteRetry,
 } from "./sqliteGuards";
 
-const DATABASE_VERSION = 8;
+const DATABASE_VERSION = 9;
 let migrationQueue = Promise.resolve();
 
 export async function migrateDbIfNeeded(db: SQLiteDatabase) {
@@ -295,6 +295,24 @@ async function runMigrations(db: SQLiteDatabase) {
       );
 
       PRAGMA user_version = 8;
+    `);
+  }
+
+  const versionAfterPlannerSettings =
+    versionAfterInstructionSegments < 8 ? 8 : versionAfterInstructionSegments;
+
+  if (versionAfterPlannerSettings < 9) {
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS creator_recipe_drafts (
+        id TEXT PRIMARY KEY NOT NULL,
+        revision INTEGER,
+        payload_json TEXT NOT NULL,
+        sync_status TEXT NOT NULL,
+        last_error TEXT,
+        updated_at TEXT NOT NULL
+      );
+
+      PRAGMA user_version = 9;
     `);
   }
 }

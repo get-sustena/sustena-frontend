@@ -15,6 +15,9 @@ type Props = {
   onPress?: () => void;
   showDivider?: boolean;
   showChevron?: boolean;
+  iconBackground?: string;
+  iconColor?: string;
+  valueColor?: string;
 };
 
 export function SettingsRow({
@@ -26,6 +29,9 @@ export function SettingsRow({
   onPress,
   showDivider = true,
   showChevron = true,
+  iconBackground = "#EEF2E7",
+  iconColor = "#17291E",
+  valueColor = "#279a5f",
 }: Props) {
   return (
     <Pressable
@@ -38,8 +44,8 @@ export function SettingsRow({
       ]}
       accessibilityRole={onPress ? "button" : undefined}
     >
-      <View style={styles.iconBox}>
-        <Icon name={icon} size={18} color={theme.colors.navy} />
+      <View style={[styles.iconBox, { backgroundColor: iconBackground }]}>
+        <Icon name={icon} size={18} color={iconColor} />
       </View>
 
       <View style={styles.info}>
@@ -53,7 +59,7 @@ export function SettingsRow({
       {rightElement ? (
         rightElement
       ) : value ? (
-        <AppText style={styles.value}>{value}</AppText>
+        <AppText style={[styles.value, { color: valueColor }]}>{value}</AppText>
       ) : null}
 
       {onPress && showChevron ? (
@@ -67,7 +73,7 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",
-    gap: theme.spacing.md,
+    gap: 12,
     paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
@@ -82,7 +88,6 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 10,
-    backgroundColor: theme.colors.card2,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -92,17 +97,16 @@ const styles = StyleSheet.create({
   label: {
     fontFamily: theme.fontFamily.bodySemiBold,
     fontSize: 14,
-    color: theme.colors.navy,
+    color: "#17291E",
   },
   subtitle: {
     fontFamily: theme.fontFamily.body,
     fontSize: 12,
-    color: theme.colors.textMedium,
+    color: "#5C6459",
     marginTop: 2,
   },
   value: {
     fontFamily: theme.fontFamily.bodyBold,
     fontSize: 12,
-    color: theme.colors.linkGreen,
   },
 });

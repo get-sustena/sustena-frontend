@@ -2,6 +2,8 @@
 
 import {
   AuthResponse,
+  ChangePasswordRequest,
+  CurrentUserUpdateRequest,
   ForgotPasswordRequest,
   ForgotPasswordResponse,
   LoginRequest,
@@ -57,6 +59,22 @@ export async function getMe() {
   return apiRequest<User>({
     url: "/auth/me",
     method: "GET",
+  });
+}
+
+export function updateMe(payload: CurrentUserUpdateRequest) {
+  return apiRequest<User>({
+    url: "/auth/me",
+    method: "PUT",
+    data: payload,
+  });
+}
+
+export function changePassword(payload: ChangePasswordRequest) {
+  return apiRequest<{ success: boolean }>({
+    url: "/auth/change-password",
+    method: "POST",
+    data: payload,
   });
 }
 

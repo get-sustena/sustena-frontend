@@ -40,6 +40,24 @@ export function RecipeTile({ recipe, onPress }: Props) {
             </AppText>
           ) : null}
         </View>
+
+        {recipe.creator || recipe.ratingCount ? (
+          <View style={styles.communityRow}>
+            {recipe.creator ? (
+              <AppText numberOfLines={1} style={styles.creator}>
+                by {recipe.creator.displayName}
+              </AppText>
+            ) : <View style={styles.communitySpacer} />}
+            {recipe.ratingCount ? (
+              <View style={styles.rating}>
+                <AppText style={styles.ratingStar}>★</AppText>
+                <AppText style={styles.ratingText}>
+                  {recipe.averageRating?.toFixed(1)}
+                </AppText>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
       </View>
     </Pressable>
   );
@@ -85,6 +103,33 @@ const styles = StyleSheet.create({
     fontFamily: theme.fontFamily.mono,
     fontSize: 13,
     letterSpacing: 0,
+    color: theme.colors.textMedium,
+  },
+  communityRow: {
+    marginTop: 7,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  communitySpacer: { flex: 1 },
+  creator: {
+    flex: 1,
+    fontFamily: theme.fontFamily.bodyMedium,
+    fontSize: 10.5,
+    color: theme.colors.textMuted,
+  },
+  rating: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+  },
+  ratingStar: {
+    fontSize: 11,
+    color: theme.colors.orange,
+  },
+  ratingText: {
+    fontFamily: theme.fontFamily.monoBold,
+    fontSize: 10.5,
     color: theme.colors.textMedium,
   },
 });

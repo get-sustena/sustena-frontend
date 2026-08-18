@@ -56,7 +56,10 @@ function invalidateFavoriteBackedQueries(queryClient: QueryClient) {
   return async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: queryKeys.favorites.all }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.recipes.all }),
+      queryClient.invalidateQueries({
+        predicate: (query) =>
+          query.queryKey[0] === "recipes" && query.queryKey[1] === "list",
+      }),
     ]);
   };
 }
