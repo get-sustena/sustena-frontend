@@ -29,6 +29,7 @@ import { StatusBar } from "expo-status-bar";
 import { Suspense, useEffect } from "react";
 import { AppBootstrapGate } from "../src/components/bootstrap/AppBootstrapGate";
 import { PersistenceEffects } from "../src/components/bootstrap/PersistenceEffects";
+import { WebGlobalStyles } from "../src/components/bootstrap/WebGlobalStyles";
 import { WebAppFrame } from "../src/components/layout/WebAppFrame";
 import { BottomSheetHost } from "../src/components/ui/BottomSheet";
 import { ProgressLoader } from "../src/components/ui/ProgressLoader";
@@ -77,6 +78,7 @@ export default function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <WebGlobalStyles />
       <Suspense fallback={<RootLoading />}>
         <SQLiteProvider
           databaseName="cookeasev2.db"

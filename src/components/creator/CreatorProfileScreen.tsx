@@ -14,6 +14,7 @@ import { theme } from "../../theme/theme";
 import type { RecipeDraft } from "../../types/api";
 import { AppText } from "../ui/AppText";
 import { Icon } from "../ui/Icon";
+import { ProgressLoader } from "../ui/ProgressLoader";
 import { CreatorProfileFiltersSheet, EMPTY_CREATOR_RECIPE_FILTERS, type CreatorRecipeFilters } from "./CreatorProfileFiltersSheet";
 import { CreatorProfileRecipeCard } from "./CreatorProfileRecipeCard";
 import { PublishingActivity } from "./PublishingActivity";
@@ -39,6 +40,10 @@ export function CreatorProfileScreen() {
   const published = publishedQuery.data?.items ?? [];
   const drafts = draftsQuery.data?.items ?? [];
   const list = tab === "published" ? published : drafts;
+  const activeRecipesQuery = tab === "published" ? publishedQuery : draftsQuery;
+  const isRecipeListLoading =
+    profileQuery.isLoading ||
+    (hasCreatorProfile && activeRecipesQuery.isLoading);
   const search = searches[tab];
   const filters = filtersByTab[tab];
   const categoryLookup = useMemo(() => new Map((vocabularyQuery.data?.categories ?? []).map((item) => [item.id, item.label])), [vocabularyQuery.data?.categories]);
@@ -135,7 +140,9 @@ export function CreatorProfileScreen() {
             <Pressable accessibilityLabel="Filter my recipes" onPress={openFilters} style={styles.filterButton}><Icon name="settings" size={19} color="#1f7048" /></Pressable>
           </View>
 
-          {shown.length ? (
+          {isRecipeListLoading ? (
+            <ProgressLoader />
+          ) : shown.length ? (
             <View style={styles.grid}>{shown.map((recipe) => <View key={recipe.id} style={shown.length === 1 ? styles.singleCard : styles.gridCard}><CreatorProfileRecipeCard recipe={recipe} onPress={() => openRecipe(recipe, tab)} onMore={() => openSheet(<RecipeActionsSheet recipe={recipe} />)} /></View>)}</View>
           ) : (
             <View style={styles.empty}>
@@ -223,8 +230,8 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1, paddingVertical: 0, fontSize: 13.5, color: "#17291E" },
   searchClear: { width: 22, height: 22, borderRadius: 11, backgroundColor: "#EEF2E7", alignItems: "center", justifyContent: "center" },
   filterButton: { width: 42, height: 42, alignItems: "center", justifyContent: "center" },
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  gridCard: { width: "31.7%" },
+  grid: { flexDirection: "row", flexWrap: "wrap", columnGap: 10, rowGap: 14 },
+  gridCard: { width: "31.4%" },
   singleCard: { width: "100%" },
   empty: { alignItems: "center", paddingHorizontal: 10, paddingVertical: 30 },
   emptyIcon: { width: 64, height: 64, marginBottom: 16, borderRadius: 20, backgroundColor: "#EEF2E7", alignItems: "center", justifyContent: "center" },

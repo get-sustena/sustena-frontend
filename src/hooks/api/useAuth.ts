@@ -1,5 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useSQLiteContext } from "expo-sqlite";
+import { QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { SQLiteDatabase, useSQLiteContext } from "expo-sqlite";
 import {
   clearLocalAccountData,
   prepareLocalAccountData,
@@ -78,12 +78,7 @@ export function useLogoutMutation() {
 
   return useMutation({
     mutationFn: authApi.logout,
-    onSettled: async () => {
-      clearAuth();
-      queryClient.clear();
-      await clearLocalAccountData(db);
-      resetLocalAccountStores();
-    },
+    onSettled: () => finalizeLocalLogout(db, queryClient, clearAuth),
   });
 }
 
@@ -94,13 +89,28 @@ export function useLogoutAllMutation() {
 
   return useMutation({
     mutationFn: authApi.logoutAll,
-    onSettled: async () => {
-      clearAuth();
-      queryClient.clear();
-      await clearLocalAccountData(db);
-      resetLocalAccountStores();
-    },
+    onSettled: () => finalizeLocalLogout(db, queryClient, clearAuth),
   });
+}
+
+async function finalizeLocalLogout(
+  db: SQLiteDatabase,
+  queryClient: QueryClient,
+  clearAuth: () => void
+) {
+  try {
+    // Keep persistence effects mounted until the account snapshot and cleanup
+    // finish. Unmounting them first can race Expo SQLite's web worker.
+    await clearLocalAccountData(db);
+  } catch (error) {
+    // Server logout and token removal have already completed. A browser-local
+    // SQLite failure must not leave the user on an uncaught error screen.
+    console.warn("Failed to clear local account data during logout", error);
+  } finally {
+    clearAuth();
+    queryClient.clear();
+    resetLocalAccountStores();
+  }
 }
 
 export function useForgotPasswordMutation() {
