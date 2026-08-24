@@ -1,3 +1,5 @@
+import { formatQuantityText } from "./scaling";
+
 export function capitalizeWords(value: string) {
   return value.replace(/\S+/g, (word) => {
     const firstLetterIndex = word.search(/[A-Za-zÀ-ÖØ-öø-ÿ]/);
@@ -13,8 +15,5 @@ export function capitalizeWords(value: string) {
 }
 
 export function formatShoppingQuantity(value: string) {
-  return value.replace(/-?\d+\.\d+/g, (quantity) => {
-    const parsed = Number(quantity);
-    return Number.isFinite(parsed) ? String(parsed) : quantity;
-  });
+  return formatQuantityText(value);
 }

@@ -28,7 +28,7 @@ export default function SavedCreatorsScreen() {
       </View>
 
       {creatorsQuery.isLoading ? (
-        <ProgressLoader variant="screen" message="Loading saved creators..." />
+        <ProgressLoader variant="screen" />
       ) : (
         <ScrollView
           showsVerticalScrollIndicator={false}

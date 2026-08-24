@@ -75,7 +75,6 @@ export function StageBasics({
           {uploadingCover ? (
             <View style={styles.uploading}>
               <ActivityIndicator color={theme.colors.white} />
-              <AppText style={styles.uploadingText}>Uploading...</AppText>
             </View>
           ) : null}
         </Pressable>
@@ -209,6 +208,5 @@ const styles = StyleSheet.create({
     gap: 8,
     backgroundColor: "rgba(23,41,30,0.7)",
   },
-  uploadingText: { fontSize: 12, color: theme.colors.white },
   pressed: { opacity: 0.84 },
 });

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -46,8 +47,11 @@ export function PlanSetupModal({
   onComplete,
 }: Props) {
   const insets = useSafeAreaInsets();
-  const { width: windowWidth } = useWindowDimensions();
-  const dayTileSize = (windowWidth - 48 - 30) / 4;
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const isDesktopWeb = Platform.OS === "web" && windowWidth >= 700;
+  const contentWidth = isDesktopWeb ? 480 : windowWidth;
+  const dayTileSize = Math.min(84, (contentWidth - 48 - 30) / 4);
+  const desktopModalHeight = Math.max(1, Math.min(windowHeight - 48, 900));
   const [stepIndex, setStepIndex] = useState(0);
   const [draft, setDraft] = useState(initialValue);
   const steps = useMemo<PlanStep[]>(
@@ -109,14 +113,35 @@ export function PlanSetupModal({
   return (
     <Modal
       visible={visible}
-      animationType="slide"
-      presentationStyle="fullScreen"
+      transparent={isDesktopWeb}
+      animationType={isDesktopWeb ? "fade" : "slide"}
+      presentationStyle={isDesktopWeb ? "overFullScreen" : "fullScreen"}
       onRequestClose={handleBack}
     >
-      <View style={styles.screen}>
+      <View
+        style={[
+          styles.modalViewport,
+          isDesktopWeb && styles.desktopModalViewport,
+        ]}
+      >
+        {isDesktopWeb ? (
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={onClose}
+            accessibilityRole="button"
+            accessibilityLabel="Close plan setup"
+          />
+        ) : null}
         <View
-          style={[styles.header, { paddingTop: Math.max(insets.top, 52) }]}
+          style={[
+            styles.screen,
+            isDesktopWeb && styles.desktopScreen,
+            isDesktopWeb && { height: desktopModalHeight },
+          ]}
         >
+          <View
+            style={[styles.header, { paddingTop: Math.max(insets.top, 52) }]}
+          >
           <View style={styles.headerRow}>
             <Pressable
               onPress={handleBack}
@@ -161,7 +186,7 @@ export function PlanSetupModal({
               );
             })}
           </View>
-        </View>
+          </View>
 
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -299,6 +324,7 @@ export function PlanSetupModal({
             </AppText>
           </Pressable>
         </View>
+        </View>
       </View>
     </Modal>
   );
@@ -415,9 +441,35 @@ function capitalize(value: string) {
 }
 
 const styles = StyleSheet.create({
+  modalViewport: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.white,
+  },
+  desktopModalViewport: {
+    padding: 24,
+    backgroundColor: "rgba(16, 27, 20, 0.52)",
+  },
   screen: {
     flex: 1,
+    width: "100%",
     backgroundColor: theme.colors.white,
+  },
+  desktopScreen: {
+    flexGrow: 0,
+    flexShrink: 0,
+    flexBasis: "auto",
+    width: "100%",
+    maxWidth: 480,
+    maxHeight: 900,
+    overflow: "hidden",
+    borderRadius: 28,
+    zIndex: 1,
+    shadowColor: "#101B14",
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.28,
+    shadowRadius: 36,
   },
   header: {
     paddingHorizontal: 20,

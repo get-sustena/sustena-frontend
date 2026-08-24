@@ -12,8 +12,11 @@ const VULGAR_FRACTIONS: Record<string, number> = {
   "⅞": 7 / 8,
 };
 
+const VULGAR_FRACTION_SOURCE = "½|⅓|⅔|¼|¾|⅛|⅜|⅝|⅞";
 const NUMERIC_TOKEN_SOURCE =
-  "(\\d+\\.\\d+|\\d+\\/\\d+|\\d+|½|⅓|⅔|¼|¾|⅛|⅜|⅝|⅞)";
+  `(\\d+\\s+\\d+\\/\\d+|\\d+(?:${VULGAR_FRACTION_SOURCE})|` +
+  `\\d+\\s+(?:${VULGAR_FRACTION_SOURCE})|\\d+\\.\\d+|\\d+\\/\\d+|` +
+  `\\d+|${VULGAR_FRACTION_SOURCE})`;
 
 export const NUMERIC_TOKEN_PATTERN = new RegExp(NUMERIC_TOKEN_SOURCE);
 export const NUMERIC_TOKEN_PATTERN_GLOBAL = new RegExp(
@@ -22,12 +25,36 @@ export const NUMERIC_TOKEN_PATTERN_GLOBAL = new RegExp(
 );
 
 export function parseQuantityToken(token: string): number | null {
-  if (token in VULGAR_FRACTIONS) {
-    return VULGAR_FRACTIONS[token];
+  const normalized = token.trim();
+
+  if (normalized in VULGAR_FRACTIONS) {
+    return VULGAR_FRACTIONS[normalized];
   }
 
-  if (token.includes("/")) {
-    const [numerator, denominator] = token.split("/").map(Number);
+  const vulgarMixedNumber = normalized.match(
+    /^(\d+)\s*(½|⅓|⅔|¼|¾|⅛|⅜|⅝|⅞)$/
+  );
+  if (vulgarMixedNumber) {
+    return (
+      Number(vulgarMixedNumber[1]) +
+      VULGAR_FRACTIONS[vulgarMixedNumber[2]]
+    );
+  }
+
+  const asciiMixedNumber = normalized.match(/^(\d+)\s+(\d+)\/(\d+)$/);
+  if (asciiMixedNumber) {
+    const denominator = Number(asciiMixedNumber[3]);
+    if (!denominator) {
+      return null;
+    }
+    return (
+      Number(asciiMixedNumber[1]) +
+      Number(asciiMixedNumber[2]) / denominator
+    );
+  }
+
+  if (normalized.includes("/")) {
+    const [numerator, denominator] = normalized.split("/").map(Number);
 
     if (!numerator || !denominator) {
       return null;
@@ -36,7 +63,7 @@ export function parseQuantityToken(token: string): number | null {
     return numerator / denominator;
   }
 
-  const parsed = Number(token);
+  const parsed = Number(normalized);
 
   return Number.isNaN(parsed) ? null : parsed;
 }

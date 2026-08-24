@@ -13,10 +13,7 @@ import { RecipePhoto } from "../recipe/RecipePhoto";
 import { AppText } from "../ui/AppText";
 import { EmptyState } from "../ui/EmptyState";
 import { Icon } from "../ui/Icon";
-import {
-  MEAL_PLAN_LOADING_MESSAGES,
-  ProgressLoader,
-} from "../ui/ProgressLoader";
+import { ProgressLoader } from "../ui/ProgressLoader";
 
 export function TimetablePlannerPane() {
   const mealPlanMutation = useMealPlanMutation();
@@ -54,7 +51,7 @@ export function TimetablePlannerPane() {
           message={getApiErrorMessage(mealPlanMutation.error)}
         />
       ) : mealPlanMutation.isPending ? (
-        <ProgressLoader messages={MEAL_PLAN_LOADING_MESSAGES} />
+        <ProgressLoader />
       ) : groupedMeals.length === 0 ? (
         <EmptyState
           iconName="plan"
@@ -160,9 +157,7 @@ export function TimetablePlannerPane() {
             <Icon name="swap" size={15} color={theme.colors.onDark} />
           ) : null}
           <AppText style={styles.generateButtonText}>
-            {mealPlanMutation.isPending
-              ? "Generating..."
-              : groupedMeals.length > 0
+            {groupedMeals.length > 0
                 ? "Regenerate Weekly Plan"
                 : "Generate Weekly Plan"}
           </AppText>

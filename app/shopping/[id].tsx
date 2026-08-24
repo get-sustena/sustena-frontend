@@ -2,9 +2,10 @@ import { useFocusEffect } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
 import * as Sharing from "expo-sharing";
 import { useSQLiteContext } from "expo-sqlite";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -26,6 +27,7 @@ import {
   getStoredShoppingListItems,
   insertShoppingListItem,
   mapShoppingListRowToItem,
+  replaceShoppingListItemsForList,
   updateShoppingListItemChecked,
 } from "../../src/db/shoppingListRepository";
 import {
@@ -333,6 +335,16 @@ async function shareViewShot(shotRef: React.RefObject<ViewShot | null>) {
     const uri = await shotRef.current?.capture?.();
     if (!uri) return;
 
+    if (Platform.OS === "web") {
+      const link = document.createElement("a");
+      link.href = uri;
+      link.download = "sustena-shopping-list.png";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      return;
+    }
+
     const isAvailable = await Sharing.isAvailableAsync();
     if (!isAvailable) {
       showToast("Sharing isn't available on this device", "danger");
@@ -351,6 +363,7 @@ function DefaultListDetail() {
   const shotRef = useRef<ViewShot | null>(null);
 
   const items = useShoppingListStore((state) => state.items);
+  const hydrateItems = useShoppingListStore((state) => state.hydrateItems);
   const toggleItem = useShoppingListStore((state) => state.toggleItem);
   const removeItemLocal = useShoppingListStore((state) => state.removeItem);
   const clearCheckedItems = useShoppingListStore(
@@ -360,9 +373,30 @@ function DefaultListDetail() {
   const updateShoppingItemMutation = useUpdateShoppingListItemMutation();
   const addShoppingItemMutation = useAddShoppingListItemMutation();
   const clearCheckedMutation = useClearCheckedShoppingListItemsMutation();
-  const apiItems =
-    shoppingListQuery.data?.items.map(apiShoppingItemToLocalItem) ?? [];
-  const visibleItems = apiItems.length > 0 ? apiItems : items;
+  const apiItems = useMemo(
+    () =>
+      shoppingListQuery.data?.items.map((item) => ({
+        ...apiShoppingItemToLocalItem(item),
+        listId: DEFAULT_SHOPPING_LIST_ID,
+      })) ?? [],
+    [shoppingListQuery.data]
+  );
+  const visibleItems = shoppingListQuery.data ? apiItems : items;
+
+  useEffect(() => {
+    if (!shoppingListQuery.data) {
+      return;
+    }
+
+    hydrateItems(apiItems);
+    replaceShoppingListItemsForList(
+      db,
+      DEFAULT_SHOPPING_LIST_ID,
+      apiItems
+    ).catch((error) => {
+      console.error("Failed to cache the current shopping list", error);
+    });
+  }, [apiItems, db, hydrateItems, shoppingListQuery.data]);
 
   const visibleItemCount = visibleItems.length;
   const visibleListName = shoppingListQuery.data?.name ?? "My Shopping List";
@@ -610,7 +644,7 @@ function DefaultListDetail() {
 
         <View style={styles.body}>
           {shoppingListQuery.isLoading ? (
-            <ProgressLoader message="Fetching your shopping list..." />
+            <ProgressLoader />
           ) : shoppingListQuery.isError && visibleItemCount === 0 ? (
             <View style={styles.errorState}>
               <EmptyState
@@ -953,7 +987,7 @@ function LocalListDetail({ listId }: { listId: string }) {
 
         <View style={styles.body}>
           {isLoading ? (
-            <ProgressLoader message="Fetching your shopping list..." />
+            <ProgressLoader />
           ) : items.length === 0 ? (
             <ShoppingEmptyState onAddPress={openAddItemSheet} />
           ) : (

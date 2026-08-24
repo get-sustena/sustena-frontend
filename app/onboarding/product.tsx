@@ -1,11 +1,4 @@
 // app/onboarding/product.tsx
-//
-// 5-slide value-prop carousel shown before auth, matching the mockup's "ob"
-// screen exactly: layered dark-to-white gradient background, a floating
-// glass mock-UI card illustrating the feature, pill-shaped progress dots,
-// and a Skip/Back/Next nav row that swaps to Create Account/Sign In on the
-// final slide.
-
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -18,12 +11,24 @@ import { theme } from "../../src/theme/theme";
 
 const SLIDE_COUNT = 5;
 
-const GRADIENT_LOCATIONS: [number, number, number, number, number, number, number] = [
-  0, 0.14, 0.26, 0.34, 0.4, 0.48, 1,
-];
-const LAST_GRADIENT_LOCATIONS: [number, number, number, number, number, number, number] = [
-  0, 0.09, 0.17, 0.22, 0.26, 0.31, 1,
-];
+const GRADIENT_LOCATIONS: [
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number
+] = [0, 0.14, 0.26, 0.34, 0.4, 0.48, 1];
+const LAST_GRADIENT_LOCATIONS: [
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number
+] = [0, 0.09, 0.17, 0.22, 0.26, 0.31, 1];
 
 const SLIDE_GRADIENTS: string[][] = [
   ["#17291E", "#1C3223", "#2A4A35", "#6B8F78", "#B9D0BD", "#FFFFFF", "#FFFFFF"],
@@ -58,7 +63,9 @@ export default function ProductOnboardingScreen() {
       <StatusBar style="light" backgroundColor={theme.colors.navy} />
 
       <LinearGradient
-        colors={SLIDE_GRADIENTS[slide] as unknown as [string, string, ...string[]]}
+        colors={
+          SLIDE_GRADIENTS[slide] as unknown as [string, string, ...string[]]
+        }
         locations={isLast ? LAST_GRADIENT_LOCATIONS : GRADIENT_LOCATIONS}
         style={StyleSheet.absoluteFillObject}
       />
@@ -105,9 +112,7 @@ export default function ProductOnboardingScreen() {
                 pressed && styles.pressed,
               ]}
             >
-              <AppText style={styles.createAccountText}>
-                Create Account
-              </AppText>
+              <AppText style={styles.createAccountText}>Create Account</AppText>
             </Pressable>
 
             <Pressable onPress={() => router.push("/auth")}>
@@ -244,9 +249,7 @@ function SlideCard({ slide }: { slide: number }) {
   if (slide === 1) {
     return (
       <GlassCard width={230} style={styles.servingsCard}>
-        <AppText style={styles.glassCardTitle}>
-          Jollof Rice & Chicken
-        </AppText>
+        <AppText style={styles.glassCardTitle}>Jollof Rice & Chicken</AppText>
 
         <View style={styles.stepperRow}>
           <View style={styles.stepperButton}>
@@ -278,9 +281,7 @@ function SlideCard({ slide }: { slide: number }) {
             <AppText style={styles.ingredientChipSelectedText}>Rice</AppText>
           </View>
           <View style={styles.ingredientChipSelected}>
-            <AppText style={styles.ingredientChipSelectedText}>
-              Chicken
-            </AppText>
+            <AppText style={styles.ingredientChipSelectedText}>Chicken</AppText>
           </View>
           <View style={styles.ingredientChip}>
             <AppText style={styles.ingredientChipText}>Tomatoes</AppText>
@@ -336,26 +337,22 @@ function ChecklistRow({
 }) {
   return (
     <View style={styles.checklistRow}>
-      <View style={[styles.checklistBox, checked && styles.checklistBoxChecked]}>
+      <View
+        style={[styles.checklistBox, checked && styles.checklistBoxChecked]}
+      >
         {checked ? (
           <Icon name="check" size={10} color="#17291E" strokeWidth={3} />
         ) : null}
       </View>
 
       <AppText
-        style={[
-          styles.checklistLabel,
-          checked && styles.checklistLabelChecked,
-        ]}
+        style={[styles.checklistLabel, checked && styles.checklistLabelChecked]}
       >
         {label}
       </AppText>
 
       <AppText
-        style={[
-          styles.checklistQty,
-          checked && styles.checklistQtyChecked,
-        ]}
+        style={[styles.checklistQty, checked && styles.checklistQtyChecked]}
       >
         {qty}
       </AppText>

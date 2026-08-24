@@ -56,8 +56,9 @@ export function useFavoriteRecipes() {
     favoritesQuery.data
       ?.map(apiFavoriteToRecipe)
       .filter((recipe): recipe is Recipe => Boolean(recipe)) ?? [];
-  const favoriteRecipes =
-    apiFavoriteRecipes.length > 0 ? apiFavoriteRecipes : localFavoriteRecipes;
+  const favoriteRecipes = favoritesQuery.data
+    ? apiFavoriteRecipes
+    : localFavoriteRecipes;
 
   async function removeFavoriteRecipe(recipeId: string) {
     removeFavorite(recipeId);

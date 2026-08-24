@@ -20,6 +20,8 @@ export type UploadedImage = {
 
 const MAX_IMAGE_EDGE = 1800;
 const MAX_IMAGE_BYTES = 10_000_000;
+const UPLOAD_ATTEMPTS = 3;
+const UPLOAD_RETRY_DELAYS_MS = [400, 1_000];
 
 export async function pickAndUploadImage(
   purpose: MediaPurpose,
@@ -79,14 +81,11 @@ export async function pickAndUploadImage(
     throw new Error("The image upload could not be started.");
   }
 
-  const uploadResponse = await expoFetch(pending.uploadUrl, {
-    method: "PUT",
-    headers: pending.uploadHeaders,
-    body: file,
-  });
-  if (!uploadResponse.ok) {
-    throw new Error("The image could not be uploaded. Please try again.");
-  }
+  await uploadFileWithRetry(
+    pending.uploadUrl,
+    pending.uploadHeaders,
+    normalized.uri
+  );
 
   const completed = await mediaApi.completeMediaUpload(pending.id, {
     width: normalized.width,
@@ -103,6 +102,62 @@ export async function pickAndUploadImage(
     width: normalized.width,
     height: normalized.height,
   };
+}
+
+async function uploadFileWithRetry(
+  uploadUrl: string,
+  uploadHeaders: Record<string, string>,
+  fileUri: string
+) {
+  for (let attempt = 0; attempt < UPLOAD_ATTEMPTS; attempt += 1) {
+    try {
+      const response = await expoFetch(uploadUrl, {
+        method: "PUT",
+        headers: uploadHeaders,
+        body: new File(fileUri),
+      });
+      if (response.ok) {
+        return;
+      }
+      if (!isRetryableUploadStatus(response.status)) {
+        throw new ImageUploadError(
+          "The image could not be uploaded. Please try again."
+        );
+      }
+    } catch (error) {
+      if (error instanceof ImageUploadError) {
+        throw error;
+      }
+      if (attempt === UPLOAD_ATTEMPTS - 1) {
+        throw new ImageUploadError(
+          "We couldn't reach image storage. Check your connection and try again."
+        );
+      }
+    }
+
+    if (attempt < UPLOAD_RETRY_DELAYS_MS.length) {
+      await wait(UPLOAD_RETRY_DELAYS_MS[attempt]);
+    }
+  }
+
+  throw new ImageUploadError(
+    "We couldn't reach image storage. Check your connection and try again."
+  );
+}
+
+function isRetryableUploadStatus(status: number) {
+  return status === 408 || status === 425 || status === 429 || status >= 500;
+}
+
+function wait(milliseconds: number) {
+  return new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
+}
+
+class ImageUploadError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ImageUploadError";
+  }
 }
 
 function arrayBufferToHex(value: ArrayBuffer) {

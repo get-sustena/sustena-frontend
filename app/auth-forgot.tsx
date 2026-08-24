@@ -1,9 +1,3 @@
-// app/auth-forgot.tsx
-//
-// Forgot-password (email -> 6-digit code -> new password -> success) flow,
-// backed by the real /auth/forgot-password, /auth/verify-reset-code, and
-// /auth/reset-password endpoints.
-
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -241,8 +235,8 @@ function EmailStep({
     <View>
       <AppText style={styles.title}>Reset your password.</AppText>
       <AppText style={styles.subtitle}>
-        Enter the email on your account and we&apos;ll send you a code to
-        reset it.
+        Enter the email on your account and we&apos;ll send you a code to reset
+        it.
       </AppText>
 
       <AuthField
@@ -261,7 +255,10 @@ function EmailStep({
         disabled={isSubmitting}
       />
 
-      <Pressable onPress={() => router.replace("/auth")} style={styles.switchRow}>
+      <Pressable
+        onPress={() => router.replace("/auth")}
+        style={styles.switchRow}
+      >
         <AppText style={styles.switchText}>Remembered it? </AppText>
         <AppText style={styles.switchLink}>Sign in</AppText>
       </Pressable>
@@ -375,12 +372,14 @@ function CodeStep({
         accessibilityRole="button"
       >
         <AppText style={styles.switchText}>Didn&apos;t get it? </AppText>
-        <AppText style={canResend ? styles.resendLink : styles.resendLinkInactive}>
+        <AppText
+          style={canResend ? styles.resendLink : styles.resendLinkInactive}
+        >
           {isResending
             ? "Resending..."
             : canResend
-              ? "Resend code"
-              : `Resend in 0:${String(resendSecondsLeft).padStart(2, "0")}`}
+            ? "Resend code"
+            : `Resend in 0:${String(resendSecondsLeft).padStart(2, "0")}`}
         </AppText>
       </Pressable>
     </View>
@@ -453,7 +452,12 @@ function DoneStep() {
   return (
     <View style={styles.doneContainer}>
       <View style={styles.doneIconWrap}>
-        <Icon name="check" size={28} color={theme.colors.navy3} strokeWidth={2.5} />
+        <Icon
+          name="check"
+          size={28}
+          color={theme.colors.navy3}
+          strokeWidth={2.5}
+        />
       </View>
 
       <AppText style={styles.doneTitle}>Password reset.</AppText>

@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
-import { SafeAreaView, ScrollView, StyleSheet, ViewStyle } from "react-native";
+import { ScrollView, StyleSheet, ViewStyle } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { theme } from "../../theme/theme";
 
 type Props = {

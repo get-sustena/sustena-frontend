@@ -1,5 +1,5 @@
 import { LinearGradient } from "expo-linear-gradient";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { StyleSheet, View } from "react-native";
 import Animated, {
   Easing,
@@ -12,39 +12,18 @@ import Animated, {
 } from "react-native-reanimated";
 import Svg, { Path } from "react-native-svg";
 import { theme } from "../../theme/theme";
-import { AppText } from "./AppText";
 import { LOGO_PATH_D } from "./Logo";
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 const LOGO_DASH_LENGTH = 1000;
 
-export const MEAL_PLAN_LOADING_MESSAGES = [
-  "Creating your personalized meal plan...",
-  "Understanding your preferences...",
-  "Finding the best meal combinations...",
-  "Balancing nutrition and budget...",
-  "Selecting delicious recipes...",
-  "Organizing your weekly plan...",
-  "Putting the finishing touches on your plan...",
-  "Almost ready...",
-] as const;
-
 type Props = {
-  message?: string;
-  messages?: readonly string[];
   variant?: "screen" | "inline";
 };
 
-export function ProgressLoader({
-  message = "Loading...",
-  messages,
-  variant = "inline",
-}: Props) {
+export function ProgressLoader({ variant = "inline" }: Props) {
   const progress = useSharedValue(0);
   const logoDraw = useSharedValue(0);
-  const [messageIndex, setMessageIndex] = useState(0);
-  const activeMessages = messages?.length ? messages : [message];
-  const activeMessage = activeMessages[messageIndex % activeMessages.length];
   const isScreen = variant === "screen";
 
   useEffect(() => {
@@ -67,20 +46,6 @@ export function ProgressLoader({
       false
     );
   }, [logoDraw, progress]);
-
-  useEffect(() => {
-    setMessageIndex(0);
-
-    if (!messages || messages.length < 2) {
-      return;
-    }
-
-    const timer = setInterval(() => {
-      setMessageIndex((current) => (current + 1) % messages.length);
-    }, 625);
-
-    return () => clearInterval(timer);
-  }, [messages]);
 
   const fillStyle = useAnimatedStyle(() => ({
     transform: [
@@ -106,7 +71,7 @@ export function ProgressLoader({
     <View
       style={[styles.container, isScreen ? styles.screen : styles.inline]}
       accessibilityRole="progressbar"
-      accessibilityLabel={activeMessage}
+      accessibilityLabel="Loading"
     >
       <View
         style={[
@@ -131,15 +96,6 @@ export function ProgressLoader({
           />
         </Svg>
       </View>
-
-      <AppText
-        style={[
-          styles.message,
-          isScreen ? styles.screenMessage : styles.inlineMessage,
-        ]}
-      >
-        {activeMessage}
-      </AppText>
 
       <View style={styles.track}>
         <Animated.View style={[styles.fill, fillStyle]}>
@@ -178,23 +134,6 @@ const styles = StyleSheet.create({
   },
   inlineLogo: {
     marginBottom: 18,
-  },
-  message: {
-    fontFamily: theme.fontFamily.bodySemiBold,
-    color: theme.colors.navy,
-    textAlign: "center",
-  },
-  screenMessage: {
-    minHeight: 44,
-    marginBottom: 26,
-    fontSize: 16,
-    lineHeight: 22,
-  },
-  inlineMessage: {
-    minHeight: 20,
-    marginBottom: 18,
-    fontSize: 14,
-    lineHeight: 20,
   },
   track: {
     width: "100%",

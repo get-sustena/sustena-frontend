@@ -1,8 +1,3 @@
-// app/auth.tsx
-//
-// Sign-in screen. Sign-up is a separate route (app/auth-signup.tsx) — the
-// mockup treats them as two distinct screens, not tabs of one screen.
-
 import { router } from "expo-router";
 import { useState } from "react";
 import {

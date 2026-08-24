@@ -7,6 +7,11 @@ import { Icon } from "../ui/Icon";
 
 export function SubscriptionScreen() {
   const insets = useSafeAreaInsets();
+  const billingProvider = Platform.select({
+    ios: "the App Store",
+    android: "Google Play",
+    default: "your Sustena account",
+  });
   return (
     <View style={styles.screen}>
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
@@ -23,7 +28,7 @@ export function SubscriptionScreen() {
         </View>
         <Pressable style={styles.primary}><AppText style={styles.primaryText}>See Sustena Plus</AppText></Pressable>
         <Pressable style={styles.restore}><AppText style={styles.restoreText}>Restore purchases</AppText></Pressable>
-        <AppText style={styles.note}>Subscriptions are billed and managed through {Platform.OS === "ios" ? "the App Store" : "Google Play"}. Sustena does not store your card details.</AppText>
+        <AppText style={styles.note}>Subscriptions are billed and managed through {billingProvider}. Sustena does not store your card details.</AppText>
       </ScrollView>
     </View>
   );

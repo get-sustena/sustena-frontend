@@ -7,11 +7,15 @@ import { AppState } from "react-native";
 import { processSyncQueue } from "../lib/sync/processSyncQueue";
 import { isConnectedState } from "../lib/query/networkStatus";
 
-export function useSyncQueueProcessor() {
+export function useSyncQueueProcessor(enabled = true) {
   const db = useSQLiteContext();
   const isRunningRef = useRef(false);
 
   useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
     function runProcessor() {
       if (isRunningRef.current) {
         return;
@@ -49,5 +53,5 @@ export function useSyncQueueProcessor() {
       unsubscribeNetwork();
       appStateSubscription.remove();
     };
-  }, [db]);
+  }, [db, enabled]);
 }

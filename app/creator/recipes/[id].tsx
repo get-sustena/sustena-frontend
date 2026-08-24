@@ -7,7 +7,6 @@ import {
   useState,
 } from "react";
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -22,6 +21,7 @@ import { StageIngredients } from "../../../src/components/creator/editor/StageIn
 import { StageInstructions } from "../../../src/components/creator/editor/StageInstructions";
 import { StageReview } from "../../../src/components/creator/editor/StageReview";
 import { AppText } from "../../../src/components/ui/AppText";
+import { ConfirmationSheet } from "../../../src/components/ui/ConfirmationSheet";
 import { Icon } from "../../../src/components/ui/Icon";
 import { ProgressLoader } from "../../../src/components/ui/ProgressLoader";
 import {
@@ -54,7 +54,7 @@ import {
 import { queryKeys } from "../../../src/lib/query/queryKeys";
 import { queryClient } from "../../../src/lib/query/queryClient";
 import { pickAndUploadImage } from "../../../src/lib/media/uploadImage";
-import { showToast } from "../../../src/store/uiStore";
+import { closeSheet, openSheet, showToast } from "../../../src/store/uiStore";
 import { theme } from "../../../src/theme/theme";
 import { RecipeDraft } from "../../../src/types/api";
 
@@ -327,10 +327,23 @@ export default function RecipeEditorScreen() {
       exitEditor();
       return;
     }
-    Alert.alert("Leave recipe editor?", "Your latest changes can be saved before you leave.", [
-      { text: "Keep editing", style: "cancel" },
-      { text: "Save and exit", onPress: saveAndExit },
-    ]);
+    openSheet(
+      <ConfirmationSheet
+        title="Leave recipe editor?"
+        description="Your latest changes can be saved before you leave."
+        actions={[
+          { label: "Keep editing", onPress: closeSheet },
+          {
+            label: "Save and exit",
+            primary: true,
+            onPress: async () => {
+              closeSheet();
+              await saveAndExit();
+            },
+          },
+        ]}
+      />
+    );
   }
 
   async function publish() {
@@ -376,14 +389,29 @@ export default function RecipeEditorScreen() {
   }
 
   function openConflictDialog() {
-    Alert.alert(
-      "This draft changed elsewhere",
-      "Choose whether to reload the latest server copy or keep the changes on this device.",
-      [
-        { text: "Later", style: "cancel" },
-        { text: "Reload server copy", onPress: reloadServerCopy },
-        { text: "Keep my changes", onPress: keepLocalChanges },
-      ]
+    openSheet(
+      <ConfirmationSheet
+        title="This draft changed elsewhere"
+        description="Choose whether to reload the latest server copy or keep the changes on this device."
+        actions={[
+          { label: "Later", onPress: closeSheet },
+          {
+            label: "Reload server copy",
+            onPress: async () => {
+              closeSheet();
+              await reloadServerCopy();
+            },
+          },
+          {
+            label: "Keep my changes",
+            primary: true,
+            onPress: async () => {
+              closeSheet();
+              await keepLocalChanges();
+            },
+          },
+        ]}
+      />
     );
   }
 
@@ -450,7 +478,7 @@ export default function RecipeEditorScreen() {
     unitsQuery.error;
 
   if (loading) {
-    return <ProgressLoader variant="screen" message="Opening your recipe studio..." />;
+    return <ProgressLoader variant="screen" />;
   }
 
   if (!recipe || !state || !vocabulary || loadError) {

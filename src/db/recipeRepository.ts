@@ -1,16 +1,17 @@
 // src/db/recipeRepository.ts
 
 import { type SQLiteDatabase } from "expo-sqlite";
-import seedRecipesJson from "../data/mobile_seed_recipes_published.json";
 import {
   PaginatedResponse,
   RecipeDetail,
   RecipeListItem,
   RecipeSearchParams,
 } from "../types/api";
+import { recipeSeedJson, RECIPE_SEED_VERSION } from "./recipeSeed";
 import { runWithSqliteRetry } from "./sqliteGuards";
+import { runWriteTransaction } from "./writeTransaction";
 
-export const RECIPE_SEED_VERSION = "2026-06-19-published-112";
+export { RECIPE_SEED_VERSION } from "./recipeSeed";
 
 type SeedRecipe = Omit<
   RecipeDetail,
@@ -27,7 +28,7 @@ type RecipeRow = {
   raw_json: string;
 };
 
-const seedRecipes = seedRecipesJson as unknown as SeedRecipe[];
+const seedRecipes = recipeSeedJson as SeedRecipe[];
 
 export async function seedPublishedRecipesIfNeeded(db: SQLiteDatabase) {
   await runWithSqliteRetry(async () => {
@@ -42,9 +43,7 @@ export async function seedPublishedRecipesIfNeeded(db: SQLiteDatabase) {
 
     const now = new Date().toISOString();
 
-    await db.withExclusiveTransactionAsync(async (txn) => {
-      const transactionDb = txn as unknown as SQLiteDatabase;
-
+    await runWriteTransaction(db, async (transactionDb) => {
       for (const seedRecipe of seedRecipes) {
         const recipe = mapSeedRecipe(seedRecipe, now);
 
@@ -116,9 +115,7 @@ export async function cacheRecipeDetail(
   const now = new Date().toISOString();
 
   await runWithSqliteRetry(() =>
-    db.withExclusiveTransactionAsync(async (txn) => {
-      const transactionDb = txn as unknown as SQLiteDatabase;
-
+    runWriteTransaction(db, async (transactionDb) => {
       await upsertRecipe(transactionDb, recipe, now);
       await replaceRecipeChildren(transactionDb, recipe);
     })

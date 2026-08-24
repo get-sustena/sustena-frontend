@@ -1,4 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSQLiteContext } from "expo-sqlite";
+import {
+  clearLocalAccountData,
+  prepareLocalAccountData,
+} from "../../db/accountDataRepository";
+import {
+  hydrateLocalAccountStores,
+  resetLocalAccountStores,
+} from "../../lib/accountSession";
 import { authApi } from "../../lib/api";
 import { queryKeys } from "../../lib/query/queryKeys";
 import { useAuthStore } from "../../store/authStore";
@@ -27,12 +36,16 @@ export function useChangePasswordMutation() {
 }
 
 export function useSignupMutation() {
+  const db = useSQLiteContext();
   const queryClient = useQueryClient();
   const setUser = useAuthStore((state) => state.setUser);
 
   return useMutation({
     mutationFn: authApi.signup,
     onSuccess: async (response) => {
+      await prepareLocalAccountData(db, response.user.id);
+      await hydrateLocalAccountStores(db);
+      queryClient.clear();
       setUser(response.user);
       queryClient.setQueryData(queryKeys.auth.me, response.user);
       await queryClient.invalidateQueries({ queryKey: queryKeys.auth.me });
@@ -41,12 +54,16 @@ export function useSignupMutation() {
 }
 
 export function useLoginMutation() {
+  const db = useSQLiteContext();
   const queryClient = useQueryClient();
   const setUser = useAuthStore((state) => state.setUser);
 
   return useMutation({
     mutationFn: authApi.login,
     onSuccess: async (response) => {
+      await prepareLocalAccountData(db, response.user.id);
+      await hydrateLocalAccountStores(db);
+      queryClient.clear();
       setUser(response.user);
       queryClient.setQueryData(queryKeys.auth.me, response.user);
       await queryClient.invalidateQueries({ queryKey: queryKeys.auth.me });
@@ -55,6 +72,7 @@ export function useLoginMutation() {
 }
 
 export function useLogoutMutation() {
+  const db = useSQLiteContext();
   const queryClient = useQueryClient();
   const clearAuth = useAuthStore((state) => state.clearAuth);
 
@@ -62,12 +80,15 @@ export function useLogoutMutation() {
     mutationFn: authApi.logout,
     onSettled: async () => {
       clearAuth();
-      await queryClient.clear();
+      queryClient.clear();
+      await clearLocalAccountData(db);
+      resetLocalAccountStores();
     },
   });
 }
 
 export function useLogoutAllMutation() {
+  const db = useSQLiteContext();
   const queryClient = useQueryClient();
   const clearAuth = useAuthStore((state) => state.clearAuth);
 
@@ -75,7 +96,9 @@ export function useLogoutAllMutation() {
     mutationFn: authApi.logoutAll,
     onSettled: async () => {
       clearAuth();
-      await queryClient.clear();
+      queryClient.clear();
+      await clearLocalAccountData(db);
+      resetLocalAccountStores();
     },
   });
 }

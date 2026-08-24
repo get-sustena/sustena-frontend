@@ -5,7 +5,7 @@ import { useEffect } from "react";
 import { saveStoredPreferences } from "../db/preferencesRepository";
 import { usePreferencesStore } from "../store/preferencesStore";
 
-export function usePersistPreferences() {
+export function usePersistPreferences(enabled = true) {
   const db = useSQLiteContext();
 
   const healthConditions = usePreferencesStore(
@@ -30,6 +30,10 @@ export function usePersistPreferences() {
   );
 
   useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
     saveStoredPreferences(db, {
       healthConditions,
       dietaryPreference,
@@ -44,6 +48,7 @@ export function usePersistPreferences() {
     });
   }, [
     db,
+    enabled,
     healthConditions,
     dietaryPreference,
     defaultUnitMode,

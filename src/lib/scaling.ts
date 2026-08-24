@@ -37,7 +37,7 @@ export function scaleAmountText({
   const normalizedAmount = amount.trim();
 
   if (shouldSkipScaling(normalizedAmount)) {
-    return normalizedAmount;
+    return formatQuantityText(normalizedAmount);
   }
 
   const factor = selectedServings / getSafeBaseServings(baseServings);
@@ -72,41 +72,61 @@ function shouldSkipScaling(amount: string) {
   );
 }
 
-const FRACTION_MAP: Record<number, string> = {
-  0.125: "⅛",
-  0.25: "¼",
-  0.375: "⅜",
-  0.5: "½",
-  0.625: "⅝",
-  0.75: "¾",
-  0.875: "⅞",
-};
+const COMMON_FRACTIONS = [
+  { value: 1 / 8, label: "1/8" },
+  { value: 1 / 6, label: "1/6" },
+  { value: 1 / 4, label: "1/4" },
+  { value: 1 / 3, label: "1/3" },
+  { value: 3 / 8, label: "3/8" },
+  { value: 1 / 2, label: "1/2" },
+  { value: 5 / 8, label: "5/8" },
+  { value: 2 / 3, label: "2/3" },
+  { value: 3 / 4, label: "3/4" },
+  { value: 5 / 6, label: "5/6" },
+  { value: 7 / 8, label: "7/8" },
+] as const;
+
+const FRACTION_TOLERANCE = 0.012;
+
+export function formatQuantityText(value: string) {
+  return value
+    .replace(/(\d)(½|⅓|⅔|¼|¾|⅛|⅜|⅝|⅞)/g, "$1 $2")
+    .replace(NUMERIC_TOKEN_PATTERN_GLOBAL, (token) => {
+      const quantity = parseQuantityToken(token);
+      return quantity === null ? token : formatQuantityValue(quantity);
+    });
+}
 
 export function formatQuantityValue(value: number) {
   if (!Number.isFinite(value) || value <= 0) {
     return "0";
   }
 
-  const rounded = Math.round(value * 8) / 8;
-  // Never collapse a nonzero quantity down to "0" — floor at the smallest
-  // displayable fraction instead of silently dropping the ingredient.
-  const clamped = rounded === 0 ? 0.125 : rounded;
-
-  if (Number.isInteger(clamped)) {
-    return String(clamped);
+  const nearestInteger = Math.round(value);
+  if (
+    nearestInteger > 0 &&
+    Math.abs(value - nearestInteger) <= FRACTION_TOLERANCE
+  ) {
+    return String(nearestInteger);
   }
 
-  const whole = Math.floor(clamped);
-  const fraction = clamped - whole;
-  const fractionText = FRACTION_MAP[fraction];
+  const whole = Math.floor(value);
+  const remainder = value - whole;
+  const fraction = COMMON_FRACTIONS.reduce((nearest, candidate) =>
+    Math.abs(candidate.value - remainder) <
+    Math.abs(nearest.value - remainder)
+      ? candidate
+      : nearest
+  );
 
-  if (!fractionText) {
-    return String(Number(clamped.toFixed(2)));
+  if (Math.abs(fraction.value - remainder) > FRACTION_TOLERANCE) {
+    const decimalPlaces = value < 1 ? 3 : 2;
+    return String(Number(value.toFixed(decimalPlaces)));
   }
 
   if (whole === 0) {
-    return fractionText;
+    return fraction.label;
   }
 
-  return `${whole}${fractionText}`;
+  return `${whole} ${fraction.label}`;
 }

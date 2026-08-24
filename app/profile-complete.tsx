@@ -1,11 +1,3 @@
-// app/profile-complete.tsx
-//
-// "Complete Profile" gated-question personalization flow. Answers are
-// cached locally (local_profile_answers / profileAnswersStore, persisted
-// reactively via usePersistProfileAnswers) and synced to the account via
-// PUT /me/profile-answers, local-first: the UI updates immediately, the API
-// call is best-effort, and a failure is queued for retry.
-
 import { router } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
 import { useState } from "react";
@@ -98,7 +90,10 @@ const HEARD_OPTIONS = [
   { value: "other", label: "Other" },
 ];
 
-function labelFor(options: { value: string; label: string }[], value: string | null) {
+function labelFor(
+  options: { value: string; label: string }[],
+  value: string | null
+) {
   return options.find((option) => option.value === value)?.label;
 }
 

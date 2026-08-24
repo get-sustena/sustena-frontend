@@ -7,9 +7,10 @@ import {
   ShoppingListItem as ApiShoppingListItem,
 } from "../../types/api";
 import { ShoppingListItem } from "../../types/shoppingList";
+import { formatQuantityText } from "../scaling";
 import { capitalizeWords } from "../textFormatters";
-import { API_BASE_URL } from "./config";
 import { isSelectableIngredientUnit } from "../unitConversion";
+import { API_BASE_URL } from "./config";
 
 export function apiRecipeToLocalRecipe(
   recipe: RecipeListItem | RecipeDetail
@@ -70,7 +71,7 @@ export function apiShoppingItemToLocalItem(
     id: item.id,
     name: item.name,
     emoji: item.emoji ?? "🛒",
-    quantity: item.quantity ?? item.unit ?? "",
+    quantity: formatQuantityText(item.quantity ?? item.unit ?? ""),
     unit: item.unit ?? undefined,
     category: item.category ?? "Pantry",
     estimatedPrice: item.estimatedPrice ?? 0,
@@ -82,19 +83,23 @@ export function apiShoppingItemToLocalItem(
 }
 
 function apiIngredientToLocalIngredient(ingredient: RecipeIngredient) {
-  const amountLabel =
+  const amountLabel = formatQuantityText(
     ingredient.displayText ??
-    ingredient.availableUnits[0]?.label ??
-    ingredient.rawText;
+      ingredient.availableUnits[0]?.label ??
+      ingredient.rawText
+  );
+  const nigerianUnitLabel = findNigerianUnitLabel(ingredient);
+  const imperialUnitLabel =
+    findUnitLabel(ingredient, "ounce") ??
+    findUnitLabel(ingredient, "pound");
   const amount = {
     metric: amountLabel,
-    cups:
-      findNigerianUnitLabel(ingredient) ??
-      amountLabel,
-    imperial:
-      findUnitLabel(ingredient, "ounce") ??
-      findUnitLabel(ingredient, "pound") ??
-      amountLabel,
+    cups: nigerianUnitLabel
+      ? formatQuantityText(nigerianUnitLabel)
+      : amountLabel,
+    imperial: imperialUnitLabel
+      ? formatQuantityText(imperialUnitLabel)
+      : amountLabel,
   };
 
   return {
@@ -104,11 +109,16 @@ function apiIngredientToLocalIngredient(ingredient: RecipeIngredient) {
       ingredient.canonicalIngredientName ??
       ingredient.rawText,
     canonicalIngredientName: ingredient.canonicalIngredientName,
-    rawText: ingredient.rawText,
+    rawText: formatQuantityText(ingredient.rawText),
     emoji: "🛒",
     amount,
-    availableUnits: ingredient.availableUnits,
-    displayText: ingredient.displayText,
+    availableUnits: ingredient.availableUnits.map((unit) => ({
+      ...unit,
+      label: formatQuantityText(unit.label),
+    })),
+    displayText: ingredient.displayText
+      ? formatQuantityText(ingredient.displayText)
+      : null,
     quantity: ingredient.quantity,
     unit: ingredient.unit,
     category: ingredient.category ?? "Pantry",

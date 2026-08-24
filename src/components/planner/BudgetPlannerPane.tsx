@@ -48,10 +48,7 @@ import { RecipePhoto } from "../recipe/RecipePhoto";
 import { AppText } from "../ui/AppText";
 import { EmptyState } from "../ui/EmptyState";
 import { Icon } from "../ui/Icon";
-import {
-  MEAL_PLAN_LOADING_MESSAGES,
-  ProgressLoader,
-} from "../ui/ProgressLoader";
+import { ProgressLoader } from "../ui/ProgressLoader";
 import { PlanSetupModal } from "./PlanSetupModal";
 import {
   QuickPlanSetupModal,
@@ -145,11 +142,6 @@ export function BudgetPlannerPane() {
   );
   const resultDays =
     budgetPlannerMutation.data?.days ?? planSetup.days;
-  const isPartialPlan = Boolean(
-    budgetPlannerMutation.data &&
-      budgetPlannerMutation.data.generatedMealCount <
-        budgetPlannerMutation.data.requestedMealCount
-  );
   const isPlanResultPreparing =
     budgetPlannerMutation.isPending ||
     (Boolean(budgetPlannerMutation.data?.meals.length) &&
@@ -462,9 +454,7 @@ export function BudgetPlannerPane() {
           style={StyleSheet.absoluteFillObject}
         />
         <AppText style={styles.generateButtonText}>
-          {budgetPlannerMutation.isPending
-            ? "Creating Plan..."
-            : "Create My Meal Plan"}
+          Create My Meal Plan
         </AppText>
       </Pressable>
 
@@ -492,10 +482,7 @@ export function BudgetPlannerPane() {
 
       {isPlanResultPreparing ? (
         <View style={styles.loadingPanel}>
-          <ProgressLoader
-            variant="screen"
-            messages={MEAL_PLAN_LOADING_MESSAGES}
-          />
+          <ProgressLoader variant="screen" />
         </View>
       ) : null}
 
@@ -509,19 +496,10 @@ export function BudgetPlannerPane() {
         <EmptyState
           iconName="plan"
           title="No meals found"
-          message={
-            budgetPlannerMutation.data.message ??
-            "No meals matched this setup and total plan budget."
-          }
+          message="No meals matched this setup and total plan budget."
         />
       ) : (
         <View style={styles.results}>
-          {isPartialPlan && budgetPlannerMutation.data.message ? (
-            <AppText style={styles.plannerMessage}>
-              {budgetPlannerMutation.data.message}
-            </AppText>
-          ) : null}
-
           {resultDays > 1 ? (
             <ScrollView
               horizontal
@@ -917,13 +895,6 @@ const styles = StyleSheet.create({
   },
   results: {
     marginBottom: theme.spacing.md,
-  },
-  plannerMessage: {
-    fontFamily: theme.fontFamily.body,
-    fontSize: 13,
-    lineHeight: 19,
-    color: theme.colors.textMedium,
-    marginBottom: 8,
   },
   dayChipRow: {
     gap: 8,

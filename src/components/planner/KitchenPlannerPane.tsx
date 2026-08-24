@@ -199,7 +199,7 @@ export function KitchenPlannerPane({ initialCategory }: Props) {
           ) : null}
 
           {catalogQuery.isPending ? (
-            <ProgressLoader message="Loading ingredients..." />
+            <ProgressLoader />
           ) : catalogQuery.isError ? (
             <EmptyState
               iconName="offline"
@@ -296,7 +296,7 @@ export function KitchenPlannerPane({ initialCategory }: Props) {
             message={getApiErrorMessage(kitchenPlannerMutation.error)}
           />
         ) : kitchenPlannerMutation.isPending ? (
-          <ProgressLoader message="Checking your ingredients against the recipe library..." />
+          <ProgressLoader />
         ) : matches.length === 0 ? (
           <View style={styles.emptyResults}>
             <View style={styles.emptyResultsIconWrap}>

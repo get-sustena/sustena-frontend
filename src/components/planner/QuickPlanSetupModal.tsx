@@ -180,10 +180,13 @@ function Question({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
+    alignItems: "center",
     justifyContent: "flex-end",
     backgroundColor: "rgba(0,0,0,0.45)",
   },
   sheet: {
+    width: "100%",
+    maxWidth: 480,
     maxHeight: "88%",
     paddingTop: 10,
     paddingHorizontal: 20,

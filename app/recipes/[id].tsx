@@ -517,7 +517,7 @@ export default function RecipeDetailScreen() {
   }
 
   if (recipeQuery.isLoading && !recipe) {
-    return <ProgressLoader variant="screen" message="Loading recipe..." />;
+    return <ProgressLoader variant="screen" />;
   }
 
   if (recipeQuery.isError && !recipe) {

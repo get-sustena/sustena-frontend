@@ -380,19 +380,12 @@ export function getIngredientConversionContext(
   return ingredient?.conversionContext ?? "mass";
 }
 
-// Nigerian market units read naturally as fractions (e.g. "¾ milk cup"); metric/imperial mass
-// and volume read more naturally as rounded decimals (e.g. "127.5 g", not "127⅛ g").
-export function formatConvertedQuantity(quantity: number, mode: UnitMode): string {
+export function formatConvertedQuantity(quantity: number, _mode: UnitMode): string {
   if (!Number.isFinite(quantity) || quantity <= 0) {
     return "0";
   }
 
-  if (mode === "cups") {
-    return formatQuantityValue(quantity);
-  }
-
-  const rounded = quantity >= 10 ? Math.round(quantity) : Math.round(quantity * 10) / 10;
-  return String(rounded);
+  return formatQuantityValue(quantity);
 }
 
 export function getUnitDisplayLabel(unitsById: Map<string, Unit>, unitId: string): string {
@@ -471,12 +464,5 @@ function averageUnitFactor(unit: Unit) {
 }
 
 function formatScaleQuantity(quantity: number) {
-  if (!Number.isFinite(quantity) || quantity <= 0) {
-    return "0";
-  }
-
-  const decimalPlaces =
-    quantity >= 100 ? 0 : quantity >= 10 ? 1 : quantity >= 1 ? 2 : 3;
-
-  return String(Number(quantity.toFixed(decimalPlaces)));
+  return formatQuantityValue(quantity);
 }

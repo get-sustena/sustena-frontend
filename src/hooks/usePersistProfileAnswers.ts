@@ -5,7 +5,7 @@ import { useEffect } from "react";
 import { saveStoredProfileAnswers } from "../db/localProfileAnswersRepository";
 import { useProfileAnswersStore } from "../store/profileAnswersStore";
 
-export function usePersistProfileAnswers() {
+export function usePersistProfileAnswers(enabled = true) {
   const db = useSQLiteContext();
 
   const nickname = useProfileAnswersStore((state) => state.nickname);
@@ -24,6 +24,10 @@ export function usePersistProfileAnswers() {
   const heardOther = useProfileAnswersStore((state) => state.heardOther);
 
   useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
     saveStoredProfileAnswers(db, {
       nickname,
       gender,
@@ -44,6 +48,7 @@ export function usePersistProfileAnswers() {
     });
   }, [
     db,
+    enabled,
     nickname,
     gender,
     birthdayMonth,

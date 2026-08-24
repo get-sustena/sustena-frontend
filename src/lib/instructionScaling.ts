@@ -9,6 +9,7 @@ import {
   getUnitDisplayLabel,
   getUnitModeForUnitId,
 } from "./unitConversion";
+import { formatQuantityText, formatQuantityValue } from "./scaling";
 
 const MAX_DECIMAL_PLACES = 3;
 
@@ -114,7 +115,7 @@ function formatQuantitySegment({
     selectedServings === baseServings &&
     (!selectedUnit || selectedUnit === segment.unit)
   ) {
-    return segment.text;
+    return formatQuantityText(segment.text);
   }
 
   if (segment.unit && selectedUnit && selectedUnit !== segment.unit) {
@@ -137,11 +138,13 @@ function formatQuantitySegment({
   }
 
   if (!segment.unit) {
-    return scaledQuantity;
+    return formatQuantityValue(Number(scaledQuantity));
   }
 
   const unitLabel = getInstructionUnitLabel(unitsById, segment.unit);
-  return `${scaledQuantity}${unitLabel ? ` ${unitLabel}` : ""}`;
+  return `${formatQuantityValue(Number(scaledQuantity))}${
+    unitLabel ? ` ${unitLabel}` : ""
+  }`;
 }
 
 function getInstructionUnitLabel(unitsById: Map<string, Unit>, unit: string) {

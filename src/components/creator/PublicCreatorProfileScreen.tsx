@@ -24,7 +24,7 @@ export function PublicCreatorProfileScreen() {
   const [gridWidth, setGridWidth] = useState(0);
   const [scrolled, setScrolled] = useState(false);
   const profileQuery = useCreatorProfileQuery(handle);
-  const recipesQuery = useCreatorRecipesQuery(handle, { sort, page: 1, pageSize: 100 });
+  const recipesQuery = useCreatorRecipesQuery(handle, { sort, page: 1, pageSize: 500 });
   const vocabularyQuery = useAuthoringVocabularyQuery();
   const saveMutation = useSaveCreatorMutation();
   const profile = profileQuery.data;

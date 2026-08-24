@@ -1,11 +1,3 @@
-// app/auth-signup.tsx
-//
-// Create-account screen, separate from sign-in (app/auth.tsx) to match the
-// mockup's two-screen structure. Our backend requires firstName/lastName on
-// signup (the mockup's simplified email/password-only form doesn't), so
-// those fields are kept — everything else (confirm password, live strength
-// meter, match indicator) mirrors the mockup exactly.
-
 import { router } from "expo-router";
 import { useState } from "react";
 import {
@@ -237,9 +229,7 @@ export default function AuthSignupScreen() {
         <AuthAlternativeActions />
 
         <View style={styles.switchRow}>
-          <AppText style={styles.switchText}>
-            Already have an account?{" "}
-          </AppText>
+          <AppText style={styles.switchText}>Already have an account? </AppText>
           <Pressable onPress={() => router.replace("/auth")}>
             <AppText style={styles.switchLink}>Sign in</AppText>
           </Pressable>

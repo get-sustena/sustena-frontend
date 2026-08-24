@@ -1,10 +1,12 @@
 import { Href, router } from "expo-router";
+import { useSQLiteContext } from "expo-sqlite";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLogoutMutation } from "../../hooks/api/useAuth";
 import { usePreferencesQuery, useUpdatePreferencesMutation } from "../../hooks/api/usePreferences";
 import { useProfileAnswersQuery } from "../../hooks/api/useProfileAnswers";
 import { useFavoriteRecipes } from "../../hooks/useFavoriteRecipes";
+import { markWelcomeSeen } from "../../db/appMetadataRepository";
 import { countAnsweredProfileFields, PROFILE_COMPLETION_FIELD_COUNT } from "../../lib/profileCompletion";
 import { usePreferencesStore } from "../../store/preferencesStore";
 import { useProfileAnswersStore } from "../../store/profileAnswersStore";
@@ -24,6 +26,7 @@ import { SignOutSheet } from "./SignOutSheet";
 import { UnitPickerSheet } from "./UnitPickerSheet";
 
 export function AccountSettingsScreen() {
+  const db = useSQLiteContext();
   const insets = useSafeAreaInsets();
   const logoutMutation = useLogoutMutation();
   const updatePreferences = useUpdatePreferencesMutation();
@@ -62,8 +65,9 @@ export function AccountSettingsScreen() {
     try {
       await logoutMutation.mutateAsync();
     } finally {
+      await markWelcomeSeen(db).catch(() => undefined);
       closeSheet();
-      router.replace("/welcome");
+      router.replace("/auth");
     }
   }
 

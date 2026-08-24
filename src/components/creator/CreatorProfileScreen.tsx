@@ -30,8 +30,8 @@ export function CreatorProfileScreen() {
   const profileQuery = useMyCreatorProfileQuery();
   const savedProfile = profileQuery.data;
   const hasCreatorProfile = Boolean(savedProfile);
-  const publishedQuery = useMyRecipesQuery({ status: "published", page: 1, pageSize: 100 }, hasCreatorProfile);
-  const draftsQuery = useMyRecipesQuery({ status: "draft", page: 1, pageSize: 100 }, hasCreatorProfile);
+  const publishedQuery = useMyRecipesQuery({ status: "published", page: 1, pageSize: 500 }, hasCreatorProfile);
+  const draftsQuery = useMyRecipesQuery({ status: "draft", page: 1, pageSize: 500 }, hasCreatorProfile);
   const vocabularyQuery = useAuthoringVocabularyQuery();
   const createMutation = useCreateRecipeDraftMutation();
   const displayName = savedProfile?.displayName || user?.fullName?.trim() || [user?.firstName, user?.lastName].filter(Boolean).join(" ") || "Sustena";

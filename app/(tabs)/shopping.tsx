@@ -1,11 +1,3 @@
-// app/(tabs)/shopping.tsx
-// "Your Lists" overview. The default list stays wired to the real backend
-// via /me/shopping-list (see app/shopping/[id].tsx). Every other list is a
-// real synced resource via /shopping-lists — creating, renaming, and
-// deleting a list requires connectivity (foreground, user-initiated
-// actions), while item-level edits within an already-synced list stay
-// local-first with retry-on-reconnect, same as the default list.
-
 import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
@@ -17,8 +9,8 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppText } from "../../src/components/ui/AppText";
 import { Icon } from "../../src/components/ui/Icon";
 import {
@@ -36,8 +28,8 @@ import {
   useRenameShoppingListMutation,
 } from "../../src/hooks/api/useShoppingLists";
 import { useIsOnline } from "../../src/hooks/useIsOnline";
-import { getApiErrorMessage } from "../../src/lib/api/errors";
 import { shoppingListsApi } from "../../src/lib/api";
+import { getApiErrorMessage } from "../../src/lib/api/errors";
 import { formatNaira } from "../../src/lib/formatters";
 import { useShoppingListsStore } from "../../src/store/shoppingListsStore";
 import { closeSheet, openSheet, showToast } from "../../src/store/uiStore";
@@ -112,7 +104,9 @@ export default function ShoppingListsScreen() {
         await upsertShoppingList(db, list);
       }
 
-      hydrateLists(defaultList ? [defaultList, ...mergedNonDefault] : mergedNonDefault);
+      hydrateLists(
+        defaultList ? [defaultList, ...mergedNonDefault] : mergedNonDefault
+      );
     } catch (error) {
       console.error("Failed to sync shopping lists from server", error);
     }
@@ -217,15 +211,9 @@ export default function ShoppingListsScreen() {
   }
 
   return (
-    <Animated.View
-      entering={FadeInDown.duration(320)}
-      style={styles.screen}
-    >
+    <Animated.View entering={FadeInDown.duration(320)} style={styles.screen}>
       <View
-        style={[
-          styles.header,
-          { paddingTop: Math.max(52, insets.top + 5) },
-        ]}
+        style={[styles.header, { paddingTop: Math.max(52, insets.top + 5) }]}
       >
         <AppText style={styles.title}>Your Lists</AppText>
 
@@ -275,8 +263,7 @@ export default function ShoppingListsScreen() {
               const summary = summaries[list.id];
               const itemCount = summary?.itemCount ?? 0;
               const checkedCount = summary?.checkedCount ?? 0;
-              const pct =
-                itemCount > 0 ? (checkedCount / itemCount) * 100 : 0;
+              const pct = itemCount > 0 ? (checkedCount / itemCount) * 100 : 0;
 
               return (
                 <Pressable
@@ -335,10 +322,7 @@ export default function ShoppingListsScreen() {
                     <>
                       <View style={styles.progressTrack}>
                         <View
-                          style={[
-                            styles.progressFill,
-                            { width: `${pct}%` },
-                          ]}
+                          style={[styles.progressFill, { width: `${pct}%` }]}
                         />
                       </View>
                       <AppText style={styles.progressLabel}>
@@ -371,11 +355,7 @@ export default function ShoppingListsScreen() {
   );
 }
 
-function CreateListSheet({
-  onCreate,
-}: {
-  onCreate: (name: string) => void;
-}) {
+function CreateListSheet({ onCreate }: { onCreate: (name: string) => void }) {
   const [name, setName] = useState("");
 
   return (

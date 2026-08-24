@@ -23,7 +23,7 @@ export function CreatorProfilePreviewScreen() {
   const [collection, setCollection] = useState("");
   const [gridWidth, setGridWidth] = useState(0);
   const [scrolled, setScrolled] = useState(false);
-  const recipeItems = useCreatorRecipesQuery(currentProfile?.handle, { sort, page: 1, pageSize: 100 }).data?.items;
+  const recipeItems = useCreatorRecipesQuery(currentProfile?.handle, { sort, page: 1, pageSize: 500 }).data?.items;
   const recipes = useMemo(() => recipeItems ?? [], [recipeItems]);
   const vocabulary = useAuthoringVocabularyQuery().data;
   const categoryLabels = useMemo(() => new Map((vocabulary?.categories ?? []).map((item) => [item.id, item.label])), [vocabulary?.categories]);

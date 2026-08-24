@@ -29,6 +29,7 @@ import { StatusBar } from "expo-status-bar";
 import { Suspense, useEffect } from "react";
 import { AppBootstrapGate } from "../src/components/bootstrap/AppBootstrapGate";
 import { PersistenceEffects } from "../src/components/bootstrap/PersistenceEffects";
+import { WebAppFrame } from "../src/components/layout/WebAppFrame";
 import { BottomSheetHost } from "../src/components/ui/BottomSheet";
 import { ProgressLoader } from "../src/components/ui/ProgressLoader";
 import { ToastHost } from "../src/components/ui/Toast";
@@ -82,22 +83,24 @@ export default function RootLayout() {
           onInit={migrateDbIfNeeded}
           useSuspense
         >
-          <AppBootstrapGate>
-            <PersistenceEffects />
+          <WebAppFrame>
+            <AppBootstrapGate>
+              <PersistenceEffects />
 
-            <StatusBar style="dark" backgroundColor={theme.colors.background} />
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                contentStyle: {
-                  backgroundColor: theme.colors.background,
-                },
-              }}
-            />
+              <StatusBar style="dark" backgroundColor={theme.colors.background} />
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                  contentStyle: {
+                    backgroundColor: theme.colors.background,
+                  },
+                }}
+              />
 
-            <ToastHost />
-            <BottomSheetHost />
-          </AppBootstrapGate>
+              <ToastHost />
+              <BottomSheetHost />
+            </AppBootstrapGate>
+          </WebAppFrame>
         </SQLiteProvider>
       </Suspense>
     </QueryClientProvider>
@@ -105,5 +108,5 @@ export default function RootLayout() {
 }
 
 function RootLoading() {
-  return <ProgressLoader variant="screen" message="Preparing Sustena..." />;
+  return <ProgressLoader variant="screen" />;
 }

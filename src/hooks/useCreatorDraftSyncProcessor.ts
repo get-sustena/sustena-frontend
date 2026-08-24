@@ -19,13 +19,17 @@ import { queryClient } from "../lib/query/queryClient";
 import { queryKeys } from "../lib/query/queryKeys";
 import { isConnectedState } from "../lib/query/networkStatus";
 
-export function useCreatorDraftSyncProcessor() {
+export function useCreatorDraftSyncProcessor(enabled = true) {
   const db = useSQLiteContext();
   const pathname = usePathname();
   const isRunningRef = useRef(false);
   const editorIsOpen = pathname.startsWith("/creator/recipes/");
 
   useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
     function runProcessor() {
       if (editorIsOpen || isRunningRef.current) return;
       isRunningRef.current = true;
@@ -51,7 +55,7 @@ export function useCreatorDraftSyncProcessor() {
       unsubscribeNetwork();
       appStateSubscription.remove();
     };
-  }, [db, editorIsOpen]);
+  }, [db, editorIsOpen, enabled]);
 }
 
 async function syncPendingCreatorDrafts(db: ReturnType<typeof useSQLiteContext>) {

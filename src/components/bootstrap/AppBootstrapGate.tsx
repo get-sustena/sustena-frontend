@@ -2,10 +2,14 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
+import { useSQLiteContext } from "expo-sqlite";
 import { ReactNode, useEffect } from "react";
 import { StyleSheet, View } from "react-native";
 import { useAppBootstrap } from "../../hooks/useAppBootstrap";
 import { useAuthBootstrap } from "../../hooks/useAuthBootstrap";
+import { clearLocalAccountData } from "../../db/accountDataRepository";
+import { resetLocalAccountStores } from "../../lib/accountSession";
+import { markWelcomeSeen } from "../../db/appMetadataRepository";
 import { setAuthFailureHandler } from "../../lib/api/authEvents";
 import { useAuthStore } from "../../store/authStore";
 import { theme } from "../../theme/theme";
@@ -17,9 +21,13 @@ type Props = {
 };
 
 export function AppBootstrapGate({ children }: Props) {
+  const db = useSQLiteContext();
   useAuthBootstrap();
 
-  const { isBootstrapping, bootstrapError } = useAppBootstrap();
+  const isHydratingAuth = useAuthStore((state) => state.isHydratingAuth);
+  const { isBootstrapping, bootstrapError } = useAppBootstrap(
+    !isHydratingAuth
+  );
   const queryClient = useQueryClient();
   const clearAuth = useAuthStore((state) => state.clearAuth);
 
@@ -27,16 +35,20 @@ export function AppBootstrapGate({ children }: Props) {
     setAuthFailureHandler(() => {
       clearAuth();
       queryClient.clear();
-      router.replace("/welcome");
+      void clearLocalAccountData(db)
+        .catch(() => undefined)
+        .finally(resetLocalAccountStores);
+      void markWelcomeSeen(db).catch(() => undefined);
+      router.replace("/auth");
     });
 
     return () => {
       setAuthFailureHandler(null);
     };
-  }, [clearAuth, queryClient]);
+  }, [clearAuth, db, queryClient]);
 
   if (isBootstrapping) {
-    return <ProgressLoader variant="screen" message="Preparing Sustena..." />;
+    return <ProgressLoader variant="screen" />;
   }
 
   if (bootstrapError) {

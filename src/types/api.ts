@@ -75,6 +75,7 @@ export interface User {
   lastName: string;
   fullName: string;
   isActive: boolean;
+  isAdmin: boolean;
   emailVerifiedAt: ISODateTimeString | null;
   createdAt: ISODateTimeString;
   updatedAt: ISODateTimeString;

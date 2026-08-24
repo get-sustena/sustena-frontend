@@ -1,7 +1,9 @@
 import { router } from "expo-router";
+import { useSQLiteContext } from "expo-sqlite";
 import { StatusBar } from "expo-status-bar";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
+  Platform,
   Pressable,
   StyleSheet,
   useWindowDimensions,
@@ -17,8 +19,14 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import Svg, { Path } from "react-native-svg";
+import { WEB_APP_MAX_WIDTH } from "../src/components/layout/WebAppFrame";
 import { AppText } from "../src/components/ui/AppText";
 import { LOGO_PATH_D } from "../src/components/ui/Logo";
+import { ProgressLoader } from "../src/components/ui/ProgressLoader";
+import {
+  getHasSeenWelcome,
+  markWelcomeSeen,
+} from "../src/db/appMetadataRepository";
 import { theme } from "../src/theme/theme";
 
 const REFERENCE_WIDTH = 390;
@@ -26,16 +34,56 @@ const REFERENCE_HEIGHT = 844;
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 
 export default function WelcomeScreen() {
+  const db = useSQLiteContext();
   const { width, height } = useWindowDimensions();
   const logoProgress = useSharedValue(0);
   const drawProgress = useSharedValue(0);
   const wordProgress = useSharedValue(0);
   const missionProgress = useSharedValue(0);
   const ctaProgress = useSharedValue(0);
-  const scaleX = width / REFERENCE_WIDTH;
+  const [canShowWelcome, setCanShowWelcome] = useState<boolean | null>(null);
+  const contentWidth =
+    Platform.OS === "web" ? Math.min(width, WEB_APP_MAX_WIDTH) : width;
+  const scaleX = contentWidth / REFERENCE_WIDTH;
   const scaleY = height / REFERENCE_HEIGHT;
 
+  async function handleGetStarted() {
+    await markWelcomeSeen(db).catch(() => undefined);
+    router.push("/onboarding/product");
+  }
+
   useEffect(() => {
+    let isMounted = true;
+
+    getHasSeenWelcome(db)
+      .then((hasSeen) => {
+        if (!isMounted) {
+          return;
+        }
+
+        if (hasSeen) {
+          router.replace("/auth");
+          return;
+        }
+
+        setCanShowWelcome(true);
+      })
+      .catch(() => {
+        if (isMounted) {
+          setCanShowWelcome(true);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [db]);
+
+  useEffect(() => {
+    if (!canShowWelcome) {
+      return;
+    }
+
     const designEase = Easing.bezier(0.2, 0, 0, 1);
 
     drawProgress.value = withTiming(1, {
@@ -60,6 +108,7 @@ export default function WelcomeScreen() {
     );
   }, [
     ctaProgress,
+    canShowWelcome,
     drawProgress,
     logoProgress,
     missionProgress,
@@ -91,6 +140,10 @@ export default function WelcomeScreen() {
     opacity: ctaProgress.value,
     transform: [{ translateY: (1 - ctaProgress.value) * 14 }],
   }));
+
+  if (!canShowWelcome) {
+    return <ProgressLoader variant="screen" />;
+  }
 
   return (
     <View style={styles.screen}>
@@ -164,7 +217,7 @@ export default function WelcomeScreen() {
         ]}
       >
         <Pressable
-          onPress={() => router.push("/onboarding/product")}
+          onPress={handleGetStarted}
           style={({ pressed }) => [
             styles.ctaButton,
             pressed && styles.ctaPressed,

@@ -1,9 +1,10 @@
-// app/support.tsx
-
 import { router } from "expo-router";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
-import Animated, { FadeInDown, LinearTransition } from "react-native-reanimated";
+import Animated, {
+  FadeInDown,
+  LinearTransition,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppText } from "../src/components/ui/AppText";
 import { Icon } from "../src/components/ui/Icon";
@@ -33,7 +34,7 @@ const HOW_TO = [
   {
     question: "Find recipes from ingredients you already have",
     answer:
-      "On the Recipes tab, use \"Match My Kitchen\": select what you have and we'll suggest recipes that use it.",
+      'On the Recipes tab, use "Match My Kitchen": select what you have and we\'ll suggest recipes that use it.',
   },
   {
     question: "Share a shopping list",
@@ -80,10 +81,7 @@ export default function SupportScreen() {
   return (
     <View style={styles.screen}>
       <View
-        style={[
-          styles.header,
-          { paddingTop: Math.max(52, insets.top + 5) },
-        ]}
+        style={[styles.header, { paddingTop: Math.max(52, insets.top + 5) }]}
       >
         <Pressable
           onPress={() => router.back()}
@@ -140,17 +138,8 @@ function FaqRow({ question, answer }: { question: string; answer: string }) {
         ]}
       >
         <AppText style={styles.faqQuestion}>{question}</AppText>
-        <View
-          style={[
-            styles.faqChevron,
-            isOpen && styles.faqChevronOpen,
-          ]}
-        >
-          <Icon
-            name="chevronDown"
-            size={16}
-            color={theme.colors.textMuted}
-          />
+        <View style={[styles.faqChevron, isOpen && styles.faqChevronOpen]}>
+          <Icon name="chevronDown" size={16} color={theme.colors.textMuted} />
         </View>
       </Pressable>
 

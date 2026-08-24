@@ -1,6 +1,7 @@
 import { type SQLiteDatabase } from "expo-sqlite";
 import { DEFAULT_SHOPPING_LIST_ID, ShoppingListItem } from "../types/shoppingList";
 import { runWithSqliteRetry } from "./sqliteGuards";
+import { runWriteTransaction } from "./writeTransaction";
 
 type ShoppingListItemRow = {
   id: string;
@@ -86,11 +87,31 @@ export async function insertShoppingListItems(
   items: ShoppingListItem[]
 ) {
   await runWithSqliteRetry(async () => {
-    await db.withExclusiveTransactionAsync(async (txn) => {
-      const transactionDb = txn as unknown as SQLiteDatabase;
-
+    await runWriteTransaction(db, async (transactionDb) => {
       for (const item of items) {
         await insertShoppingListItem(transactionDb, item);
+      }
+    });
+  });
+}
+
+export async function replaceShoppingListItemsForList(
+  db: SQLiteDatabase,
+  listId: string,
+  items: ShoppingListItem[]
+) {
+  await runWithSqliteRetry(async () => {
+    await runWriteTransaction(db, async (transactionDb) => {
+      await transactionDb.runAsync(
+        "DELETE FROM shopping_list_items WHERE list_id = ?",
+        [listId]
+      );
+
+      for (const item of items) {
+        await insertShoppingListItem(transactionDb, {
+          ...item,
+          listId,
+        });
       }
     });
   });

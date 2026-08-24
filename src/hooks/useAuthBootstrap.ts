@@ -1,12 +1,23 @@
 // src/hooks/useAuthBootstrap.ts
 
 import { useEffect } from "react";
+import { useSQLiteContext } from "expo-sqlite";
+import {
+  clearLocalAccountData,
+  getLocalAccountDataOwner,
+  prepareLocalAccountData,
+} from "../db/accountDataRepository";
+import {
+  hydrateLocalAccountStores,
+  resetLocalAccountStores,
+} from "../lib/accountSession";
 import { getMe } from "../lib/api/auth";
 import { isApiClientError } from "../lib/api/errors";
 import { clearAuthTokens, getStoredAuthTokens } from "../lib/api/tokenStorage";
 import { useAuthStore } from "../store/authStore";
 
 export function useAuthBootstrap() {
+  const db = useSQLiteContext();
   const setUser = useAuthStore((state) => state.setUser);
   const setIsHydratingAuth = useAuthStore((state) => state.setIsHydratingAuth);
   const setAuthenticatedOffline = useAuthStore(
@@ -21,6 +32,9 @@ export function useAuthBootstrap() {
         const tokens = await getStoredAuthTokens();
 
         if (!tokens) {
+          await clearLocalAccountData(db);
+          resetLocalAccountStores();
+
           if (isMounted) {
             setUser(null);
           }
@@ -30,6 +44,10 @@ export function useAuthBootstrap() {
 
         try {
           const user = await getMe();
+
+          if (await prepareLocalAccountData(db, user.id)) {
+            await hydrateLocalAccountStores(db);
+          }
 
           if (isMounted) {
             setUser(user);
@@ -41,11 +59,17 @@ export function useAuthBootstrap() {
           // request confirms the session is gone.
           if (isApiClientError(error) && error.status === 401) {
             await clearAuthTokens();
+            await clearLocalAccountData(db);
+            resetLocalAccountStores();
 
             if (isMounted) {
               setUser(null);
             }
           } else if (isMounted) {
+            if (!(await getLocalAccountDataOwner(db))) {
+              await clearLocalAccountData(db);
+              resetLocalAccountStores();
+            }
             setAuthenticatedOffline();
           }
         }
@@ -61,5 +85,5 @@ export function useAuthBootstrap() {
     return () => {
       isMounted = false;
     };
-  }, [setUser, setIsHydratingAuth, setAuthenticatedOffline]);
+  }, [db, setUser, setIsHydratingAuth, setAuthenticatedOffline]);
 }

@@ -1,16 +1,9 @@
-// src/components/ui/BottomSheet.tsx
-// Single global bottom-sheet host, mounted once at the app root. Anywhere else
-// in the app, call openSheet(content) / closeSheet() from src/store/uiStore
-// to show/hide it imperatively — mirrors the mockup's generic sheet pattern
-// used for pickers/menus/confirmations.
-
 import { useEffect } from "react";
 import {
   KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
-  SafeAreaView,
   StyleSheet,
   View,
 } from "react-native";
@@ -20,6 +13,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { closeSheet, useUIStore } from "../../store/uiStore";
 import { theme } from "../../theme/theme";
 
@@ -86,9 +80,12 @@ const styles = StyleSheet.create({
   keyboardAvoider: {
     flex: 1,
     width: "100%",
+    alignItems: "center",
     justifyContent: "flex-end",
   },
   panel: {
+    width: "100%",
+    maxWidth: 480,
     backgroundColor: theme.colors.card,
     borderTopLeftRadius: theme.radius.xl,
     borderTopRightRadius: theme.radius.xl,

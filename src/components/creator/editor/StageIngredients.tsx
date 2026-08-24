@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { createLocalId } from "../../../lib/id";
 import { RecipeEditorState } from "../../../lib/creatorRecipes/editorState";
+import { formatQuantityText } from "../../../lib/scaling";
 import { closeSheet, openSheet } from "../../../store/uiStore";
 import { setRecipeUnitPicker } from "../../../store/recipeUnitPickerStore";
 import { usePreferencesStore } from "../../../store/preferencesStore";
@@ -590,12 +591,17 @@ function ingredientSummary(
   displayName: string
 ) {
   const quantity = ingredient.quantityMode === "range"
-    ? [ingredient.quantity, ingredient.quantityMax].filter(Boolean).join("–")
+    ? [ingredient.quantity, ingredient.quantityMax]
+        .filter(Boolean)
+        .map((value) => formatQuantityText(value ?? ""))
+        .join("–")
     : ingredient.quantityMode === "to_taste"
       ? "To taste"
       : ingredient.quantityMode === "as_needed"
         ? "As needed"
-        : ingredient.quantity;
+        : ingredient.quantity
+          ? formatQuantityText(ingredient.quantity)
+          : ingredient.quantity;
   return [quantity, unitName, ingredient.sizeNote, displayName]
     .filter(Boolean)
     .join(" ");

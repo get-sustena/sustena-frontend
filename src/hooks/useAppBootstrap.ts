@@ -36,7 +36,7 @@ import { useShoppingListStore } from "../store/shoppingListStore";
 import { useShoppingListsStore } from "../store/shoppingListsStore";
 import { DEFAULT_SHOPPING_LIST_ID } from "../types/shoppingList";
 
-export function useAppBootstrap() {
+export function useAppBootstrap(enabled = true) {
   const db = useSQLiteContext();
 
   const [isBootstrapping, setIsBootstrapping] = useState(true);
@@ -59,6 +59,10 @@ export function useAppBootstrap() {
   );
 
   useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
     let isMounted = true;
 
     async function bootstrap() {
@@ -132,6 +136,7 @@ export function useAppBootstrap() {
     };
   }, [
     db,
+    enabled,
     hydrateFavorites,
     hydratePreferences,
     hydratePlanSetup,

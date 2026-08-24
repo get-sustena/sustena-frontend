@@ -6,7 +6,7 @@ import {
   runWithSqliteRetry,
 } from "./sqliteGuards";
 
-const DATABASE_VERSION = 9;
+const DATABASE_VERSION = 10;
 let migrationQueue = Promise.resolve();
 
 export async function migrateDbIfNeeded(db: SQLiteDatabase) {
@@ -313,6 +313,21 @@ async function runMigrations(db: SQLiteDatabase) {
       );
 
       PRAGMA user_version = 9;
+    `);
+  }
+
+  const versionAfterCreatorDrafts =
+    versionAfterPlannerSettings < 9 ? 9 : versionAfterPlannerSettings;
+
+  if (versionAfterCreatorDrafts < 10) {
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS account_data_snapshots (
+        user_id TEXT PRIMARY KEY NOT NULL,
+        snapshot_json TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      PRAGMA user_version = 10;
     `);
   }
 }

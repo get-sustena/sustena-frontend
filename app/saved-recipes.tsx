@@ -1,9 +1,3 @@
-// app/saved-recipes.tsx
-// Standalone saved-recipes grid, reached via the bookmark button on the
-// Recipes tab — mirrors the mockup's separate "saved-recipes" screen.
-// Reuses the same favorites data/removal logic as the Profile tab's Saved
-// Recipes section (see src/hooks/useFavoriteRecipes.ts).
-
 import { router } from "expo-router";
 import { FlatList, Pressable, StyleSheet, View } from "react-native";
 import { RecipeTile } from "../src/components/recipe/RecipeTile";
