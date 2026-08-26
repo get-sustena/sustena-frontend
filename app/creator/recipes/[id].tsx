@@ -33,6 +33,7 @@ import {
   useAuthoringVocabularyQuery,
   useMyRecipeQuery,
   usePublishRecipeMutation,
+  useSavePublishedRecipeEditMutation,
   useUpdateRecipeDraftMutation,
 } from "../../../src/hooks/api/useCreatorRecipes";
 import { useIngredientCatalogQuery } from "../../../src/hooks/api/useIngredients";
@@ -81,6 +82,7 @@ export default function RecipeEditorScreen() {
   const scrollRef = useRef<ScrollView>(null);
   const params = useLocalSearchParams<{ id: string; mode?: string }>();
   const recipeId = Array.isArray(params.id) ? params.id[0] : params.id;
+  const isPublishedEditMode = params.mode === "edit-published";
   const recipeQuery = useMyRecipeQuery(recipeId);
   const vocabularyQuery = useAuthoringVocabularyQuery();
   const ingredientCatalogQuery = useIngredientCatalogQuery();
@@ -89,6 +91,7 @@ export default function RecipeEditorScreen() {
     invalidateLibraries: false,
   });
   const publishMutation = usePublishRecipeMutation();
+  const savePublishedEditMutation = useSavePublishedRecipeEditMutation();
   const [state, setState] = useState<RecipeEditorState | null>(null);
   const [stage, setStage] = useState(1);
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
@@ -125,9 +128,11 @@ export default function RecipeEditorScreen() {
     let active = true;
 
     async function initialize() {
-      const cached = await getCachedCreatorRecipeDraft(db, initialRecipe.id).catch(
-        () => null
-      );
+      const cached = isPublishedEditMode
+        ? null
+        : await getCachedCreatorRecipeDraft(db, initialRecipe.id).catch(
+            () => null
+          );
       if (!active) return;
       const useCached = Boolean(
         cached && cached.syncStatus !== "synced"
@@ -158,13 +163,17 @@ export default function RecipeEditorScreen() {
     return () => {
       active = false;
     };
-  }, [db, recipe]);
+  }, [db, isPublishedEditMode, recipe]);
 
   useEffect(() => {
     stateRef.current = state;
     if (!state || !recipe || !initializedRef.current) return;
     const signature = stateSignature(state);
     if (signature === savedSignatureRef.current) return;
+
+    // A published recipe remains untouched until the creator explicitly
+    // chooses Save and exit or Publish.
+    if (isPublishedEditMode) return;
 
     if (!conflictRef.current) setSaveStatus("saving");
     const localTimer = setTimeout(() => {
@@ -181,14 +190,14 @@ export default function RecipeEditorScreen() {
     // The save helpers intentionally use refs so typing does not restart a save
     // that is already in flight.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [recipe, state]);
+  }, [isPublishedEditMode, recipe, state]);
 
   async function cacheState(
     value: RecipeEditorState,
     syncStatus: "synced" | "pending" | "conflict",
     lastError: string | null
   ) {
-    if (!recipeId) return;
+    if (!recipeId || isPublishedEditMode) return;
     await cacheCreatorRecipeDraft(db, {
       id: recipeId,
       revision: revisionRef.current,
@@ -307,12 +316,41 @@ export default function RecipeEditorScreen() {
 
   async function saveNow(notify = true) {
     if (!stateRef.current) return null;
+    if (isPublishedEditMode) {
+      if (!recipeId) return null;
+      setSaveStatus("saving");
+      try {
+        const saved = await savePublishedEditMutation.mutateAsync({
+          publishedRecipeId: recipeId,
+          payload: toRecipeDraftWriteRequest(
+            stateRef.current,
+            recipeQuery.data?.revision ?? null
+          ),
+        });
+        revisionRef.current = saved.revision;
+        savedSignatureRef.current = stateSignature(stateRef.current);
+        setSaveStatus("saved");
+        if (notify) showToast("Draft saved", "success");
+        return saved;
+      } catch (error) {
+        if (isRecipeConflict(error)) {
+          conflictRef.current = true;
+          setSaveStatus("conflict");
+          openConflictDialog();
+        } else {
+          setSaveStatus("saved");
+          showToast(getApiErrorMessage(error), "danger");
+        }
+        return null;
+      }
+    }
     await cacheState(stateRef.current, "pending", null).catch(() => undefined);
     return queueServerSave(stateRef.current, notify);
   }
 
   async function saveAndExit() {
-    await saveNow(false);
+    const saved = await saveNow(false);
+    if (isPublishedEditMode && !saved) return;
     queryClient.invalidateQueries({ queryKey: queryKeys.creatorRecipes.all });
     if (saveStatus === "device") {
       showToast("Draft saved on this device", "success");
@@ -363,13 +401,13 @@ export default function RecipeEditorScreen() {
     try {
       await publishMutation.mutateAsync({
         recipeId: saved.id,
-        revision: revisionRef.current,
+        revision: saved.revision,
       });
       await deleteCachedCreatorRecipeDraft(db, recipeId ?? "").catch(
         () => undefined
       );
       showToast(
-        currentRecipe.draftOfRecipeId
+        currentRecipe.draftOfRecipeId || isPublishedEditMode
           ? "Published recipe updated"
           : "Recipe published",
         "success"

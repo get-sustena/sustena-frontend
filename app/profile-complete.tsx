@@ -1,7 +1,19 @@
 import { router } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
-import { useState } from "react";
-import { Pressable, StyleSheet, TextInput, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
+import { ProfileQuestionSheet } from "../src/components/profile/complete/ProfileQuestionSheet";
+import {
+  EXPERIENCE_OPTIONS,
+  GENDER_OPTIONS,
+  HABIT_FREQ_OPTIONS,
+  HABIT_TIME_OPTIONS,
+  HABIT_WHO_OPTIONS,
+  HEARD_OPTIONS,
+  LIFESTYLE_OPTIONS,
+  PROFILE_QUESTION_META,
+  labelFor,
+  type ProfileQuestionField,
+} from "../src/components/profile/complete/profileQuestionOptions";
 import { AppText } from "../src/components/ui/AppText";
 import { Icon, IconName } from "../src/components/ui/Icon";
 import { Screen } from "../src/components/ui/Screen";
@@ -15,87 +27,6 @@ import { useProfileAnswersStore } from "../src/store/profileAnswersStore";
 import { closeSheet, openSheet, showToast } from "../src/store/uiStore";
 import { theme } from "../src/theme/theme";
 import { ProfileAnswers } from "../src/types/profileAnswers";
-
-const GENDER_OPTIONS = [
-  { value: "female", label: "Female" },
-  { value: "male", label: "Male" },
-  { value: "other", label: "Other" },
-  { value: "prefer_not_to_say", label: "Prefer not to say" },
-];
-
-const LIFESTYLE_OPTIONS = [
-  { value: "student", label: "Student" },
-  { value: "working_professional", label: "Working Professional" },
-  { value: "stay_at_home", label: "Stay-at-home" },
-  { value: "retired", label: "Retired" },
-  { value: "other", label: "Other" },
-];
-
-const REMOTE_FLEX_OPTIONS = [
-  { value: "remote", label: "Remote" },
-  { value: "hybrid", label: "Hybrid" },
-  { value: "on_site", label: "On-site" },
-];
-
-const EXPERIENCE_OPTIONS = [
-  { value: "beginner", label: "Beginner" },
-  { value: "intermediate", label: "Intermediate" },
-  { value: "advanced", label: "Advanced" },
-];
-
-const GOAL_OPTIONS = [
-  { value: "eat_healthier", label: "Eat healthier" },
-  { value: "save_money", label: "Save money" },
-  { value: "save_time", label: "Save time" },
-  { value: "learn_cuisines", label: "Learn new cuisines" },
-  { value: "reduce_waste", label: "Reduce food waste" },
-  { value: "meal_prep", label: "Meal prep better" },
-];
-
-const CHALLENGE_OPTIONS = [
-  { value: "time", label: "Time constraints" },
-  { value: "budget", label: "Budget" },
-  { value: "skills", label: "Cooking skills" },
-  { value: "motivation", label: "Motivation" },
-  { value: "picky_eaters", label: "Picky eaters" },
-  { value: "equipment", label: "Kitchen equipment" },
-];
-
-const HABIT_WHO_OPTIONS = [
-  { value: "just_me", label: "Just me" },
-  { value: "partner", label: "Me & partner" },
-  { value: "family", label: "My family" },
-  { value: "roommates", label: "Roommates" },
-];
-
-const HABIT_FREQ_OPTIONS = [
-  { value: "daily", label: "Daily" },
-  { value: "few_times_week", label: "Few times a week" },
-  { value: "weekly", label: "Weekly" },
-  { value: "rarely", label: "Rarely" },
-];
-
-const HABIT_TIME_OPTIONS = [
-  { value: "morning", label: "Morning" },
-  { value: "afternoon", label: "Afternoon" },
-  { value: "evening", label: "Evening" },
-  { value: "late_night", label: "Late night" },
-];
-
-const HEARD_OPTIONS = [
-  { value: "social_media", label: "Social media" },
-  { value: "friend_family", label: "Friend or family" },
-  { value: "app_store", label: "App store" },
-  { value: "search", label: "Search" },
-  { value: "other", label: "Other" },
-];
-
-function labelFor(
-  options: { value: string; label: string }[],
-  value: string | null
-) {
-  return options.find((option) => option.value === value)?.label;
-}
 
 export default function ProfileCompleteScreen() {
   const db = useSQLiteContext();
@@ -132,126 +63,19 @@ export default function ProfileCompleteScreen() {
     }
   }
 
-  function openTextSheet(opts: {
-    title: string;
-    placeholder: string;
-    field: "nickname";
-  }) {
+  function openQuestion(field: ProfileQuestionField) {
     openSheet(
-      <TextAnswerSheet
-        title={opts.title}
-        placeholder={opts.placeholder}
-        initialValue={answers[opts.field] ?? ""}
-        onSave={(value) => saveAnswers({ [opts.field]: value || null })}
-      />
-    );
-  }
-
-  function openSingleSelectSheet(opts: {
-    title: string;
-    options: { value: string; label: string }[];
-    field: keyof ProfileAnswers;
-  }) {
-    openSheet(
-      <SingleSelectSheet
-        title={opts.title}
-        options={opts.options}
-        value={answers[opts.field] as string | null}
-        onSelect={(value) => saveAnswers({ [opts.field]: value })}
-      />
-    );
-  }
-
-  function openMultiSelectSheet(opts: {
-    title: string;
-    options: { value: string; label: string }[];
-    field: "goals" | "challenges";
-  }) {
-    openSheet(
-      <MultiSelectSheet
-        title={opts.title}
-        options={opts.options}
-        values={answers[opts.field]}
-        onDone={(values) => saveAnswers({ [opts.field]: values })}
-      />
-    );
-  }
-
-  function openBirthdaySheet() {
-    openSheet(
-      <BirthdaySheet
-        month={answers.birthdayMonth}
-        day={answers.birthdayDay}
-        onSave={(month, day) =>
-          saveAnswers({ birthdayMonth: month, birthdayDay: day })
-        }
-      />
-    );
-  }
-
-  function openHeardSheet() {
-    openSheet(
-      <SingleSelectSheet
-        title="How did you hear about us?"
-        options={HEARD_OPTIONS}
-        value={answers.heard}
-        onSelect={(value) => {
-          if (value !== "other") {
-            saveAnswers({ heard: value, heardOther: null });
-            return;
-          }
-
-          openSheet(
-            <TextAnswerSheet
-              title="Tell us more"
-              placeholder="How did you hear about Sustena?"
-              initialValue={answers.heardOther ?? ""}
-              onSave={(text) => saveAnswers({ heard: value, heardOther: text })}
-            />
-          );
-        }}
-      />
-    );
-  }
-
-  function openLifestyleSheet() {
-    openSheet(
-      <SingleSelectSheet
-        title="What's your lifestyle?"
-        options={LIFESTYLE_OPTIONS}
-        value={answers.lifestyle}
-        onSelect={(value) => {
-          if (value !== "working_professional") {
-            saveAnswers({ lifestyle: value, remoteFlex: null });
-            return;
-          }
-
-          openSheet(
-            <SingleSelectSheet
-              title="Do you work remote?"
-              options={REMOTE_FLEX_OPTIONS}
-              value={answers.remoteFlex}
-              onSelect={(remoteFlex) =>
-                saveAnswers({ lifestyle: value, remoteFlex })
-              }
-            />
-          );
-        }}
+      <ProfileQuestionSheet
+        field={field}
+        answers={answers}
+        onSave={saveAnswers}
       />
     );
   }
 
   const birthdayLabel =
     answers.birthdayMonth && answers.birthdayDay
-      ? `${answers.birthdayMonth}/${answers.birthdayDay}`
-      : undefined;
-
-  const habitLabel =
-    answers.habitFreq && answers.habitTime
-      ? `${labelFor(HABIT_FREQ_OPTIONS, answers.habitFreq)}, ${labelFor(
-          HABIT_TIME_OPTIONS,
-          answers.habitTime
-        )}`
+      ? `${new Date(2000, answers.birthdayMonth - 1).toLocaleString("en", { month: "long" })} ${answers.birthdayDay}`
       : undefined;
 
   return (
@@ -284,135 +108,77 @@ export default function ProfileCompleteScreen() {
         <AppText style={styles.sectionTitle}>About You</AppText>
         <View style={styles.sectionCard}>
           <QuestionRow
-            icon="profile"
-            label="Nickname"
+            icon={PROFILE_QUESTION_META.nickname.icon}
+            label={PROFILE_QUESTION_META.nickname.row}
             value={answers.nickname ?? undefined}
-            onPress={() =>
-              openTextSheet({
-                title: "What should we call you?",
-                placeholder: "Your nickname",
-                field: "nickname",
-              })
-            }
+            onPress={() => openQuestion("nickname")}
           />
           <QuestionRow
-            icon="undecided"
-            label="Gender"
+            icon={PROFILE_QUESTION_META.gender.icon}
+            label={PROFILE_QUESTION_META.gender.row}
             value={labelFor(GENDER_OPTIONS, answers.gender)}
-            onPress={() =>
-              openSingleSelectSheet({
-                title: "What's your gender?",
-                options: GENDER_OPTIONS,
-                field: "gender",
-              })
-            }
+            onPress={() => openQuestion("gender")}
           />
           <QuestionRow
-            icon="timer"
-            label="Birthday"
+            icon={PROFILE_QUESTION_META.birthday.icon}
+            label={PROFILE_QUESTION_META.birthday.row}
             value={birthdayLabel}
-            onPress={openBirthdaySheet}
+            onPress={() => openQuestion("birthday")}
           />
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <AppText style={styles.sectionTitle}>Your Cooking Life</AppText>
+        <View style={styles.sectionCard}>
           <QuestionRow
-            icon="chefHat"
-            label="Lifestyle"
+            icon={PROFILE_QUESTION_META.lifestyle.icon}
+            label={PROFILE_QUESTION_META.lifestyle.row}
             value={labelFor(LIFESTYLE_OPTIONS, answers.lifestyle)}
-            onPress={openLifestyleSheet}
+            onPress={() => openQuestion("lifestyle")}
           />
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <AppText style={styles.sectionTitle}>In the Kitchen</AppText>
-        <View style={styles.sectionCard}>
           <QuestionRow
-            icon="star"
-            label="Cooking Experience"
+            icon={PROFILE_QUESTION_META.experience.icon}
+            label={PROFILE_QUESTION_META.experience.row}
             value={labelFor(EXPERIENCE_OPTIONS, answers.experience)}
-            onPress={() =>
-              openSingleSelectSheet({
-                title: "How experienced are you in the kitchen?",
-                options: EXPERIENCE_OPTIONS,
-                field: "experience",
-              })
-            }
+            onPress={() => openQuestion("experience")}
           />
           <QuestionRow
-            icon="discover"
-            label="Goals"
-            value={
-              answers.goals.length > 0
-                ? `${answers.goals.length} selected`
-                : undefined
-            }
-            onPress={() =>
-              openMultiSelectSheet({
-                title: "What are your goals?",
-                options: GOAL_OPTIONS,
-                field: "goals",
-              })
-            }
+            icon={PROFILE_QUESTION_META.habitFreq.icon}
+            label={PROFILE_QUESTION_META.habitFreq.row}
+            value={labelFor(HABIT_FREQ_OPTIONS, answers.habitFreq)}
+            onPress={() => openQuestion("habitFreq")}
           />
           <QuestionRow
-            icon="help"
-            label="Challenges"
-            value={
-              answers.challenges.length > 0
-                ? `${answers.challenges.length} selected`
-                : undefined
-            }
-            onPress={() =>
-              openMultiSelectSheet({
-                title: "What gets in your way?",
-                options: CHALLENGE_OPTIONS,
-                field: "challenges",
-              })
-            }
+            icon={PROFILE_QUESTION_META.habitWho.icon}
+            label={PROFILE_QUESTION_META.habitWho.row}
+            value={labelFor(HABIT_WHO_OPTIONS, answers.habitWho)}
+            onPress={() => openQuestion("habitWho")}
+          />
+          <QuestionRow
+            icon={PROFILE_QUESTION_META.habitTime.icon}
+            label={PROFILE_QUESTION_META.habitTime.row}
+            value={labelFor(HABIT_TIME_OPTIONS, answers.habitTime)}
+            onPress={() => openQuestion("habitTime")}
           />
         </View>
       </View>
 
       <View style={styles.section}>
-        <AppText style={styles.sectionTitle}>Cooking Habits</AppText>
+        <AppText style={styles.sectionTitle}>What You&apos;re Here For</AppText>
         <View style={styles.sectionCard}>
           <QuestionRow
-            icon="servings"
-            label="Who do you cook for?"
-            value={labelFor(HABIT_WHO_OPTIONS, answers.habitWho)}
-            onPress={() =>
-              openSingleSelectSheet({
-                title: "Who do you usually cook for?",
-                options: HABIT_WHO_OPTIONS,
-                field: "habitWho",
-              })
-            }
+            icon={PROFILE_QUESTION_META.goals.icon}
+            label={PROFILE_QUESTION_META.goals.row}
+            value={answers.goals.length > 0 ? `${answers.goals.length} ${answers.goals.length === 1 ? "goal" : "goals"}` : undefined}
+            onPress={() => openQuestion("goals")}
           />
           <QuestionRow
-            icon="timer"
-            label="When & how often"
-            value={habitLabel}
-            onPress={() =>
-              openSingleSelectSheet({
-                title: "How often do you cook?",
-                options: HABIT_FREQ_OPTIONS,
-                field: "habitFreq",
-              })
-            }
+            icon={PROFILE_QUESTION_META.challenges.icon}
+            label={PROFILE_QUESTION_META.challenges.row}
+            value={answers.challenges.length > 0 ? `${answers.challenges.length} selected` : undefined}
+            onPress={() => openQuestion("challenges")}
           />
-          {answers.habitFreq ? (
-            <QuestionRow
-              icon="timer"
-              label="Preferred time"
-              value={labelFor(HABIT_TIME_OPTIONS, answers.habitTime)}
-              onPress={() =>
-                openSingleSelectSheet({
-                  title: "When do you usually cook?",
-                  options: HABIT_TIME_OPTIONS,
-                  field: "habitTime",
-                })
-              }
-            />
-          ) : null}
         </View>
       </View>
 
@@ -420,14 +186,14 @@ export default function ProfileCompleteScreen() {
         <AppText style={styles.sectionTitle}>One Last Thing</AppText>
         <View style={styles.sectionCard}>
           <QuestionRow
-            icon="discover"
-            label="How did you hear about us?"
+            icon={PROFILE_QUESTION_META.heard.icon}
+            label={PROFILE_QUESTION_META.heard.row}
             value={
               answers.heard === "other" && answers.heardOther
                 ? answers.heardOther
                 : labelFor(HEARD_OPTIONS, answers.heard)
             }
-            onPress={openHeardSheet}
+            onPress={() => openQuestion("heard")}
           />
         </View>
       </View>
@@ -470,184 +236,6 @@ function QuestionRow({
         </View>
       )}
     </Pressable>
-  );
-}
-
-function TextAnswerSheet({
-  title,
-  placeholder,
-  initialValue,
-  onSave,
-}: {
-  title: string;
-  placeholder: string;
-  initialValue: string;
-  onSave: (value: string) => void;
-}) {
-  const [value, setValue] = useState(initialValue);
-
-  return (
-    <View style={styles.sheetContent}>
-      <AppText style={styles.sheetTitle}>{title}</AppText>
-
-      <TextInput
-        value={value}
-        onChangeText={setValue}
-        placeholder={placeholder}
-        placeholderTextColor={theme.colors.textDim}
-        style={styles.sheetInput}
-        autoFocus
-        returnKeyType="done"
-        onSubmitEditing={() => onSave(value)}
-      />
-
-      <Pressable
-        onPress={() => onSave(value)}
-        style={styles.sheetPrimaryButton}
-      >
-        <AppText style={styles.sheetPrimaryButtonText}>Save</AppText>
-      </Pressable>
-    </View>
-  );
-}
-
-function SingleSelectSheet({
-  title,
-  options,
-  value,
-  onSelect,
-}: {
-  title: string;
-  options: { value: string; label: string }[];
-  value: string | null;
-  onSelect: (value: string) => void;
-}) {
-  return (
-    <View style={styles.sheetContent}>
-      <AppText style={styles.sheetTitle}>{title}</AppText>
-
-      <View style={styles.chipRow}>
-        {options.map((option) => {
-          const isSelected = option.value === value;
-
-          return (
-            <Pressable
-              key={option.value}
-              onPress={() => onSelect(option.value)}
-              style={[styles.chip, isSelected && styles.chipSelected]}
-            >
-              <AppText style={styles.chipLabel}>{option.label}</AppText>
-            </Pressable>
-          );
-        })}
-      </View>
-    </View>
-  );
-}
-
-function MultiSelectSheet({
-  title,
-  options,
-  values,
-  onDone,
-}: {
-  title: string;
-  options: { value: string; label: string }[];
-  values: string[];
-  onDone: (values: string[]) => void;
-}) {
-  const [selected, setSelected] = useState<string[]>(values);
-
-  function toggle(value: string) {
-    setSelected((current) =>
-      current.includes(value)
-        ? current.filter((item) => item !== value)
-        : [...current, value]
-    );
-  }
-
-  return (
-    <View style={styles.sheetContent}>
-      <AppText style={styles.sheetTitle}>{title}</AppText>
-
-      <View style={styles.chipRow}>
-        {options.map((option) => {
-          const isSelected = selected.includes(option.value);
-
-          return (
-            <Pressable
-              key={option.value}
-              onPress={() => toggle(option.value)}
-              style={[styles.chip, isSelected && styles.chipSelected]}
-            >
-              <AppText style={styles.chipLabel}>{option.label}</AppText>
-            </Pressable>
-          );
-        })}
-      </View>
-
-      <Pressable
-        onPress={() => onDone(selected)}
-        style={styles.sheetPrimaryButton}
-      >
-        <AppText style={styles.sheetPrimaryButtonText}>Done</AppText>
-      </Pressable>
-    </View>
-  );
-}
-
-function BirthdaySheet({
-  month,
-  day,
-  onSave,
-}: {
-  month: number | null;
-  day: number | null;
-  onSave: (month: number | null, day: number | null) => void;
-}) {
-  const [monthText, setMonthText] = useState(month ? String(month) : "");
-  const [dayText, setDayText] = useState(day ? String(day) : "");
-
-  function handleSave() {
-    const parsedMonth = Number(monthText);
-    const parsedDay = Number(dayText);
-
-    const validMonth =
-      parsedMonth >= 1 && parsedMonth <= 12 ? parsedMonth : null;
-    const validDay = parsedDay >= 1 && parsedDay <= 31 ? parsedDay : null;
-
-    onSave(validMonth, validDay);
-  }
-
-  return (
-    <View style={styles.sheetContent}>
-      <AppText style={styles.sheetTitle}>When&apos;s your birthday?</AppText>
-
-      <View style={styles.birthdayRow}>
-        <TextInput
-          value={monthText}
-          onChangeText={setMonthText}
-          placeholder="MM"
-          placeholderTextColor={theme.colors.textDim}
-          keyboardType="number-pad"
-          maxLength={2}
-          style={[styles.sheetInput, styles.birthdayInput]}
-        />
-        <TextInput
-          value={dayText}
-          onChangeText={setDayText}
-          placeholder="DD"
-          placeholderTextColor={theme.colors.textDim}
-          keyboardType="number-pad"
-          maxLength={2}
-          style={[styles.sheetInput, styles.birthdayInput]}
-        />
-      </View>
-
-      <Pressable onPress={handleSave} style={styles.sheetPrimaryButton}>
-        <AppText style={styles.sheetPrimaryButtonText}>Save</AppText>
-      </Pressable>
-    </View>
   );
 }
 
@@ -746,7 +334,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   sectionCard: {
-    // Rows carry their own bottom border — no group-level card chrome,
+    // Rows carry their own bottom border, with no group-level card chrome,
     // matching the mockup's flat row-list pattern.
   },
   row: {
@@ -795,69 +383,5 @@ const styles = StyleSheet.create({
     fontFamily: theme.fontFamily.bodyBold,
     fontSize: 13,
     color: theme.colors.textMuted,
-  },
-  sheetContent: {
-    paddingBottom: theme.spacing.xl,
-    gap: theme.spacing.sm,
-  },
-  sheetTitle: {
-    fontFamily: theme.fontFamily.display,
-    fontSize: 19,
-    color: theme.colors.navy,
-    marginBottom: theme.spacing.sm,
-  },
-  sheetInput: {
-    minHeight: 50,
-    borderRadius: theme.radius.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.card2,
-    paddingHorizontal: theme.spacing.lg,
-    fontFamily: theme.fontFamily.body,
-    fontSize: 15,
-    color: theme.colors.text,
-    marginBottom: theme.spacing.sm,
-  },
-  sheetPrimaryButton: {
-    minHeight: 54,
-    borderRadius: 999,
-    backgroundColor: theme.colors.navy,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: theme.spacing.sm,
-  },
-  sheetPrimaryButtonText: {
-    fontFamily: theme.fontFamily.bodyBold,
-    fontSize: 15.5,
-    color: theme.colors.onDark,
-  },
-  chipRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  chip: {
-    paddingHorizontal: 18,
-    paddingVertical: 11,
-    borderRadius: 999,
-    borderWidth: 1.5,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.card,
-  },
-  chipSelected: {
-    borderColor: theme.colors.navy,
-    backgroundColor: theme.colors.greenDim,
-  },
-  chipLabel: {
-    fontFamily: theme.fontFamily.bodySemiBold,
-    fontSize: 13.5,
-    color: theme.colors.text,
-  },
-  birthdayRow: {
-    flexDirection: "row",
-    gap: theme.spacing.sm,
-  },
-  birthdayInput: {
-    flex: 1,
   },
 });

@@ -36,7 +36,18 @@ export function ReportCreatorSheet({ creatorId }: { creatorId: string }) {
       <AppText style={styles.title}>Report this profile?</AppText>
       {REASONS.map((option) => {
         const selected = reason === option.value;
-        return <Pressable key={option.value} onPress={() => setReason(option.value)} style={styles.reason}><View style={[styles.radio, selected && styles.radioSelected]} /> <AppText style={styles.reasonText}>{option.label}</AppText></Pressable>;
+        return (
+          <Pressable
+            key={option.value}
+            onPress={() => setReason(option.value)}
+            style={styles.reason}
+          >
+            <View
+              style={[styles.radio, selected && styles.radioSelected]}
+            />
+            <AppText style={styles.reasonText}>{option.label}</AppText>
+          </Pressable>
+        );
       })}
       <TextInput value={notes} onChangeText={setNotes} multiline placeholder="Tell us more (optional)" placeholderTextColor="#8a9187" style={styles.notes} />
       <View style={styles.actions}>

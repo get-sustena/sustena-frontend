@@ -41,21 +41,15 @@ export function RecipeTile({ recipe, onPress }: Props) {
           ) : null}
         </View>
 
-        {recipe.creator || recipe.ratingCount ? (
+        {recipe.ratingCount ? (
           <View style={styles.communityRow}>
-            {recipe.creator ? (
-              <AppText numberOfLines={1} style={styles.creator}>
-                by {recipe.creator.displayName}
+            <View style={styles.communitySpacer} />
+            <View style={styles.rating}>
+              <AppText style={styles.ratingStar}>★</AppText>
+              <AppText style={styles.ratingText}>
+                {recipe.averageRating?.toFixed(1)}
               </AppText>
-            ) : <View style={styles.communitySpacer} />}
-            {recipe.ratingCount ? (
-              <View style={styles.rating}>
-                <AppText style={styles.ratingStar}>★</AppText>
-                <AppText style={styles.ratingText}>
-                  {recipe.averageRating?.toFixed(1)}
-                </AppText>
-              </View>
-            ) : null}
+            </View>
           </View>
         ) : null}
       </View>
@@ -112,12 +106,6 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   communitySpacer: { flex: 1 },
-  creator: {
-    flex: 1,
-    fontFamily: theme.fontFamily.bodyMedium,
-    fontSize: 10.5,
-    color: theme.colors.textMuted,
-  },
   rating: {
     flexDirection: "row",
     alignItems: "center",

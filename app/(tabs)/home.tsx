@@ -29,7 +29,9 @@ import { RecipeCard } from "../../src/components/recipe/RecipeCard";
 import { AppText } from "../../src/components/ui/AppText";
 import { Icon } from "../../src/components/ui/Icon";
 import { useRecipesWithLocalFallback } from "../../src/hooks/api/useRecipes";
+import { useProfileAnswersQuery } from "../../src/hooks/api/useProfileAnswers";
 import { apiRecipeToLocalRecipe } from "../../src/lib/api/adapters";
+import { finiteTimeCap } from "../../src/lib/plannerQuickSetup";
 import { useAuthStore } from "../../src/store/authStore";
 import { useProfileAnswersStore } from "../../src/store/profileAnswersStore";
 import { showToast } from "../../src/store/uiStore";
@@ -62,11 +64,25 @@ function openPlanner(tab: "budget" | "kitchen", category?: string) {
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const nickname = useProfileAnswersStore((state) => state.nickname);
+  const habitTime = useProfileAnswersStore((state) => state.habitTime);
+  const experience = useProfileAnswersStore((state) => state.experience);
   const firstName = useAuthStore((state) => state.user?.firstName);
-  const recipesQuery = useRecipesWithLocalFallback({ page: 1, pageSize: 24 });
+  useProfileAnswersQuery();
+  const preferredTimeCap = finiteTimeCap(habitTime);
+  const preferredDifficulty: "beginner" | "intermediate" | undefined =
+    experience === "beginner" || experience === "intermediate"
+      ? experience
+      : undefined;
+  const recipesQuery = useRecipesWithLocalFallback({
+    preferredMaxTotalTimeMinutes: preferredTimeCap,
+    preferredDifficulty,
+    page: 1,
+    pageSize: 24,
+  });
   const quickRecipesQuery = useRecipesWithLocalFallback({
     quickAndEasy: true,
-    maxTotalTimeMinutes: 45,
+    maxTotalTimeMinutes: Math.min(preferredTimeCap ?? 45, 45),
+    preferredDifficulty,
     page: 1,
     pageSize: 12,
   });

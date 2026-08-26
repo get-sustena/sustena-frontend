@@ -11,7 +11,9 @@ const WEB_GLOBAL_STYLES = `
   [role="textbox"]:focus,
   [role="textbox"]:focus-visible,
   [contenteditable="true"]:focus,
-  [contenteditable="true"]:focus-visible {
+  [contenteditable="true"]:focus-visible,
+  [tabindex]:focus,
+  [tabindex]:focus-visible {
     outline: 0 !important;
     outline-color: transparent !important;
     outline-offset: 0 !important;

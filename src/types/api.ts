@@ -781,6 +781,8 @@ export interface RecipeSearchParams {
   difficulty?: Difficulty;
   quickAndEasy?: boolean;
   maxTotalTimeMinutes?: number;
+  preferredMaxTotalTimeMinutes?: number;
+  preferredDifficulty?: "beginner" | "intermediate" | "advanced" | "pro";
   page?: number;
   pageSize?: number;
 }
@@ -833,6 +835,7 @@ export interface BudgetPlannerRequest {
 
 export interface KitchenPlannerRequest {
   ingredientIds: string[];
+  maxTotalTimeMinutes?: number;
 }
 
 export interface TimetablePlannerRequest {

@@ -30,6 +30,12 @@ import {
 } from "../../lib/api/errors";
 import { recipesApi } from "../../lib/api";
 import { formatNaira } from "../../lib/formatters";
+import {
+  SERVINGS_BY_HABIT_WHO,
+  TIME_CAP_BY_HABIT,
+  VALID_HABIT_TIME,
+  VALID_HABIT_WHO,
+} from "../../lib/plannerQuickSetup";
 import { scaleAmountText } from "../../lib/scaling";
 import {
   generateShoppingListItemsFromRecipe,
@@ -56,21 +62,6 @@ import {
 } from "./QuickPlanSetupModal";
 
 const BUDGET_PRESETS = [3000, 5000, 10000, 15000];
-const VALID_HABIT_WHO = new Set(["me", "partner", "family", "friends"]);
-const VALID_HABIT_TIME = new Set(["15", "15-30", "30-45", "45-60", "60+"]);
-const SERVINGS_BY_HABIT_WHO: Record<string, number> = {
-  me: 1,
-  partner: 2,
-  family: 3,
-  friends: 3,
-};
-const TIME_CAP_BY_HABIT: Record<string, number> = {
-  "15": 15,
-  "15-30": 30,
-  "30-45": 45,
-  "45-60": 60,
-  "60+": Number.POSITIVE_INFINITY,
-};
 const MEAL_SLOT_ORDER: MealSlot[] = ["breakfast", "lunch", "dinner", "snack"];
 
 const MEAL_SLOT_META = {
@@ -496,7 +487,7 @@ export function BudgetPlannerPane() {
         <EmptyState
           iconName="plan"
           title="No meals found"
-          message="No meals matched this setup and total plan budget."
+          message="Try another budget or setup."
         />
       ) : (
         <View style={styles.results}>

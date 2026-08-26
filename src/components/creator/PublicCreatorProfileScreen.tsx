@@ -1,7 +1,7 @@
 import { Image } from "expo-image";
 import { Href, router, useLocalSearchParams } from "expo-router";
 import { useMemo, useState } from "react";
-import { LayoutChangeEvent, Pressable, ScrollView, Share, StyleSheet, View } from "react-native";
+import { Pressable, ScrollView, Share, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuthoringVocabularyQuery } from "../../hooks/api/useCreatorRecipes";
 import { useCreatorProfileQuery, useCreatorRecipesQuery, useSaveCreatorMutation } from "../../hooks/api/useCreators";
@@ -10,7 +10,9 @@ import { closeSheet, openSheet, showToast } from "../../store/uiStore";
 import { theme } from "../../theme/theme";
 import { AppText } from "../ui/AppText";
 import { Icon } from "../ui/Icon";
+import { ProgressLoader } from "../ui/ProgressLoader";
 import { CreatorCollectionsStrip, type CreatorRecipeCollection } from "./CreatorCollectionsStrip";
+import { CreatorRecipeToolbar } from "./CreatorRecipeToolbar";
 import { PublicCreatorRecipeTile } from "./PublicCreatorRecipeTile";
 import { ReportCreatorSheet } from "./ReportCreatorSheet";
 import { SortCreatorRecipesSheet, type CreatorRecipeSort } from "./SortCreatorRecipesSheet";
@@ -21,7 +23,6 @@ export function PublicCreatorProfileScreen() {
   const handle = Array.isArray(params.handle) ? params.handle[0] : params.handle;
   const [sort, setSort] = useState<CreatorRecipeSort>("newest");
   const [collection, setCollection] = useState("");
-  const [gridWidth, setGridWidth] = useState(0);
   const [scrolled, setScrolled] = useState(false);
   const profileQuery = useCreatorProfileQuery(handle);
   const recipesQuery = useCreatorRecipesQuery(handle, { sort, page: 1, pageSize: 500 });
@@ -64,9 +65,13 @@ export function PublicCreatorProfileScreen() {
     closeSheet();
   }
 
-  if (!profile) return <View style={styles.screen} />;
-  const tileWidth = Math.max(0, (gridWidth - 4) / 3);
-
+  if (!profile) {
+    return (
+      <View style={[styles.screen, styles.loading]}>
+        {profileQuery.isLoading ? <ProgressLoader variant="screen" /> : null}
+      </View>
+    );
+  }
   return (
     <View style={styles.screen}>
       <View style={[styles.bar, scrolled && styles.barScrolled, { paddingTop: insets.top + 8 }]}>
@@ -103,14 +108,27 @@ export function PublicCreatorProfileScreen() {
 
         {collections.length > 1 ? <CreatorCollectionsStrip collections={collections} selected={collection} onSelect={(value) => setCollection((current) => current === value ? "" : value)} /> : null}
 
-        {recipes.length ? <View style={styles.sticky}>
-          <View style={styles.allTitleRow}><AppText style={styles.allTitle}>{collection ? categoryLabels.get(collection) ?? collection : "All recipes"}</AppText><AppText style={styles.allCount}>{shown.length}</AppText></View>
-          {shown.length >= 4 ? <Pressable accessibilityLabel="Sort recipes" onPress={() => openSheet(<SortCreatorRecipesSheet value={sort} onSelect={selectSort} />)} style={styles.sortButton}><AppText style={styles.sortText}>{sort === "top_rated" ? "Top rated" : "Newest"}</AppText><Icon name="chevronDown" size={13} color="#8a9187" /></Pressable> : null}
-        </View> : null}
+        {recipes.length ? (
+          <CreatorRecipeToolbar
+            title={collection ? categoryLabels.get(collection) ?? collection : "All recipes"}
+            count={shown.length}
+            sort={sort}
+            showSort={shown.length >= 4}
+            onOpenSort={() => openSheet(<SortCreatorRecipesSheet value={sort} onSelect={selectSort} />)}
+          />
+        ) : null}
 
-        {shown.length ? (
-          <View onLayout={(event: LayoutChangeEvent) => setGridWidth(event.nativeEvent.layout.width)} style={styles.grid}>
-            {tileWidth ? shown.map((recipe) => <PublicCreatorRecipeTile key={recipe.id} recipe={recipe} width={tileWidth} onPress={() => router.push({ pathname: "/recipes/[id]", params: { id: recipe.id } })} />) : null}
+        {recipesQuery.isLoading ? (
+          <View style={styles.recipeLoading}>
+            <ProgressLoader />
+          </View>
+        ) : shown.length ? (
+          <View style={styles.grid}>
+            {shown.map((recipe) => (
+              <View key={recipe.id} style={styles.gridItem}>
+                <PublicCreatorRecipeTile recipe={recipe} onPress={() => router.push({ pathname: "/recipes/[id]", params: { id: recipe.id } })} />
+              </View>
+            ))}
           </View>
         ) : (
           <View style={styles.empty}>
@@ -128,6 +146,7 @@ function initials(value: string) { return value.trim().split(/\s+/).filter(Boole
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#FBFCFA" },
+  loading: { alignItems: "center", justifyContent: "center" },
   bar: { paddingHorizontal: 10, paddingBottom: 8, flexDirection: "row", alignItems: "center", gap: 4, borderBottomWidth: 1, borderBottomColor: "transparent", backgroundColor: "#FBFCFA", zIndex: 4 },
   barScrolled: { borderBottomColor: "#E3EAD5" },
   barButton: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
@@ -154,13 +173,9 @@ const styles = StyleSheet.create({
   ownerButton: { borderColor: "#D8E3CA", backgroundColor: "#FFFFFF" },
   ownerButtonText: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 14.5, color: "#17291E" },
   shareButton: { width: 46, height: 46, borderRadius: 23, borderWidth: 1, borderColor: "#D8E3CA", backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
-  sticky: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 10, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10, backgroundColor: "#FBFCFA", zIndex: 2 },
-  allTitleRow: { flexDirection: "row", alignItems: "center", gap: 5 },
-  allTitle: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 15, color: "#17291E" },
-  allCount: { fontFamily: theme.fontFamily.monoBold, fontSize: 12, color: "#8a9187" },
-  sortButton: { minHeight: 38, paddingHorizontal: 13, flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 999, borderWidth: 1, borderColor: "#D8E3CA", backgroundColor: "#FFFFFF" },
-  sortText: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 12.5, color: "#17291E" },
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: 2 },
+  grid: { width: "100%", flexDirection: "row", flexWrap: "wrap" },
+  gridItem: { width: "33.333333%", padding: 1 },
+  recipeLoading: { minHeight: 180, alignItems: "center", justifyContent: "center" },
   empty: { alignItems: "center", paddingHorizontal: 24, paddingTop: 34 },
   emptyIcon: { width: 60, height: 60, marginBottom: 16, borderRadius: 20, backgroundColor: "#EEF2E7", alignItems: "center", justifyContent: "center" },
   emptyTitle: { marginBottom: 6, fontFamily: theme.fontFamily.display, fontSize: 18, textAlign: "center", color: "#17291E" },

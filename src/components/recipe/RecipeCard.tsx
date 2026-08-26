@@ -48,11 +48,6 @@ export function RecipeCard({ recipe, onPress }: Props) {
             <AppText style={styles.metaDot}>·</AppText>
             <AppText style={styles.meta}>{recipe.difficulty}</AppText>
           </View>
-          {recipe.creator ? (
-            <AppText numberOfLines={1} style={styles.creator}>
-              by {recipe.creator.displayName}
-            </AppText>
-          ) : null}
         </View>
       </RecipePhoto>
     </Pressable>
@@ -109,12 +104,5 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     color: theme.colors.onDark,
     opacity: 0.6,
-  },
-  creator: {
-    marginTop: 5,
-    fontFamily: theme.fontFamily.bodyMedium,
-    fontSize: 10.5,
-    color: theme.colors.onDark,
-    opacity: 0.82,
   },
 });

@@ -98,6 +98,35 @@ export function useCreateRecipeEditDraftMutation() {
   });
 }
 
+export function useSavePublishedRecipeEditMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      publishedRecipeId,
+      payload,
+    }: {
+      publishedRecipeId: string;
+      payload: RecipeDraftWriteRequest;
+    }) => {
+      const draft = await creatorRecipesApi.createRecipeEditDraft(
+        publishedRecipeId
+      );
+      return creatorRecipesApi.updateRecipeDraft(draft.id, {
+        ...payload,
+        revision: draft.revision,
+      });
+    },
+    onSuccess: (recipe) => {
+      queryClient.setQueryData(
+        queryKeys.creatorRecipes.detail(recipe.id),
+        recipe
+      );
+      invalidateRecipeLibraries(queryClient);
+    },
+  });
+}
+
 export function usePublishRecipeMutation() {
   const queryClient = useQueryClient();
 

@@ -1,6 +1,6 @@
-import { Href, router } from "expo-router";
+import { router } from "expo-router";
 import { Pressable, StyleSheet, View } from "react-native";
-import { useCreateRecipeEditDraftMutation, useDeleteRecipeMutation, useDuplicateRecipeMutation } from "../../hooks/api/useCreatorRecipes";
+import { useDeleteRecipeMutation, useDuplicateRecipeMutation } from "../../hooks/api/useCreatorRecipes";
 import { getApiErrorMessage } from "../../lib/api/errors";
 import { closeSheet, openSheet, showToast } from "../../store/uiStore";
 import { theme } from "../../theme/theme";
@@ -11,7 +11,6 @@ import { RenameDraftSheet } from "./RenameDraftSheet";
 
 export function RecipeActionsSheet({ recipe }: { recipe: RecipeDraft }) {
   const duplicateMutation = useDuplicateRecipeMutation();
-  const editMutation = useCreateRecipeEditDraftMutation();
   const deleteMutation = useDeleteRecipeMutation();
   const isPublished = recipe.publicationStatus === "published";
 
@@ -25,14 +24,12 @@ export function RecipeActionsSheet({ recipe }: { recipe: RecipeDraft }) {
     }
   }
 
-  async function editPublished() {
-    try {
-      const draft = await editMutation.mutateAsync(recipe.id);
-      closeSheet();
-      router.push(`/creator/recipes/${encodeURIComponent(draft.id)}` as Href);
-    } catch (error) {
-      showToast(getApiErrorMessage(error), "danger");
-    }
+  function editPublished() {
+    closeSheet();
+    router.push({
+      pathname: "/creator/recipes/[id]",
+      params: { id: recipe.id, mode: "edit-published" },
+    });
   }
 
   function confirmDelete() {

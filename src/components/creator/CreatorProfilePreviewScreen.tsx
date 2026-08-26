@@ -1,7 +1,7 @@
 import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
-import { LayoutChangeEvent, Pressable, ScrollView, Share, StyleSheet, View } from "react-native";
+import { Pressable, ScrollView, Share, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuthoringVocabularyQuery } from "../../hooks/api/useCreatorRecipes";
 import { useCreatorRecipesQuery, useMyCreatorProfileQuery } from "../../hooks/api/useCreators";
@@ -11,6 +11,7 @@ import { theme } from "../../theme/theme";
 import { AppText } from "../ui/AppText";
 import { Icon } from "../ui/Icon";
 import { CreatorCollectionsStrip, type CreatorRecipeCollection } from "./CreatorCollectionsStrip";
+import { CreatorRecipeToolbar } from "./CreatorRecipeToolbar";
 import { PublicCreatorRecipeTile } from "./PublicCreatorRecipeTile";
 import { ReportCreatorSheet } from "./ReportCreatorSheet";
 import { SortCreatorRecipesSheet, type CreatorRecipeSort } from "./SortCreatorRecipesSheet";
@@ -21,7 +22,6 @@ export function CreatorProfilePreviewScreen() {
   const currentProfile = useMyCreatorProfileQuery().data;
   const [sort, setSort] = useState<CreatorRecipeSort>("newest");
   const [collection, setCollection] = useState("");
-  const [gridWidth, setGridWidth] = useState(0);
   const [scrolled, setScrolled] = useState(false);
   const recipeItems = useCreatorRecipesQuery(currentProfile?.handle, { sort, page: 1, pageSize: 500 }).data?.items;
   const recipes = useMemo(() => recipeItems ?? [], [recipeItems]);
@@ -33,7 +33,6 @@ export function CreatorProfilePreviewScreen() {
     return { id: category.id, label: category.label, count: items.length, coverUrl: items[0]?.imageUrl ?? null };
   }).filter((item) => item.count > 0), [recipes, vocabulary?.categories]);
   const shown = collection ? recipes.filter((recipe) => (recipe.categories ?? []).includes(collection)) : recipes;
-  const tileWidth = Math.max(0, (gridWidth - 4) / 3);
 
   async function shareProfile() {
     const url = `https://sustena.app/@${draft.handle}`;
@@ -69,12 +68,17 @@ export function CreatorProfilePreviewScreen() {
 
         {collections.length > 1 ? <CreatorCollectionsStrip collections={collections} selected={collection} onSelect={(value) => setCollection((current) => current === value ? "" : value)} /> : null}
 
-        {recipes.length ? <View style={styles.sticky}>
-          <View style={styles.allTitleRow}><AppText style={styles.allTitle}>{collection ? categoryLabels.get(collection) ?? collection : "All recipes"}</AppText><AppText style={styles.allCount}>{shown.length}</AppText></View>
-          {shown.length >= 4 ? <Pressable accessibilityLabel="Sort recipes" onPress={() => openSheet(<SortCreatorRecipesSheet value={sort} onSelect={(value) => { setSort(value); closeSheet(); }} />)} style={styles.sortButton}><AppText style={styles.sortText}>{sort === "top_rated" ? "Top rated" : "Newest"}</AppText><Icon name="chevronDown" size={13} color="#8a9187" /></Pressable> : null}
-        </View> : null}
+        {recipes.length ? (
+          <CreatorRecipeToolbar
+            title={collection ? categoryLabels.get(collection) ?? collection : "All recipes"}
+            count={shown.length}
+            sort={sort}
+            showSort={shown.length >= 4}
+            onOpenSort={() => openSheet(<SortCreatorRecipesSheet value={sort} onSelect={(value) => { setSort(value); closeSheet(); }} />)}
+          />
+        ) : null}
 
-        {recipes.length ? <View onLayout={(event: LayoutChangeEvent) => setGridWidth(event.nativeEvent.layout.width)} style={styles.grid}>{tileWidth ? shown.map((recipe) => <PublicCreatorRecipeTile key={recipe.id} recipe={recipe} width={tileWidth} onPress={() => router.push({ pathname: "/recipes/[id]", params: { id: recipe.id } })} />) : null}</View> : (
+        {recipes.length ? <View style={styles.grid}>{shown.map((recipe) => <View key={recipe.id} style={styles.gridItem}><PublicCreatorRecipeTile recipe={recipe} onPress={() => router.push({ pathname: "/recipes/[id]", params: { id: recipe.id } })} /></View>)}</View> : (
           <View style={styles.empty}><View style={styles.emptyIcon}><Icon name="chefHat" size={25} color="#1f7048" /></View><AppText style={styles.emptyTitle}>No recipes yet</AppText><AppText style={styles.emptyCopy}>When {draft.displayName || "this creator"} publishes a recipe, it will show up here.</AppText></View>
         )}
       </ScrollView>
@@ -105,13 +109,8 @@ const styles = StyleSheet.create({
   previewNotice: { flex: 1, minHeight: 46, alignItems: "center", justifyContent: "center", borderRadius: 999, borderWidth: 1, borderColor: "#E3EAD5", backgroundColor: "#F3F6EC" },
   previewNoticeText: { fontSize: 13.5, color: "#5C6459" },
   shareButton: { width: 46, height: 46, borderRadius: 23, borderWidth: 1, borderColor: "#D8E3CA", backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
-  sticky: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 10, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10, backgroundColor: "#FBFCFA", zIndex: 2 },
-  allTitleRow: { flexDirection: "row", alignItems: "center", gap: 5 },
-  allTitle: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 15, color: "#17291E" },
-  allCount: { fontFamily: theme.fontFamily.monoBold, fontSize: 12, color: "#8a9187" },
-  sortButton: { minHeight: 38, paddingHorizontal: 13, flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 999, borderWidth: 1, borderColor: "#D8E3CA", backgroundColor: "#FFFFFF" },
-  sortText: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 12.5, color: "#17291E" },
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: 2 },
+  grid: { width: "100%", flexDirection: "row", flexWrap: "wrap" },
+  gridItem: { width: "33.333333%", padding: 1 },
   empty: { alignItems: "center", paddingHorizontal: 24, paddingTop: 34 },
   emptyIcon: { width: 60, height: 60, marginBottom: 16, borderRadius: 20, backgroundColor: "#EEF2E7", alignItems: "center", justifyContent: "center" },
   emptyTitle: { marginBottom: 6, fontFamily: theme.fontFamily.display, fontSize: 18, textAlign: "center", color: "#17291E" },

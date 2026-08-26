@@ -12,8 +12,14 @@ import { SearchInput } from "../../src/components/ui/SearchInput";
 import { RECIPE_FILTERS } from "../../src/data/recipeFilters";
 import type { Recipe } from "../../src/data/recipes";
 import { useRecipesWithLocalFallback } from "../../src/hooks/api/useRecipes";
+import {
+  useProfileAnswersQuery,
+  useUpdateProfileAnswersMutation,
+} from "../../src/hooks/api/useProfileAnswers";
 import { apiRecipeToLocalRecipe } from "../../src/lib/api/adapters";
 import { getApiErrorMessage } from "../../src/lib/api/errors";
+import { finiteTimeCap } from "../../src/lib/plannerQuickSetup";
+import { useProfileAnswersStore } from "../../src/store/profileAnswersStore";
 import { theme } from "../../src/theme/theme";
 
 const PAGE_SIZE = 30;
@@ -21,6 +27,7 @@ const EXPERIENCE_OPTIONS = [
   { value: "beginner", label: "Beginner", level: 1 },
   { value: "intermediate", label: "Intermediate", level: 2 },
   { value: "advanced", label: "Advanced", level: 3 },
+  { value: "pro", label: "Professional Chef", level: 4 },
 ] as const;
 
 export default function RecipesScreen() {
@@ -31,6 +38,15 @@ export default function RecipesScreen() {
   const [page, setPage] = useState(1);
   const [recipePages, setRecipePages] = useState<Record<number, Recipe[]>>({});
   const [experienceCardDismissed, setExperienceCardDismissed] = useState(false);
+  const experience = useProfileAnswersStore((state) => state.experience);
+  const habitTime = useProfileAnswersStore((state) => state.habitTime);
+  const setProfileAnswers = useProfileAnswersStore((state) => state.setProfileAnswers);
+  const updateProfileAnswers = useUpdateProfileAnswersMutation();
+  useProfileAnswersQuery();
+  const preferredDifficulty: "beginner" | "intermediate" | undefined =
+    experience === "beginner" || experience === "intermediate"
+      ? experience
+      : undefined;
   const recipeParams = useMemo(
     () => ({
       search: search.trim() || undefined,
@@ -45,10 +61,12 @@ export default function RecipesScreen() {
       maxCost: activeFilter === "budget" ? 5000 : undefined,
       quickAndEasy: activeFilter === "quick" ? true : undefined,
       maxTotalTimeMinutes: activeFilter === "quick" ? 45 : undefined,
+      preferredMaxTotalTimeMinutes: finiteTimeCap(habitTime),
+      preferredDifficulty,
       page,
       pageSize: PAGE_SIZE,
     }),
-    [activeFilter, page, search]
+    [activeFilter, habitTime, page, preferredDifficulty, search]
   );
   const recipesQuery = useRecipesWithLocalFallback(recipeParams);
   const storedRecipes = useMemo(
@@ -74,7 +92,7 @@ export default function RecipesScreen() {
     setPage(1);
     setRecipePages({});
     listRef.current?.scrollToOffset({ offset: 0, animated: false });
-  }, [activeFilter, search]);
+  }, [activeFilter, habitTime, preferredDifficulty, search]);
 
   useEffect(() => {
     if (!recipesQuery.data) {
@@ -148,10 +166,14 @@ export default function RecipesScreen() {
               </ScrollView>
             </View>
 
-            {!experienceCardDismissed ? (
+            {!experience && !experienceCardDismissed ? (
               <ExperienceCard
                 onDismiss={() => setExperienceCardDismissed(true)}
-                onSelect={() => setExperienceCardDismissed(true)}
+                onSelect={(value) => {
+                  setProfileAnswers({ experience: value });
+                  updateProfileAnswers.mutate({ experience: value });
+                  setExperienceCardDismissed(true);
+                }}
               />
             ) : null}
           </View>
@@ -228,7 +250,7 @@ function ExperienceCard({
   onSelect,
 }: {
   onDismiss: () => void;
-  onSelect: () => void;
+  onSelect: (value: string) => void;
 }) {
   return (
     <View style={styles.experienceWrap}>
@@ -254,7 +276,7 @@ function ExperienceCard({
           {EXPERIENCE_OPTIONS.map((option) => (
             <Pressable
               key={option.value}
-              onPress={onSelect}
+              onPress={() => onSelect(option.value)}
               style={({ pressed }) => [
                 styles.experienceOption,
                 pressed && styles.pressed,
@@ -264,7 +286,7 @@ function ExperienceCard({
                 {option.label}
               </AppText>
               <View style={styles.experienceDots}>
-                {[1, 2, 3].map((dot) => (
+                {[1, 2, 3, 4].map((dot) => (
                   <View
                     key={dot}
                     style={[

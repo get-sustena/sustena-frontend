@@ -19,15 +19,17 @@ type Props = {
   visible: boolean;
   isFirstPlan?: boolean;
   initialValue: QuickPlanSetupValue;
+  actionLabel?: string;
   onClose: () => void;
   onComplete: (value: QuickPlanSetupValue) => void;
 };
 
 const COOKING_FOR_OPTIONS = [
   { value: "me", label: "Just me" },
-  { value: "partner", label: "Partner and me" },
-  { value: "family", label: "Family" },
-  { value: "friends", label: "Friends" },
+  { value: "partner", label: "My partner and me" },
+  { value: "family", label: "My family" },
+  { value: "friends", label: "Friends, sometimes" },
+  { value: "varies", label: "It varies week to week" },
 ] as const;
 
 const COOK_TIME_OPTIONS = [
@@ -42,6 +44,7 @@ export function QuickPlanSetupModal({
   visible,
   isFirstPlan = true,
   initialValue,
+  actionLabel = "Create My Meal Plan",
   onClose,
   onComplete,
 }: Props) {
@@ -127,9 +130,7 @@ export function QuickPlanSetupModal({
               ]}
               accessibilityRole="button"
             >
-              <AppText style={styles.continueButtonText}>
-                Create My Meal Plan
-              </AppText>
+              <AppText style={styles.continueButtonText}>{actionLabel}</AppText>
             </Pressable>
           </ScrollView>
         </View>

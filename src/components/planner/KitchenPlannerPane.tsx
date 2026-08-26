@@ -3,9 +3,19 @@ import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useIngredientCatalogQuery } from "../../hooks/api/useIngredients";
 import { useKitchenPlannerMutation } from "../../hooks/api/usePlanner";
+import {
+  useProfileAnswersQuery,
+  useUpdateProfileAnswersMutation,
+} from "../../hooks/api/useProfileAnswers";
 import { apiRecipeToLocalRecipe } from "../../lib/api/adapters";
 import { getApiErrorMessage } from "../../lib/api/errors";
 import { formatNaira } from "../../lib/formatters";
+import {
+  TIME_CAP_BY_HABIT,
+  VALID_HABIT_TIME,
+  VALID_HABIT_WHO,
+} from "../../lib/plannerQuickSetup";
+import { useProfileAnswersStore } from "../../store/profileAnswersStore";
 import { theme } from "../../theme/theme";
 import type { Ingredient } from "../../types/api";
 import { RecipePhoto } from "../recipe/RecipePhoto";
@@ -15,6 +25,10 @@ import { FilterChip } from "../ui/FilterChip";
 import { Icon } from "../ui/Icon";
 import { ProgressLoader } from "../ui/ProgressLoader";
 import { SearchInput } from "../ui/SearchInput";
+import {
+  QuickPlanSetupModal,
+  QuickPlanSetupValue,
+} from "./QuickPlanSetupModal";
 
 const ALL_CATEGORY = "All";
 const KITCHEN_CATEGORIES = [
@@ -48,7 +62,20 @@ export function KitchenPlannerPane({ initialCategory }: Props) {
     []
   );
   const [hasSearched, setHasSearched] = useState(false);
+  const [isQuickSetupOpen, setIsQuickSetupOpen] = useState(false);
   const kitchenPlannerMutation = useKitchenPlannerMutation();
+  const updateProfileAnswersMutation = useUpdateProfileAnswersMutation();
+  const habitWho = useProfileAnswersStore((state) => state.habitWho);
+  const habitTime = useProfileAnswersStore((state) => state.habitTime);
+  const setProfileAnswers = useProfileAnswersStore((state) => state.setProfileAnswers);
+
+  useProfileAnswersQuery();
+
+  const hasSavedQuickSetup =
+    habitWho !== null &&
+    habitTime !== null &&
+    VALID_HABIT_WHO.has(habitWho) &&
+    VALID_HABIT_TIME.has(habitTime);
 
   const catalogQuery = useIngredientCatalogQuery();
   const catalog = catalogQuery.data ?? EMPTY_CATALOG;
@@ -140,6 +167,30 @@ export function KitchenPlannerPane({ initialCategory }: Props) {
 
     setHasSearched(false);
     kitchenPlannerMutation.reset();
+  }
+
+  function findMatches(setup: QuickPlanSetupValue) {
+    const timeCap = TIME_CAP_BY_HABIT[setup.habitTime] ?? Number.POSITIVE_INFINITY;
+    setHasSearched(true);
+    kitchenPlannerMutation.mutate({
+      ingredientIds: selectedIngredientIds,
+      ...(Number.isFinite(timeCap) ? { maxTotalTimeMinutes: timeCap } : {}),
+    });
+  }
+
+  function startFindingMatches() {
+    if (!hasSavedQuickSetup) {
+      setIsQuickSetupOpen(true);
+      return;
+    }
+    findMatches({ habitWho, habitTime });
+  }
+
+  function handleQuickSetupComplete(value: QuickPlanSetupValue) {
+    setProfileAnswers(value);
+    setIsQuickSetupOpen(false);
+    updateProfileAnswersMutation.mutate(value);
+    findMatches(value);
   }
 
   return (
@@ -248,12 +299,7 @@ export function KitchenPlannerPane({ initialCategory }: Props) {
           )}
 
           <Pressable
-            onPress={() => {
-              setHasSearched(true);
-              kitchenPlannerMutation.mutate({
-                ingredientIds: selectedIngredientIds,
-              });
-            }}
+            onPress={startFindingMatches}
             style={({ pressed }) => [
               styles.findButton,
               pressed && styles.pressed,
@@ -370,6 +416,18 @@ export function KitchenPlannerPane({ initialCategory }: Props) {
           )}
         </>
       )}
+
+      <QuickPlanSetupModal
+        visible={isQuickSetupOpen}
+        isFirstPlan={!hasSavedQuickSetup}
+        actionLabel="Find Matching Recipes"
+        initialValue={{
+          habitWho: habitWho !== null && VALID_HABIT_WHO.has(habitWho) ? habitWho : "",
+          habitTime: habitTime !== null && VALID_HABIT_TIME.has(habitTime) ? habitTime : "",
+        }}
+        onClose={() => setIsQuickSetupOpen(false)}
+        onComplete={handleQuickSetupComplete}
+      />
     </View>
   );
 }
