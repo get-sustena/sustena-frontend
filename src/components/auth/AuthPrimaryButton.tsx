@@ -51,9 +51,9 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   text: {
-    fontFamily: theme.fontFamily.bodySemiBold,
+    fontFamily: theme.fontFamily.bodyBold,
     fontSize: 15.5,
-    color: theme.colors.text,
+    color: theme.colors.navy,
   },
   textDark: {
     color: theme.colors.onDark,

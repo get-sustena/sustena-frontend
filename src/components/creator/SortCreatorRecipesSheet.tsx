@@ -22,7 +22,7 @@ const styles = StyleSheet.create({
   content: { paddingBottom: 18 },
   title: { marginBottom: 6, fontFamily: theme.fontFamily.display, fontSize: 18, color: "#17291E" },
   option: { minHeight: 52, flexDirection: "row", alignItems: "center", gap: 12 },
-  radio: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: "#D8E3CA", alignItems: "center", justifyContent: "center" },
+  radio: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: "#E1E1E1", alignItems: "center", justifyContent: "center" },
   radioActive: { borderColor: "#17291E" },
   dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: "#17291E" },
   label: { fontFamily: theme.fontFamily.bodyMedium, fontSize: 15, color: "#17291E" },

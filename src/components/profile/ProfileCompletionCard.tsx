@@ -21,7 +21,7 @@ export function ProfileCompletionCard({ answered, total, onPress }: { answered: 
   const percentage = Math.round((answered / total) * 100);
   return (
     <Pressable onPress={onPress} style={styles.incompleteCard}>
-      <LinearGradient colors={["#1d3327", "#152119"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFillObject} />
+      <LinearGradient colors={["#1d3327", "#152119"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
       <View style={styles.glow} />
       <View style={styles.incompleteCopy}>
         <View style={styles.incompleteTitleRow}>
@@ -37,7 +37,7 @@ export function ProfileCompletionCard({ answered, total, onPress }: { answered: 
 }
 
 const styles = StyleSheet.create({
-  completeCard: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 15, borderRadius: 16, borderWidth: 1, borderColor: "#D8E3CA", backgroundColor: "#EEF2E7" },
+  completeCard: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 15, borderRadius: 16, borderWidth: 1, borderColor: "#E1E1E1", backgroundColor: "#EEF2E7" },
   completeIcon: { width: 34, height: 34, borderRadius: 10, backgroundColor: "#34B673", alignItems: "center", justifyContent: "center" },
   completeCopy: { flex: 1 },
   completeTitle: { fontFamily: theme.fontFamily.bodyBold, fontSize: 15, color: "#1B211C" },

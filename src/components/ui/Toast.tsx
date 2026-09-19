@@ -3,7 +3,8 @@
 // call showToast(message) from src/store/uiStore to surface it.
 
 import { useEffect } from "react";
-import { StyleSheet } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -23,8 +24,11 @@ const TONE_COLORS: Record<"default" | "success" | "danger", string> = {
 };
 
 export function ToastHost() {
+  const insets = useSafeAreaInsets();
   const message = useUIStore((state) => state.toastMessage);
   const tone = useUIStore((state) => state.toastTone);
+  const actionLabel = useUIStore((state) => state.toastActionLabel);
+  const action = useUIStore((state) => state.toastAction);
   const progress = useSharedValue(0);
   const isVisible = message !== null;
 
@@ -44,7 +48,7 @@ export function ToastHost() {
 
   const toastStyle = useAnimatedStyle(() => ({
     opacity: progress.value,
-    transform: [{ translateY: (1 - progress.value) * 16 }],
+    transform: [{ translateY: (1 - progress.value) * -16 }],
   }));
 
   if (!message) {
@@ -53,14 +57,29 @@ export function ToastHost() {
 
   return (
     <Animated.View
-      pointerEvents="none"
+      pointerEvents="box-none"
       style={[
         styles.toast,
+        { top: insets.top + 18 },
         { backgroundColor: TONE_COLORS[tone] },
         toastStyle,
       ]}
     >
-      <AppText style={styles.text}>{message}</AppText>
+      <View style={styles.content}>
+        <AppText style={styles.text}>{message}</AppText>
+        {actionLabel && action ? (
+          <Pressable
+            onPress={() => {
+              hideToast();
+              action();
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={actionLabel}
+          >
+            <AppText style={styles.action}>{actionLabel}</AppText>
+          </Pressable>
+        ) : null}
+      </View>
     </Animated.View>
   );
 }
@@ -68,18 +87,34 @@ export function ToastHost() {
 const styles = StyleSheet.create({
   toast: {
     position: "absolute",
-    left: theme.spacing.xl,
-    right: theme.spacing.xl,
-    bottom: 110,
-    borderRadius: theme.radius.md,
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
+    left: 18,
+    right: 18,
+    zIndex: 300,
+    minHeight: 40,
+    maxWidth: 520,
+    alignSelf: "center",
+    borderRadius: 999,
+    paddingLeft: 13,
+    paddingRight: 16,
+    paddingVertical: 9,
     alignItems: "center",
+    boxShadow: "0 10px 26px -12px rgba(0,0,0,0.5)",
   },
   text: {
     fontFamily: theme.fontFamily.bodyMedium,
     fontSize: theme.fontSize.md,
     color: theme.colors.onDark,
-    textAlign: "center",
+    textAlign: "left",
+    flexShrink: 1,
+  },
+  content: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7 },
+  action: {
+    marginLeft: 3,
+    paddingLeft: 12,
+    borderLeftWidth: 1,
+    borderLeftColor: "rgba(255,255,255,0.28)",
+    fontFamily: theme.fontFamily.bodyBold,
+    fontSize: theme.fontSize.md,
+    color: theme.colors.accent,
   },
 });

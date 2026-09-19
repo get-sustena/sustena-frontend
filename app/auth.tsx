@@ -13,7 +13,6 @@ import { AuthField } from "../src/components/auth/AuthField";
 import { AuthHeader } from "../src/components/auth/AuthHeader";
 import { AuthPrimaryButton } from "../src/components/auth/AuthPrimaryButton";
 import { AppText } from "../src/components/ui/AppText";
-import { InlineNotice } from "../src/components/ui/InlineNotice";
 import { useLoginMutation } from "../src/hooks/api/useAuth";
 import {
   getApiErrorMessage,
@@ -106,6 +105,7 @@ export default function AuthScreen() {
             setFieldErrors((current) => ({ ...current, password: undefined }));
           }}
           secureTextEntry
+          marginBottom={10}
           error={fieldErrors.password}
         />
 
@@ -116,14 +116,10 @@ export default function AuthScreen() {
           <AppText style={styles.forgotLinkText}>Forgot password?</AppText>
         </Pressable>
 
-        {formError ? (
-          <View style={styles.notice}>
-            <InlineNotice
-              tone="error"
-              title="Sign in unsuccessful"
-              message={formError}
-            />
-          </View>
+        {formError && !Object.values(fieldErrors).some(Boolean) ? (
+          <AppText accessibilityRole="alert" style={styles.formError}>
+            {formError}
+          </AppText>
         ) : null}
 
         <AuthPrimaryButton
@@ -150,21 +146,21 @@ export default function AuthScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#FBFCFA",
+    backgroundColor: "#FAFAFA",
   },
   body: {
     flex: 1,
   },
   bodyContent: {
     paddingHorizontal: 24,
-    paddingTop: 8,
+    paddingTop: 26,
     paddingBottom: 40,
   },
   title: {
     fontFamily: theme.fontFamily.displayExtraBold,
     fontSize: 32,
     lineHeight: 35,
-    letterSpacing: -0.5,
+    letterSpacing: -0.64,
     color: theme.colors.navy,
     marginBottom: 8,
   },
@@ -183,11 +179,14 @@ const styles = StyleSheet.create({
   forgotLinkText: {
     fontFamily: theme.fontFamily.bodySemiBold,
     fontSize: 13,
-    color: theme.colors.linkGreen,
+    color: "#1F7048",
   },
-  notice: {
+  formError: {
     marginTop: -12,
-    marginBottom: theme.spacing.md,
+    marginBottom: 16,
+    color: theme.colors.red,
+    fontFamily: theme.fontFamily.body,
+    fontSize: 12.5,
   },
   switchRow: {
     flexDirection: "row",

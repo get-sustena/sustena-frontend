@@ -6,7 +6,7 @@ import {
   runWithSqliteRetry,
 } from "./sqliteGuards";
 
-const DATABASE_VERSION = 10;
+const DATABASE_VERSION = 13;
 let migrationQueue = Promise.resolve();
 
 export async function migrateDbIfNeeded(db: SQLiteDatabase) {
@@ -206,7 +206,7 @@ async function runMigrations(db: SQLiteDatabase) {
 
   const versionAfterSyncQueue = versionAfterRecipes < 4 ? 4 : versionAfterRecipes;
 
-  // Local-only Complete Profile answers — no backend fields exist for any of
+  // Local-only Complete Profile answers. No backend fields exist for any of
   // this yet, so it never touches sync_queue. See redesign plan Phase 0.8.
   if (versionAfterSyncQueue < 5) {
     await db.execAsync(`
@@ -328,6 +328,87 @@ async function runMigrations(db: SQLiteDatabase) {
       );
 
       PRAGMA user_version = 10;
+    `);
+  }
+
+  const versionAfterAccountSnapshots =
+    versionAfterCreatorDrafts < 10 ? 10 : versionAfterCreatorDrafts;
+
+  if (versionAfterAccountSnapshots < 11) {
+    await db.execAsync(`
+      ALTER TABLE shopping_list_items RENAME TO shopping_list_items_legacy;
+
+      CREATE TABLE shopping_list_items (
+        id TEXT PRIMARY KEY NOT NULL,
+        name TEXT NOT NULL,
+        emoji TEXT NOT NULL,
+        quantity TEXT NOT NULL,
+        amount REAL,
+        display_quantity TEXT,
+        unit TEXT,
+        category TEXT NOT NULL,
+        estimated_price INTEGER,
+        price_status TEXT NOT NULL DEFAULT 'unknown',
+        client_mutation_id TEXT,
+        checked INTEGER NOT NULL,
+        source_recipe_id TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        list_id TEXT NOT NULL
+      );
+
+      INSERT INTO shopping_list_items (
+        id, name, emoji, quantity, unit, category, estimated_price,
+        price_status, checked, source_recipe_id, created_at, updated_at, list_id
+      )
+      SELECT
+        id, name, emoji, quantity, unit, category, estimated_price,
+        CASE WHEN estimated_price IS NULL THEN 'unknown' ELSE 'estimated' END,
+        checked, source_recipe_id, created_at, updated_at,
+        COALESCE(list_id, 'default')
+      FROM shopping_list_items_legacy;
+
+      DROP TABLE shopping_list_items_legacy;
+      CREATE INDEX IF NOT EXISTS ix_local_shopping_items_list_id
+        ON shopping_list_items(list_id);
+      CREATE UNIQUE INDEX IF NOT EXISTS uq_local_shopping_items_client_mutation
+        ON shopping_list_items(list_id, client_mutation_id)
+        WHERE client_mutation_id IS NOT NULL;
+
+      PRAGMA user_version = 11;
+    `);
+  }
+
+  const versionAfterShoppingItemHardening =
+    versionAfterAccountSnapshots < 11 ? 11 : versionAfterAccountSnapshots;
+
+  if (versionAfterShoppingItemHardening < 12) {
+    await db.execAsync(`
+      ALTER TABLE shopping_list_items ADD COLUMN ingredient_id TEXT;
+
+      CREATE TABLE IF NOT EXISTS pantry_items (
+        ingredient_id TEXT PRIMARY KEY NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      PRAGMA user_version = 12;
+    `);
+  }
+
+  const versionAfterPantry =
+    versionAfterShoppingItemHardening < 12 ? 12 : versionAfterShoppingItemHardening;
+
+  if (versionAfterPantry < 13) {
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS sync_id_mappings (
+        temporary_id TEXT PRIMARY KEY NOT NULL,
+        server_id TEXT NOT NULL,
+        entity_kind TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
+
+      PRAGMA user_version = 13;
     `);
   }
 }

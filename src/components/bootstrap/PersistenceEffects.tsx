@@ -6,11 +6,13 @@ import { useAuthStore } from "../../store/authStore";
 
 export function PersistenceEffects() {
   const hasKnownUser = useAuthStore((state) => Boolean(state.user));
+  const isSigningOut = useAuthStore((state) => state.isSigningOut);
+  const enabled = hasKnownUser && !isSigningOut;
 
-  usePersistPreferences(hasKnownUser);
-  usePersistProfileAnswers(hasKnownUser);
-  useSyncQueueProcessor(hasKnownUser);
-  useCreatorDraftSyncProcessor(hasKnownUser);
+  usePersistPreferences(enabled);
+  usePersistProfileAnswers(enabled);
+  useSyncQueueProcessor(enabled);
+  useCreatorDraftSyncProcessor(enabled);
 
   return null;
 }

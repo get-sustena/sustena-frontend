@@ -37,11 +37,11 @@ export function SubscriptionScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#FBFCFA" },
   header: { paddingHorizontal: 20, paddingBottom: 12, flexDirection: "row", alignItems: "center", gap: 8 },
-  headerButton: { width: 44, height: 44, borderRadius: 12, borderWidth: 1, borderColor: "#D8E3CA", backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
+  headerButton: { width: 44, height: 44, borderRadius: 12, borderWidth: 1, borderColor: "#E1E1E1", backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
   headerTitle: { flex: 1, paddingHorizontal: 10, fontFamily: theme.fontFamily.display, fontSize: 18, letterSpacing: -0.18, textAlign: "center", color: "#17291E" },
   headerSpacer: { width: 44 },
   content: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 40 },
-  receipt: { marginBottom: 18, padding: 20, borderRadius: 20, borderWidth: 1.5, borderColor: "#D8E3CA", backgroundColor: "#FBFBF7" },
+  receipt: { marginBottom: 18, padding: 20, borderRadius: 20, borderWidth: 1.5, borderColor: "#E1E1E1", backgroundColor: "#FBFBF7" },
   plan: { marginBottom: 12, fontFamily: theme.fontFamily.display, fontSize: 21, lineHeight: 25.2, color: "#17291E" },
   badge: { alignSelf: "flex-start", marginBottom: 14, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 999, backgroundColor: "#F1F4EC", fontFamily: theme.fontFamily.bodySemiBold, fontSize: 12, color: "#8a9187" },
   body: { marginBottom: 16, fontSize: 13, lineHeight: 19.5, color: "#5C6459" },

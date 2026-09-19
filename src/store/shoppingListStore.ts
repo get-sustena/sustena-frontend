@@ -74,7 +74,7 @@ export const useShoppingListStore = create<ShoppingListState>((set, get) => ({
 
   totalEstimatedCost: () => {
     return get().items.reduce((total, item) => {
-      return total + item.estimatedPrice;
+      return total + (item.estimatedPrice ?? 0);
     }, 0);
   },
 
@@ -112,7 +112,7 @@ function mergeShoppingListItems(
     );
 
     if (mergedQuantity === null) {
-      // Units don't match or aren't parseable — keep both lines rather
+      // Units don't match or aren't parseable. Keep both lines rather
       // than dropping or silently combining incompatible quantities.
       items.push(newItem);
       continue;
@@ -121,7 +121,10 @@ function mergeShoppingListItems(
     items[existingIndex] = {
       ...existingItem,
       quantity: mergedQuantity,
-      estimatedPrice: existingItem.estimatedPrice + newItem.estimatedPrice,
+      estimatedPrice:
+        existingItem.estimatedPrice === null || newItem.estimatedPrice === null
+          ? null
+          : existingItem.estimatedPrice + newItem.estimatedPrice,
       updatedAt: new Date().toISOString(),
     };
   }

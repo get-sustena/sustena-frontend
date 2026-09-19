@@ -16,7 +16,7 @@ export function CreatorCollectionsStrip({ collections, selected, onSelect }: { c
             <View style={styles.coverWrap}>
               {active ? <View pointerEvents="none" style={styles.activeRing} /> : null}
               <View style={styles.cover}>
-                {collection.coverUrl ? <Image source={{ uri: collection.coverUrl }} contentFit="cover" style={StyleSheet.absoluteFillObject} /> : <View style={styles.fallback} />}
+                {collection.coverUrl ? <Image source={{ uri: collection.coverUrl }} contentFit="cover" style={StyleSheet.absoluteFill} /> : <View style={styles.fallback} />}
                 <View style={[styles.scrim, active && styles.scrimActive]} />
                 {active ? <View pointerEvents="none" style={styles.activeInset} /> : null}
                 <AppText style={styles.count}>{collection.count}</AppText>
@@ -36,9 +36,9 @@ const styles = StyleSheet.create({
   coverWrap: { position: "relative", width: 70, height: 70, marginBottom: 7 },
   cover: { position: "relative", width: 70, height: 70, borderRadius: 35, overflow: "hidden" },
   activeRing: { position: "absolute", top: -2, left: -2, width: 74, height: 74, borderRadius: 37, borderWidth: 2, borderColor: "#17291E" },
-  activeInset: { ...StyleSheet.absoluteFillObject, borderRadius: 35, borderWidth: 3, borderColor: "#FBFCFA" },
-  fallback: { ...StyleSheet.absoluteFillObject, backgroundColor: "#EEF2E7" },
-  scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(23,41,30,0.28)" },
+  activeInset: { ...StyleSheet.absoluteFill, borderRadius: 35, borderWidth: 3, borderColor: "#FBFCFA" },
+  fallback: { ...StyleSheet.absoluteFill, backgroundColor: "#EEF2E7" },
+  scrim: { ...StyleSheet.absoluteFill, backgroundColor: "rgba(23,41,30,0.28)" },
   scrimActive: { backgroundColor: "rgba(23,41,30,0.12)" },
   count: { position: "absolute", left: 0, right: 0, bottom: 8, fontFamily: theme.fontFamily.monoBold, fontSize: 10, textAlign: "center", color: "#FBFBF7" },
   label: { fontFamily: theme.fontFamily.bodyMedium, fontSize: 11.5, lineHeight: 14.375, textAlign: "center", color: "#5C6459" },

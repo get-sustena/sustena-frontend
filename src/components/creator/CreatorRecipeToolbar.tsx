@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
     gap: 6,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "#D8E3CA",
+    borderColor: "#E1E1E1",
     backgroundColor: "#FFFFFF",
   },
   sortText: {

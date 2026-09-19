@@ -213,12 +213,6 @@ export function validateRecipeEditor(
     categories.every((category) => BASE_OPTIONAL_CATEGORIES.has(category));
 
   require(state.name.trim(), 1, "name", "Enter a recipe name.");
-  require(
-    state.description?.trim(),
-    1,
-    "description",
-    "Enter a short recipe description."
-  );
   require(categories.length, 1, "categories", "Choose at least one recipe category.");
   require(
     baseIsOptional || bases.length,

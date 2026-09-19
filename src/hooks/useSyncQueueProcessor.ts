@@ -5,7 +5,9 @@ import { useSQLiteContext } from "expo-sqlite";
 import { useEffect, useRef } from "react";
 import { AppState } from "react-native";
 import { processSyncQueue } from "../lib/sync/processSyncQueue";
+import { trackAccountBackgroundTask } from "../lib/accountBackgroundTasks";
 import { isConnectedState } from "../lib/query/networkStatus";
+import { useAuthStore } from "../store/authStore";
 
 export function useSyncQueueProcessor(enabled = true) {
   const db = useSQLiteContext();
@@ -17,13 +19,13 @@ export function useSyncQueueProcessor(enabled = true) {
     }
 
     function runProcessor() {
-      if (isRunningRef.current) {
+      if (isRunningRef.current || useAuthStore.getState().isSigningOut) {
         return;
       }
 
       isRunningRef.current = true;
 
-      processSyncQueue(db)
+      trackAccountBackgroundTask(processSyncQueue(db))
         .catch((error) => {
           console.error("Failed to process sync queue", error);
         })

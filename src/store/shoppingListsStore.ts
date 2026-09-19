@@ -1,5 +1,5 @@
 // src/store/shoppingListsStore.ts
-// Metadata for the "Your Lists" multi-list feature — which lists exist and
+// Metadata for the "Your Lists" multi-list feature: which lists exist and
 // which one is active. Item contents for the active list still live in
 // shoppingListStore.ts.
 
@@ -25,7 +25,11 @@ export const useShoppingListsStore = create<ShoppingListsState>(
     activeListId: DEFAULT_SHOPPING_LIST_ID,
 
     hydrateLists: (lists) => {
-      set({ lists });
+      const active = lists.find((list) => list.isDefaultSyncedList);
+      set({
+        lists,
+        activeListId: active?.id ?? lists[0]?.id ?? DEFAULT_SHOPPING_LIST_ID,
+      });
     },
 
     addList: (list) => {
@@ -46,7 +50,7 @@ export const useShoppingListsStore = create<ShoppingListsState>(
       set((state) => {
         const list = state.lists.find((item) => item.id === listId);
 
-        // The default synced list can never be removed locally — it's the
+        // The default synced list can never be removed locally. It's the
         // one list wired to the real backend.
         if (!list || list.isDefaultSyncedList) {
           return state;
@@ -56,7 +60,8 @@ export const useShoppingListsStore = create<ShoppingListsState>(
           lists: state.lists.filter((item) => item.id !== listId),
           activeListId:
             state.activeListId === listId
-              ? DEFAULT_SHOPPING_LIST_ID
+              ? state.lists.find((item) => item.id !== listId)?.id ??
+                DEFAULT_SHOPPING_LIST_ID
               : state.activeListId,
         };
       });

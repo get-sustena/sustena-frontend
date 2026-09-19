@@ -3,6 +3,7 @@
 import { useSQLiteContext } from "expo-sqlite";
 import { useEffect } from "react";
 import { saveStoredProfileAnswers } from "../db/localProfileAnswersRepository";
+import { trackAccountBackgroundTask } from "../lib/accountBackgroundTasks";
 import { useProfileAnswersStore } from "../store/profileAnswersStore";
 
 export function usePersistProfileAnswers(enabled = true) {
@@ -28,7 +29,7 @@ export function usePersistProfileAnswers(enabled = true) {
       return;
     }
 
-    saveStoredProfileAnswers(db, {
+    trackAccountBackgroundTask(saveStoredProfileAnswers(db, {
       nickname,
       gender,
       birthdayMonth,
@@ -43,7 +44,7 @@ export function usePersistProfileAnswers(enabled = true) {
       habitTime,
       heard,
       heardOther,
-    }).catch((error) => {
+    })).catch((error) => {
       console.error("Failed to persist profile answers", error);
     });
   }, [

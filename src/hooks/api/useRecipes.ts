@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useSQLiteContext } from "expo-sqlite";
 import {
   cacheRecipeDetail,
@@ -44,6 +49,36 @@ export function useRecipesWithLocalFallback(params?: RecipeSearchParams) {
       return apiResult.data ? apiResult : localResult;
     },
   };
+}
+
+export function useInfiniteRecipesWithLocalFallback(
+  params: Omit<RecipeSearchParams, "page"> = {}
+) {
+  const db = useSQLiteContext();
+
+  return useInfiniteQuery({
+    queryKey: ["recipes", "infinite-list", params] as const,
+    initialPageParam: 1,
+    queryFn: async ({ pageParam }) => {
+      const pageParams = { ...params, page: pageParam };
+
+      try {
+        const data = await recipesApi.getRecipes(pageParams);
+        return { data, source: "api" as const };
+      } catch (apiError) {
+        try {
+          const data = await getLocalRecipes(db, pageParams);
+          return { data, source: "local" as const };
+        } catch {
+          throw apiError;
+        }
+      }
+    },
+    getNextPageParam: (lastPage) => {
+      const { page, pageSize, total } = lastPage.data;
+      return page * pageSize < total ? page + 1 : undefined;
+    },
+  });
 }
 
 export function useRecipeDetailQuery(recipeId?: string) {

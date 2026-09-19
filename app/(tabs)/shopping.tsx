@@ -1,5 +1,5 @@
-import { useFocusEffect } from "@react-navigation/native";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
+import { Image } from "expo-image";
 import { useSQLiteContext } from "expo-sqlite";
 import { useCallback, useState } from "react";
 import {
@@ -12,10 +12,12 @@ import {
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppText } from "../../src/components/ui/AppText";
+import { appImages } from "../../src/assets/appImages";
 import { Icon } from "../../src/components/ui/Icon";
 import {
   deleteShoppingListItemsForList,
   getShoppingListItemSummaries,
+  replaceShoppingListItemsForList,
 } from "../../src/db/shoppingListRepository";
 import {
   deleteShoppingList,
@@ -29,8 +31,8 @@ import {
 } from "../../src/hooks/api/useShoppingLists";
 import { useIsOnline } from "../../src/hooks/useIsOnline";
 import { shoppingListsApi } from "../../src/lib/api";
+import { apiShoppingItemToLocalItem } from "../../src/lib/api/adapters";
 import { getApiErrorMessage } from "../../src/lib/api/errors";
-import { formatNaira } from "../../src/lib/formatters";
 import { useShoppingListsStore } from "../../src/store/shoppingListsStore";
 import { closeSheet, openSheet, showToast } from "../../src/store/uiStore";
 import { theme } from "../../src/theme/theme";
@@ -39,7 +41,6 @@ import { ShoppingListMeta } from "../../src/types/shoppingList";
 type ListSummary = {
   itemCount: number;
   checkedCount: number;
-  totalEstimatedPrice: number;
 };
 
 export default function ShoppingListsScreen() {
@@ -64,7 +65,6 @@ export default function ShoppingListsScreen() {
       next[row.list_id] = {
         itemCount: row.item_count,
         checkedCount: row.checked_count,
-        totalEstimatedPrice: row.total_estimated_price ?? 0,
       };
     }
 
@@ -77,12 +77,10 @@ export default function ShoppingListsScreen() {
     try {
       const serverLists = await shoppingListsApi.getShoppingLists();
       const currentLists = useShoppingListsStore.getState().lists;
-      const defaultList = currentLists.find((list) => list.isDefaultSyncedList);
-      const serverNonDefault = serverLists.filter((list) => !list.isActive);
-      const serverIds = new Set(serverNonDefault.map((list) => list.id));
+      const serverIds = new Set(serverLists.map((list) => list.id));
 
       const staleLocalLists = currentLists.filter(
-        (list) => !list.isDefaultSyncedList && !serverIds.has(list.id)
+        (list) => !serverIds.has(list.id)
       );
 
       for (const stale of staleLocalLists) {
@@ -90,27 +88,36 @@ export default function ShoppingListsScreen() {
         await deleteShoppingList(db, stale.id);
       }
 
-      const mergedNonDefault: ShoppingListMeta[] = serverNonDefault.map(
+      const synchronizedLists: ShoppingListMeta[] = serverLists.map(
         (list) => ({
           id: list.id,
           name: list.name,
-          isDefaultSyncedList: false,
+          isDefaultSyncedList: list.isActive,
           createdAt: list.createdAt,
           updatedAt: list.updatedAt,
         })
       );
 
-      for (const list of mergedNonDefault) {
+      for (const list of synchronizedLists) {
         await upsertShoppingList(db, list);
+        await replaceShoppingListItemsForList(
+          db,
+          list.id,
+          serverLists
+            .find((serverList) => serverList.id === list.id)!
+            .items.map((item) => ({
+              ...apiShoppingItemToLocalItem(item),
+              listId: list.id,
+            }))
+        );
       }
 
-      hydrateLists(
-        defaultList ? [defaultList, ...mergedNonDefault] : mergedNonDefault
-      );
+      hydrateLists(synchronizedLists);
+      await loadSummaries();
     } catch (error) {
       console.error("Failed to sync shopping lists from server", error);
     }
-  }, [db, hydrateLists, isOnline]);
+  }, [db, hydrateLists, isOnline, loadSummaries]);
 
   useFocusEffect(
     useCallback(() => {
@@ -132,6 +139,7 @@ export default function ShoppingListsScreen() {
     try {
       const created = await createShoppingListMutation.mutateAsync({
         name: trimmed,
+        isActive: false,
       });
       const list: ShoppingListMeta = {
         id: created.id,
@@ -144,7 +152,7 @@ export default function ShoppingListsScreen() {
       await upsertShoppingList(db, list);
       addList(list);
       closeSheet();
-      showToast("List created", "success");
+      router.push({ pathname: "/shopping/[id]", params: { id: list.id } });
     } catch (error) {
       closeSheet();
       showToast(getApiErrorMessage(error), "danger");
@@ -152,7 +160,7 @@ export default function ShoppingListsScreen() {
   }
 
   function openCreateSheet() {
-    openSheet(<CreateListSheet onCreate={handleCreateList} />);
+    openSheet(<CreateListSheet defaultName={`Shopping List #${lists.length + 1}`} onCreate={handleCreateList} />);
   }
 
   async function handleRenameList(list: ShoppingListMeta, name: string) {
@@ -206,6 +214,10 @@ export default function ShoppingListsScreen() {
         list={list}
         onRename={(name) => handleRenameList(list, name)}
         onDelete={() => handleDeleteList(list)}
+        onShare={() => {
+          closeSheet();
+          router.push({ pathname: "/shopping/[id]", params: { id: list.id, share: "1" } });
+        }}
       />
     );
   }
@@ -215,7 +227,7 @@ export default function ShoppingListsScreen() {
       <View
         style={[styles.header, { paddingTop: Math.max(52, insets.top + 5) }]}
       >
-        <AppText style={styles.title}>Your Lists</AppText>
+        <AppText style={styles.title}>Shopping lists</AppText>
 
         <Pressable
           onPress={openCreateSheet}
@@ -224,7 +236,8 @@ export default function ShoppingListsScreen() {
             pressed && styles.pressed,
           ]}
         >
-          <Icon name="plus" size={20} color={theme.colors.onDark} />
+          <Icon name="plus" size={17} color={theme.colors.onDark} />
+          <AppText style={styles.newListButtonText}>New list</AppText>
         </Pressable>
       </View>
 
@@ -235,14 +248,15 @@ export default function ShoppingListsScreen() {
       >
         {lists.length === 0 ? (
           <View style={styles.empty}>
-            <View style={styles.emptyIconWrap}>
-              <Icon name="list" size={30} color={theme.colors.textMutedAlt} />
-            </View>
+            <Image
+              source={appImages.emptyStates.shoppingList}
+              contentFit="contain"
+              style={styles.emptyImage}
+            />
 
-            <AppText style={styles.emptyTitle}>No shopping lists yet</AppText>
+            <AppText style={styles.emptyTitle}>Start a shopping list</AppText>
             <AppText style={styles.emptyText}>
-              Create a list to start collecting ingredients for your next
-              cook-up.
+              Use a separate list for each trip, store, or occasion.
             </AppText>
 
             <Pressable
@@ -252,120 +266,79 @@ export default function ShoppingListsScreen() {
                 pressed && styles.pressed,
               ]}
             >
-              <AppText style={styles.emptyButtonText}>
-                Create Shopping List
-              </AppText>
+              <Icon name="plus" size={16} color={theme.colors.onDark} />
+              <AppText style={styles.emptyButtonText}>Create a list</AppText>
             </Pressable>
           </View>
         ) : (
-          <View style={styles.listGrid}>
-            {lists.map((list) => {
+          <>
+            <View style={styles.listOverviewMeta}>
+              <AppText style={styles.listOverviewCount}>
+                {lists.length} {lists.length === 1 ? "list" : "lists"}
+              </AppText>
+              <AppText style={styles.listOverviewOrder}>Most recent first</AppText>
+            </View>
+            <View style={styles.listGrid}>
+            {[...lists].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).map((list) => {
               const summary = summaries[list.id];
               const itemCount = summary?.itemCount ?? 0;
               const checkedCount = summary?.checkedCount ?? 0;
-              const pct = itemCount > 0 ? (checkedCount / itemCount) * 100 : 0;
-
               return (
-                <Pressable
-                  key={list.id}
-                  onPress={() =>
-                    router.push({
-                      pathname: "/shopping/[id]",
-                      params: { id: list.id },
-                    })
-                  }
-                  style={({ pressed }) => [
-                    styles.listCard,
-                    pressed && styles.pressed,
-                  ]}
-                >
-                  <View style={styles.listCardTop}>
+                <View key={list.id} style={styles.listCard}>
+                  <Pressable
+                    onPress={() => router.push({ pathname: "/shopping/[id]", params: { id: list.id } })}
+                    style={({ pressed }) => [styles.listMain, pressed && styles.pressed]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Open ${list.name}`}
+                  >
                     <View style={styles.listInfo}>
                       <AppText style={styles.listName} numberOfLines={1}>
                         {list.name}
                       </AppText>
-
-                      <AppText style={styles.listMeta}>
-                        {itemCount} {itemCount === 1 ? "item" : "items"}
-                        {summary && summary.totalEstimatedPrice > 0
-                          ? ` · ${formatNaira(summary.totalEstimatedPrice)}`
-                          : ""}
-                      </AppText>
-                    </View>
-
-                    <Pressable
-                      onPress={() => {
-                        if (list.isDefaultSyncedList) {
-                          router.push({
-                            pathname: "/shopping/[id]",
-                            params: { id: list.id },
-                          });
-                          return;
-                        }
-
-                        openListOptionsSheet(list);
-                      }}
-                      hitSlop={8}
-                      style={styles.optionsButton}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Options for ${list.name}`}
-                    >
-                      <Icon
-                        name="moreH"
-                        size={17}
-                        color={theme.colors.textMuted}
-                      />
-                    </Pressable>
-                  </View>
-
-                  {itemCount > 0 ? (
-                    <>
-                      <View style={styles.progressTrack}>
-                        <View
-                          style={[styles.progressFill, { width: `${pct}%` }]}
-                        />
+                      <View style={styles.listMetaRow}>
+                        <AppText style={styles.listMetaCount}>{itemCount} {itemCount === 1 ? "item" : "items"}</AppText>
+                        {itemCount > 0 ? (
+                          <>
+                            <AppText style={styles.listMeta}>·</AppText>
+                            <AppText style={styles.listMeta}>{checkedCount} in pantry</AppText>
+                          </>
+                        ) : null}
                       </View>
-                      <AppText style={styles.progressLabel}>
-                        {checkedCount} of {itemCount} checked off
-                      </AppText>
-                    </>
-                  ) : (
-                    <AppText style={styles.emptyListLabel}>
-                      Nothing added yet
-                    </AppText>
-                  )}
-                </Pressable>
+                    </View>
+                    <Icon name="chevronRight" size={17} color={theme.colors.textMuted} />
+                  </Pressable>
+                  <Pressable
+                    onPress={() => openListOptionsSheet(list)}
+                    hitSlop={8}
+                    style={styles.optionsButton}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Options for ${list.name}`}
+                  >
+                    <Icon name="moreH" size={18} color={theme.colors.textMuted} />
+                  </Pressable>
+                </View>
               );
             })}
 
-            <Pressable
-              onPress={openCreateSheet}
-              style={({ pressed }) => [
-                styles.newListRow,
-                pressed && styles.pressed,
-              ]}
-            >
-              <Icon name="plus" size={16} color={theme.colors.textMedium} />
-              <AppText style={styles.newListRowText}>New Shopping List</AppText>
-            </Pressable>
           </View>
+          </>
         )}
       </ScrollView>
     </Animated.View>
   );
 }
 
-function CreateListSheet({ onCreate }: { onCreate: (name: string) => void }) {
-  const [name, setName] = useState("");
+function CreateListSheet({ defaultName, onCreate }: { defaultName: string; onCreate: (name: string) => void }) {
+  const [name, setName] = useState(defaultName);
 
   return (
     <View style={styles.sheetContent}>
-      <AppText style={styles.sheetTitle}>New List</AppText>
+      <AppText style={styles.sheetTitle}>New shopping list</AppText>
 
       <TextInput
         value={name}
         onChangeText={setName}
-        placeholder="e.g. Weekend Groceries"
+        placeholder="e.g. Weekend groceries"
         placeholderTextColor={theme.colors.textDim}
         style={styles.sheetInput}
         autoFocus
@@ -381,7 +354,7 @@ function CreateListSheet({ onCreate }: { onCreate: (name: string) => void }) {
           !name.trim() && styles.sheetPrimaryButtonDisabled,
         ]}
       >
-        <AppText style={styles.sheetPrimaryButtonText}>Create List</AppText>
+        <AppText style={styles.sheetPrimaryButtonText}>Create list</AppText>
       </Pressable>
     </View>
   );
@@ -391,17 +364,43 @@ function ListOptionsSheet({
   list,
   onRename,
   onDelete,
+  onShare,
 }: {
   list: ShoppingListMeta;
   onRename: (name: string) => void;
   onDelete: () => void;
+  onShare: () => void;
 }) {
   const [name, setName] = useState(list.name);
+  const [isRenaming, setIsRenaming] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+
+  if (!isRenaming && !isConfirmingDelete) {
+    return (
+      <View style={styles.menuSheet}>
+        <Pressable onPress={() => setIsRenaming(true)} style={styles.menuRow}><Icon name="pencil" size={19} color={theme.colors.navy} /><AppText style={styles.menuRowText}>Rename list</AppText></Pressable>
+        <Pressable onPress={onShare} style={styles.menuRow}><Icon name="share" size={19} color={theme.colors.navy} /><AppText style={styles.menuRowText}>Share as image</AppText></Pressable>
+        {!list.isDefaultSyncedList ? <Pressable onPress={() => setIsConfirmingDelete(true)} style={styles.menuRow}><Icon name="trash" size={19} color={theme.colors.red} /><AppText style={styles.menuRowDanger}>Delete list</AppText></Pressable> : null}
+      </View>
+    );
+  }
+
+  if (isConfirmingDelete) {
+    return (
+      <View style={styles.sheetContent}>
+        <AppText style={styles.sheetTitle}>Delete “{list.name}”?</AppText>
+        <AppText style={styles.sheetCopy}>This will permanently remove the list and its items.</AppText>
+        <View style={styles.confirmActions}>
+          <Pressable onPress={() => setIsConfirmingDelete(false)} style={styles.cancelButton}><AppText style={styles.cancelText}>Cancel</AppText></Pressable>
+          <Pressable onPress={onDelete} style={styles.deleteButton}><AppText style={styles.sheetPrimaryButtonText}>Delete</AppText></Pressable>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.sheetContent}>
-      <AppText style={styles.sheetTitle}>Edit List</AppText>
+      <AppText style={styles.sheetTitle}>Rename list</AppText>
 
       <TextInput
         value={name}
@@ -420,23 +419,7 @@ function ListOptionsSheet({
           !name.trim() && styles.sheetPrimaryButtonDisabled,
         ]}
       >
-        <AppText style={styles.sheetPrimaryButtonText}>Save Name</AppText>
-      </Pressable>
-
-      <Pressable
-        onPress={() => {
-          if (isConfirmingDelete) {
-            onDelete();
-            return;
-          }
-          setIsConfirmingDelete(true);
-        }}
-        style={styles.sheetDangerButton}
-      >
-        <Icon name="trash" size={15} color={theme.colors.red} />
-        <AppText style={styles.sheetDangerButtonText}>
-          {isConfirmingDelete ? "Tap again to confirm delete" : "Delete List"}
-        </AppText>
+        <AppText style={styles.sheetPrimaryButtonText}>Save</AppText>
       </Pressable>
     </View>
   );
@@ -445,7 +428,7 @@ function ListOptionsSheet({
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: theme.colors.white,
+    backgroundColor: "#FAFAFA",
   },
   scroll: {
     flex: 1,
@@ -469,32 +452,22 @@ const styles = StyleSheet.create({
     color: theme.colors.navy,
   },
   newListButton: {
-    width: 44,
-    height: 44,
-    borderRadius: theme.radius.md,
+    minHeight: 44,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    flexDirection: "row",
+    gap: 7,
     backgroundColor: theme.colors.navy,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: theme.colors.text,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.14,
-    shadowRadius: 6,
-    elevation: 2,
   },
+  newListButtonText: { fontFamily: theme.fontFamily.bodyBold, fontSize: 13, color: theme.colors.onDark },
   empty: {
     alignItems: "center",
     paddingHorizontal: 20,
     paddingTop: 56,
   },
-  emptyIconWrap: {
-    width: 64,
-    height: 64,
-    borderRadius: 999,
-    backgroundColor: "#EEF2E7",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 18,
-  },
+  emptyImage: { width: 138, height: 92, marginBottom: 28 },
   emptyTitle: {
     fontFamily: theme.fontFamily.display,
     fontSize: 18,
@@ -515,6 +488,9 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 22,
     paddingVertical: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   emptyButtonText: {
     fontFamily: theme.fontFamily.bodySemiBold,
@@ -522,31 +498,52 @@ const styles = StyleSheet.create({
     color: theme.colors.onDark,
   },
   listGrid: {
-    paddingHorizontal: 20,
-  },
-  listCard: {
-    backgroundColor: theme.colors.cream,
+    marginHorizontal: 20,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    borderRadius: 18,
-    padding: 16,
-    paddingBottom: 14,
-    marginBottom: 12,
-    shadowColor: theme.colors.text,
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.08,
-    shadowRadius: 11,
-    elevation: 2,
+    borderRadius: 16,
+    overflow: "hidden",
+    backgroundColor: theme.colors.white,
+  },
+  listOverviewMeta: {
+    marginHorizontal: 20,
+    marginBottom: 9,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  listOverviewCount: {
+    fontFamily: theme.fontFamily.bodySemiBold,
+    fontSize: 13,
+    color: theme.colors.text,
+  },
+  listOverviewOrder: {
+    fontFamily: theme.fontFamily.body,
+    fontSize: 12,
+    color: theme.colors.textMuted,
+  },
+  listCard: {
+    backgroundColor: theme.colors.white,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+    minHeight: 76,
+    flexDirection: "row",
+    alignItems: "center",
   },
   pressed: {
     opacity: 0.9,
   },
-  listCardTop: {
+  listMain: {
+    flex: 1,
+    minWidth: 0,
+    alignSelf: "stretch",
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "center",
     justifyContent: "space-between",
-    gap: 10,
-    marginBottom: 10,
+    gap: 12,
+    paddingLeft: 15,
+    paddingRight: 8,
+    paddingVertical: 14,
   },
   listInfo: {
     flex: 1,
@@ -554,67 +551,38 @@ const styles = StyleSheet.create({
   },
   listName: {
     fontFamily: theme.fontFamily.display,
-    fontSize: 16.5,
+    fontSize: 16,
     lineHeight: 21,
-    color: theme.colors.text,
+    color: theme.colors.navy,
   },
+  listMetaRow: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 7, marginTop: 5 },
+  listMetaCount: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 12.5, color: theme.colors.navy },
   listMeta: {
-    fontFamily: theme.fontFamily.mono,
-    fontSize: 13,
-    color: theme.colors.textMedium,
-    marginTop: 4,
-  },
-  optionsButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 9,
-    backgroundColor: theme.colors.card2,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  progressTrack: {
-    height: 6,
-    borderRadius: 999,
-    backgroundColor: theme.colors.border,
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: "100%",
-    borderRadius: 999,
-    backgroundColor: theme.colors.green,
-  },
-  progressLabel: {
-    fontFamily: theme.fontFamily.mono,
-    fontSize: 12,
-    color: theme.colors.textMuted,
-    marginTop: 7,
-  },
-  emptyListLabel: {
     fontFamily: theme.fontFamily.body,
     fontSize: 12.5,
-    color: theme.colors.textMuted,
+    color: theme.colors.textMedium,
   },
-  newListRow: {
-    flexDirection: "row",
+  optionsButton: {
+    width: 44,
+    height: 44,
+    marginRight: 8,
+    borderRadius: 11,
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
-    borderWidth: 1.5,
-    borderStyle: "dashed",
-    borderColor: theme.colors.border,
-    borderRadius: 16,
-    padding: 15,
-    marginTop: 4,
-  },
-  newListRowText: {
-    fontFamily: theme.fontFamily.bodySemiBold,
-    fontSize: 14,
-    color: theme.colors.textMedium,
   },
   sheetContent: {
     paddingBottom: theme.spacing.xl,
     gap: theme.spacing.md,
   },
+  menuSheet: { paddingBottom: theme.spacing.xl },
+  menuRow: { minHeight: 52, flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 4, borderBottomWidth: 1, borderBottomColor: theme.colors.border },
+  menuRowText: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 15, color: theme.colors.navy },
+  menuRowDanger: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 15, color: theme.colors.red },
+  sheetCopy: { fontFamily: theme.fontFamily.body, fontSize: 14, lineHeight: 21, color: theme.colors.textMedium },
+  confirmActions: { flexDirection: "row", gap: 10 },
+  cancelButton: { flex: 1, minHeight: 48, borderRadius: 999, alignItems: "center", justifyContent: "center", backgroundColor: theme.colors.card2 },
+  cancelText: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 14.5, color: theme.colors.navy },
+  deleteButton: { flex: 1, minHeight: 48, borderRadius: 999, alignItems: "center", justifyContent: "center", backgroundColor: theme.colors.red },
   sheetTitle: {
     fontFamily: theme.fontFamily.display,
     fontSize: 20,
@@ -646,20 +614,5 @@ const styles = StyleSheet.create({
     fontFamily: theme.fontFamily.bodyBold,
     fontSize: 14,
     color: theme.colors.onDark,
-  },
-  sheetDangerButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: theme.spacing.sm,
-    minHeight: 48,
-    borderRadius: theme.radius.md,
-    borderWidth: 1.5,
-    borderColor: theme.colors.red,
-  },
-  sheetDangerButtonText: {
-    fontFamily: theme.fontFamily.bodyBold,
-    fontSize: 13,
-    color: theme.colors.red,
   },
 });

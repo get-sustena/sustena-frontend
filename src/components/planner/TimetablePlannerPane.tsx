@@ -1,7 +1,7 @@
 // src/components/planner/TimetablePlannerPane.tsx
 
 import { router } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { LinearGradient } from "expo-linear-gradient";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useMealPlanMutation } from "../../hooks/api/usePlanner";
@@ -25,15 +25,6 @@ export function TimetablePlannerPane() {
 
   const selectedGroup =
     groupedMeals.find((group) => group.day === selectedDay) ?? groupedMeals[0];
-
-  useEffect(() => {
-    if (
-      groupedMeals.length > 0 &&
-      !groupedMeals.some((group) => group.day === selectedDay)
-    ) {
-      setSelectedDay(groupedMeals[0].day);
-    }
-  }, [groupedMeals, selectedDay]);
 
   function generateMealPlan() {
     mealPlanMutation.mutate({
@@ -151,7 +142,7 @@ export function TimetablePlannerPane() {
         >
           <LinearGradient
             colors={["#1D3327", "#0F1B12"]}
-            style={StyleSheet.absoluteFillObject}
+            style={StyleSheet.absoluteFill}
           />
           {!mealPlanMutation.isPending && groupedMeals.length > 0 ? (
             <Icon name="swap" size={15} color={theme.colors.onDark} />

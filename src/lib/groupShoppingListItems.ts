@@ -1,14 +1,24 @@
 import { ShoppingListItem, ShoppingListSection } from "../types/shoppingList";
 
 const CATEGORY_ORDER = [
-  "Proteins",
-  "Grains",
-  "Produce",
-  "Spices",
-  "Dairy",
-  "Pantry",
-  "Tools",
+  "meat_seafood",
+  "grains_staples",
+  "produce",
+  "dairy_eggs",
+  "herbs_spices",
+  "pantry",
+  "other",
 ];
+
+export const SHOPPING_CATEGORY_LABELS: Record<string, string> = {
+  meat_seafood: "Meat & Seafood",
+  grains_staples: "Grains & Staples",
+  produce: "Produce",
+  dairy_eggs: "Dairy & Eggs",
+  herbs_spices: "Herbs & Spices",
+  pantry: "Pantry",
+  other: "Other",
+};
 
 export function groupShoppingListItems(
   items: ShoppingListItem[]
@@ -43,7 +53,7 @@ export function groupShoppingListItems(
       return indexA - indexB;
     })
     .map(([category, categoryItems]) => ({
-      category,
+      category: SHOPPING_CATEGORY_LABELS[category] ?? category,
       items: [...categoryItems].sort((itemA, itemB) => {
         const createdA = Date.parse(itemA.createdAt);
         const createdB = Date.parse(itemB.createdAt);

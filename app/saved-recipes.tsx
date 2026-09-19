@@ -1,6 +1,8 @@
 import { router } from "expo-router";
+import { Image } from "expo-image";
 import { FlatList, Pressable, StyleSheet, View } from "react-native";
 import { RecipeTile } from "../src/components/recipe/RecipeTile";
+import { appImages } from "../src/assets/appImages";
 import { AppText } from "../src/components/ui/AppText";
 import { Button } from "../src/components/ui/Button";
 import { Icon } from "../src/components/ui/Icon";
@@ -48,9 +50,11 @@ export default function SavedRecipesScreen() {
         )}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <View style={styles.emptyIconWrap}>
-              <Icon name="bookmark" size={26} color={theme.colors.linkGreen} />
-            </View>
+            <Image
+              source={appImages.emptyStates.savedRecipe}
+              contentFit="contain"
+              style={styles.emptyImage}
+            />
 
             <AppText style={styles.emptyTitle}>No saved recipes yet</AppText>
             <AppText style={styles.emptyText}>
@@ -111,15 +115,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 60,
   },
-  emptyIconWrap: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
-    backgroundColor: theme.colors.card2,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 18,
-  },
+  emptyImage: { width: "100%", maxWidth: 288, aspectRatio: 3 / 2, marginBottom: 28 },
   emptyTitle: {
     fontFamily: theme.fontFamily.display,
     fontSize: 19,

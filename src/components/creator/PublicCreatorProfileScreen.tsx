@@ -84,7 +84,7 @@ export function PublicCreatorProfileScreen() {
         <View style={styles.profile}>
           <View style={styles.identity}>
             <View style={styles.avatar}>
-              {profile.avatarUrl ? <Image source={{ uri: profile.avatarUrl }} contentFit="cover" style={StyleSheet.absoluteFillObject} /> : <AppText style={styles.initials}>{initials(profile.displayName)}</AppText>}
+              {profile.avatarUrl ? <Image source={{ uri: profile.avatarUrl }} contentFit="cover" style={StyleSheet.absoluteFill} /> : <AppText style={styles.initials}>{initials(profile.displayName)}</AppText>}
             </View>
             <View style={styles.identityCopy}>
               <View style={styles.nameRow}>
@@ -164,15 +164,15 @@ const styles = StyleSheet.create({
   handle: { fontSize: 14, color: "#5C6459" },
   bio: { marginBottom: 10, fontSize: 14.5, lineHeight: 21.75, color: "#1B211C" },
   specialities: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 16 },
-  speciality: { paddingHorizontal: 11, paddingVertical: 5, borderRadius: 999, borderWidth: 1, borderColor: "#D8E3CA", backgroundColor: "#EEF2E7", fontFamily: theme.fontFamily.bodySemiBold, fontSize: 12, color: "#1f7048" },
+  speciality: { paddingHorizontal: 11, paddingVertical: 5, borderRadius: 999, borderWidth: 1, borderColor: "#E1E1E1", backgroundColor: "#EEF2E7", fontFamily: theme.fontFamily.bodySemiBold, fontSize: 12, color: "#1f7048" },
   actions: { flexDirection: "row", gap: 10 },
   saveButton: { flex: 1, minHeight: 46, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderRadius: 999, borderWidth: 1, borderColor: "#17291E", backgroundColor: "#17291E" },
   saveButtonText: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 14.5, color: "#FBFBF7" },
-  savedButton: { borderColor: "#D8E3CA", backgroundColor: "#FFFFFF" },
+  savedButton: { borderColor: "#E1E1E1", backgroundColor: "#FFFFFF" },
   savedButtonText: { color: "#17291E" },
-  ownerButton: { borderColor: "#D8E3CA", backgroundColor: "#FFFFFF" },
+  ownerButton: { borderColor: "#E1E1E1", backgroundColor: "#FFFFFF" },
   ownerButtonText: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 14.5, color: "#17291E" },
-  shareButton: { width: 46, height: 46, borderRadius: 23, borderWidth: 1, borderColor: "#D8E3CA", backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
+  shareButton: { width: 46, height: 46, borderRadius: 23, borderWidth: 1, borderColor: "#E1E1E1", backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
   grid: { width: "100%", flexDirection: "row", flexWrap: "wrap" },
   gridItem: { width: "33.333333%", padding: 1 },
   recipeLoading: { minHeight: 180, alignItems: "center", justifyContent: "center" },

@@ -31,7 +31,7 @@ export function RecipeStepGuidanceButton({
         strokeWidth={2}
       />
       <AppText style={[styles.text, { color }]}>
-        {mistake ? "Flag a common mistake" : "Add a helpful tip"}
+        {mistake ? "Common mistake" : "Helpful tip"}
       </AppText>
     </Pressable>
   );
@@ -46,18 +46,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 7,
-    borderWidth: 1.5,
-    borderStyle: "dashed",
+    borderWidth: 1,
     borderRadius: 12,
   },
   full: { width: "100%", flex: 0 },
   mistake: {
-    borderColor: "rgba(198,138,46,0.44)",
-    backgroundColor: "rgba(198,138,46,0.08)",
+    borderColor: theme.colors.border,
+    backgroundColor: "transparent",
   },
   tip: {
-    borderColor: "rgba(31,112,72,0.44)",
-    backgroundColor: "rgba(31,112,72,0.08)",
+    borderColor: theme.colors.border,
+    backgroundColor: "transparent",
   },
   text: {
     flexShrink: 1,

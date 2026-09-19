@@ -77,6 +77,13 @@ const CONTEXT_UNITS: Record<IngredientConversionContext, ContextUnitMap> = {
     imperialSmall: "sorghum_oz",
     imperialLarge: "sorghum_lb",
   },
+  seasoning_cube: {
+    metricSmall: "cube",
+    metricLarge: null,
+    nigerianDefault: null,
+    imperialSmall: "oz",
+    imperialLarge: "lb",
+  },
   count: {
     metricSmall: null,
     metricLarge: null,
@@ -266,6 +273,7 @@ export function getUnitModeForUnitId(unitId: string | null): UnitMode | null {
   }
 
   if (
+    normalized === "cube" ||
     normalized === "mg" ||
     normalized === "g" ||
     normalized === "kg" ||
@@ -320,6 +328,12 @@ export function convertIngredientQuantity({
 }): ConvertedQuantity | null {
   const contextUnits = CONTEXT_UNITS[context];
 
+  // API data can introduce a new context before this client knows its unit mapping.
+  // Keep the stored quantity/unit instead of crashing the whole recipe screen.
+  if (!contextUnits) {
+    return null;
+  }
+
   if (mode === "cups") {
     if (!contextUnits.nigerianDefault) {
       return null;
@@ -365,6 +379,11 @@ export function getAvailableModesForContext(
   context: IngredientConversionContext
 ): UnitMode[] {
   const contextUnits = CONTEXT_UNITS[context];
+
+  if (!contextUnits) {
+    return [];
+  }
+
   const modes: UnitMode[] = [];
 
   if (contextUnits.metricSmall) modes.push("metric");

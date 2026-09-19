@@ -1,9 +1,10 @@
 // src/lib/api/client.ts
 
-import axios, {
+import {
   AxiosError,
   AxiosInstance,
   AxiosRequestConfig,
+  create as createAxiosInstance,
   InternalAxiosRequestConfig,
 } from "axios";
 import { RefreshTokenResponse } from "../../types/api";
@@ -32,7 +33,7 @@ type RetryableAxiosRequestConfig = InternalAxiosRequestConfig & {
 
 let refreshPromise: Promise<RefreshTokenResponse | null> | null = null;
 
-export const apiClient: AxiosInstance = axios.create({
+export const apiClient: AxiosInstance = createAxiosInstance({
   baseURL: API_BASE_URL,
   timeout: API_TIMEOUT_MS,
   headers: {

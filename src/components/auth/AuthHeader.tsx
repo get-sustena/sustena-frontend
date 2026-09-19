@@ -2,18 +2,21 @@
 
 import { StatusBar } from "expo-status-bar";
 import { Pressable, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { theme } from "../../theme/theme";
 import { AppText } from "../ui/AppText";
 import { Icon } from "../ui/Icon";
 import { Logo } from "../ui/Logo";
 
 export function AuthHeader({ onBack }: { onBack: () => void }) {
+  const insets = useSafeAreaInsets();
+
   return (
     <>
-      <StatusBar style="dark" backgroundColor="#FBFCFA" />
-      <View style={styles.header}>
+      <StatusBar style="dark" />
+      <View style={[styles.header, { paddingTop: Math.max(52, insets.top) }]}>
         <Pressable onPress={onBack} style={styles.backButton} hitSlop={8}>
-          <Icon name="chevronLeft" size={19} color={theme.colors.text} />
+          <Icon name="chevronLeft" size={19} color={theme.colors.navy} />
         </Pressable>
 
         <View style={styles.logoRow}>
@@ -32,20 +35,16 @@ export function AuthHeader({ onBack }: { onBack: () => void }) {
 
 const styles = StyleSheet.create({
   header: {
-    paddingTop: 52,
     paddingHorizontal: 24,
-    paddingBottom: 18,
+    paddingBottom: 0,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
   backButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
-    backgroundColor: theme.colors.card,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    width: 44,
+    height: 44,
+    backgroundColor: "transparent",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -57,8 +56,8 @@ const styles = StyleSheet.create({
   logoText: {
     fontFamily: theme.fontFamily.displayExtraBold,
     fontSize: 19,
-    lineHeight: 19,
-    letterSpacing: 0,
+    lineHeight: 18,
+    letterSpacing: -0.285,
     color: theme.colors.navy,
   },
 });

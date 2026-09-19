@@ -1,10 +1,9 @@
-import { useFocusEffect } from "@react-navigation/native";
-import { router, useLocalSearchParams } from "expo-router";
+import { useQueryClient } from "@tanstack/react-query";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import * as Sharing from "expo-sharing";
 import { useSQLiteContext } from "expo-sqlite";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Platform,
   Pressable,
   ScrollView,
@@ -13,11 +12,12 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import ViewShot from "react-native-view-shot";
-import { ShoppingListSection } from "../../src/components/shopping/ShoppingListSection";
+import ViewShot, { type ViewShotRef } from "react-native-view-shot";
+import { ShoppingListItemRow } from "../../src/components/shopping/ShoppingListItemRow";
+import { InPantrySection } from "../../src/components/shopping/InPantrySection";
+import { AddShoppingItemSheet } from "../../src/components/shopping/AddShoppingItemSheet";
+import { ShoppingListItemEditSheet } from "../../src/components/shopping/ShoppingListItemEditSheet";
 import { AppText } from "../../src/components/ui/AppText";
-import { Button } from "../../src/components/ui/Button";
-import { EmptyState } from "../../src/components/ui/EmptyState";
 import { Icon } from "../../src/components/ui/Icon";
 import { Logo } from "../../src/components/ui/Logo";
 import { ProgressLoader } from "../../src/components/ui/ProgressLoader";
@@ -34,14 +34,11 @@ import {
   deleteShoppingList,
   renameShoppingList as renameShoppingListLocal,
 } from "../../src/db/shoppingListsRepository";
-import { enqueueSyncOperation } from "../../src/db/syncQueueRepository";
-import { useIngredientCatalogQuery } from "../../src/hooks/api/useIngredients";
 import {
-  useAddShoppingListItemMutation,
-  useClearCheckedShoppingListItemsMutation,
-  useShoppingListQuery,
-  useUpdateShoppingListItemMutation,
-} from "../../src/hooks/api/useShoppingList";
+  cancelQueuedShoppingListItemRemoval,
+  enqueueSyncOperation,
+} from "../../src/db/syncQueueRepository";
+import { saveSyncIdMapping } from "../../src/db/syncIdMappingRepository";
 import {
   useDeleteShoppingListMutation,
   useRenameShoppingListMutation,
@@ -50,11 +47,11 @@ import { useIsOnline } from "../../src/hooks/useIsOnline";
 import { shoppingListsApi } from "../../src/lib/api";
 import { apiShoppingItemToLocalItem } from "../../src/lib/api/adapters";
 import { getApiErrorMessage } from "../../src/lib/api/errors";
-import { formatNaira } from "../../src/lib/formatters";
 import { groupShoppingListItems } from "../../src/lib/groupShoppingListItems";
 import { createLocalId } from "../../src/lib/id";
+import { structureShoppingQuantity } from "../../src/lib/shoppingQuantity";
 import { formatShoppingQuantity } from "../../src/lib/textFormatters";
-import { useShoppingListStore } from "../../src/store/shoppingListStore";
+import { queryKeys } from "../../src/lib/query/queryKeys";
 import { useShoppingListsStore } from "../../src/store/shoppingListsStore";
 import { closeSheet, openSheet, showToast } from "../../src/store/uiStore";
 import { theme } from "../../src/theme/theme";
@@ -64,14 +61,19 @@ import {
 } from "../../src/types/shoppingList";
 
 export default function ShoppingListDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const isDefaultList = id === DEFAULT_SHOPPING_LIST_ID;
+  const { id, share } = useLocalSearchParams<{ id: string; share?: string }>();
+  const activeListId = useShoppingListsStore((state) => state.activeListId);
+  const resolvedId = id === DEFAULT_SHOPPING_LIST_ID ? activeListId : id;
 
-  return isDefaultList ? (
-    <DefaultListDetail />
-  ) : (
-    <LocalListDetail listId={id} />
-  );
+  if (!resolvedId || resolvedId === DEFAULT_SHOPPING_LIST_ID) {
+    return (
+      <View style={styles.screen}>
+        <ProgressLoader />
+      </View>
+    );
+  }
+
+  return <LocalListDetail listId={resolvedId} shareOnOpen={share === "1"} />;
 }
 
 function ListHeader({
@@ -102,18 +104,18 @@ function ListHeader({
 
       <Pressable
         onPress={onAddPress}
-        style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
+        style={({ pressed }) => [styles.headerAddButton, pressed && styles.pressed]}
         accessibilityRole="button"
-        accessibilityLabel="Add ingredients"
+        accessibilityLabel="Add items"
       >
-        <Icon name="plus" size={19} color={theme.colors.text} />
+        <Icon name="plus" size={16} color={theme.colors.onDark} />
+        <AppText style={styles.headerAddText}>Add</AppText>
       </Pressable>
 
       <Pressable
         onPress={onMenuPress}
         style={({ pressed }) => [
           styles.iconButton,
-          styles.menuIconButton,
           pressed && styles.pressed,
         ]}
         accessibilityRole="button"
@@ -156,15 +158,13 @@ function MenuSheetRow({
 }
 
 function SummaryCard({
-  listName,
-  total,
   itemCount,
+  neededCount,
   checkedCount,
   onToggleSelectAll,
 }: {
-  listName: string;
-  total: number;
   itemCount: number;
+  neededCount: number;
   checkedCount: number;
   onToggleSelectAll: () => void;
 }) {
@@ -175,18 +175,21 @@ function SummaryCard({
     <View style={styles.summaryCard}>
       <View style={styles.summaryRow}>
         <View style={styles.summaryLeft}>
-          <AppText style={styles.summaryEyebrow}>Active List</AppText>
-          <AppText style={styles.summaryName} numberOfLines={1}>
-            {listName}
-          </AppText>
+          <AppText style={styles.summaryEyebrow}>On list</AppText>
+          <View style={styles.summaryValueRow}>
+            <AppText style={styles.summaryTotal}>{neededCount}</AppText>
+            <AppText style={styles.summaryCount}>{neededCount === 1 ? "item" : "items"}</AppText>
+          </View>
         </View>
 
+        <View style={styles.summaryDivider} />
+
         <View style={styles.summaryRight}>
-          <AppText style={styles.summaryEyebrow}>Total</AppText>
-          <AppText style={styles.summaryTotal}>{formatNaira(total)}</AppText>
-          <AppText style={styles.summaryCount}>
-            {itemCount} {itemCount === 1 ? "item" : "items"}
-          </AppText>
+          <AppText style={styles.summaryEyebrow}>In pantry</AppText>
+          <View style={styles.summaryValueRow}>
+            <AppText style={styles.summaryTotal}>{checkedCount}</AppText>
+            <AppText style={styles.summaryCount}>{checkedCount === 1 ? "item" : "items"}</AppText>
+          </View>
         </View>
       </View>
 
@@ -196,7 +199,7 @@ function SummaryCard({
 
       <View style={styles.summaryFooterRow}>
         <AppText style={styles.summaryFooterLabel}>
-          {checkedCount} of {itemCount} items ticked off
+          {checkedCount} of {itemCount} in pantry
         </AppText>
 
         <Pressable
@@ -204,7 +207,7 @@ function SummaryCard({
           disabled={itemCount === 0}
           accessibilityRole="button"
           accessibilityLabel={
-            allChecked ? "Deselect all items" : "Select all items"
+            allChecked ? "Mark all as not in pantry" : "Mark all as in pantry"
           }
         >
           <AppText
@@ -213,7 +216,7 @@ function SummaryCard({
               itemCount === 0 && styles.summarySelectAllDisabled,
             ]}
           >
-            {allChecked ? "Deselect all" : "Select all"}
+            {allChecked ? "Mark all as not in pantry" : "Mark all as in pantry"}
           </AppText>
         </Pressable>
       </View>
@@ -227,10 +230,9 @@ function ShoppingEmptyState({ onAddPress }: { onAddPress: () => void }) {
       <View style={styles.emptyStateIcon}>
         <Icon name="shop" size={30} color={theme.colors.textMutedAlt} />
       </View>
-      <AppText style={styles.emptyStateTitle}>This list is empty</AppText>
+      <AppText style={styles.emptyStateTitle}>Nothing on this list yet</AppText>
       <AppText style={styles.emptyStateText}>
-        Add ingredients yourself, or open a recipe and tap “Add to Shopping
-        List”.
+        Search for ingredients, or bring them in from a recipe or meal plan.
       </AppText>
       <Pressable
         onPress={onAddPress}
@@ -240,30 +242,13 @@ function ShoppingEmptyState({ onAddPress }: { onAddPress: () => void }) {
         ]}
       >
         <Icon name="plus" size={15} color={theme.colors.onDark} />
-        <AppText style={styles.emptyStateButtonText}>Add ingredients</AppText>
+        <AppText style={styles.emptyStateButtonText}>Add items</AppText>
       </Pressable>
+      <View style={styles.emptyStateLinks}>
+        <Pressable onPress={() => router.push("/(tabs)/recipes")}><AppText style={styles.emptyStateLink}>Browse recipes</AppText></Pressable>
+        <Pressable onPress={() => router.push({ pathname: "/(tabs)/planner", params: { tab: "budget" } })}><AppText style={styles.emptyStateLink}>Open planner</AppText></Pressable>
+      </View>
     </View>
-  );
-}
-
-function CheckoutButton() {
-  function handleCheckout() {
-    showToast("Connecting to checkout…");
-    setTimeout(() => showToast("Cart sent! Redirecting…"), 1600);
-  }
-
-  return (
-    <Pressable
-      onPress={handleCheckout}
-      style={({ pressed }) => [
-        styles.checkoutButton,
-        pressed && styles.pressed,
-      ]}
-      accessibilityRole="button"
-    >
-      <Icon name="shop" size={18} color={theme.colors.onDark} />
-      <AppText style={styles.checkoutButtonText}>Checkout</AppText>
-    </Pressable>
   );
 }
 
@@ -271,12 +256,10 @@ function ShareCard({
   shotRef,
   title,
   items,
-  totalEstimatedCost,
 }: {
-  shotRef: React.RefObject<ViewShot | null>;
+  shotRef: React.RefObject<ViewShotRef | null>;
   title: string;
   items: ShoppingListItem[];
-  totalEstimatedCost: number;
 }) {
   return (
     <View style={styles.shareCardOffscreen} pointerEvents="none">
@@ -312,17 +295,6 @@ function ShareCard({
             </AppText>
           ) : null}
 
-          {totalEstimatedCost > 0 ? (
-            <View style={styles.shareCardTotal}>
-              <AppText style={styles.shareCardTotalLabel}>
-                Estimated Total
-              </AppText>
-              <AppText style={styles.shareCardTotalValue}>
-                {formatNaira(totalEstimatedCost)}
-              </AppText>
-            </View>
-          ) : null}
-
           <AppText style={styles.shareCardFooter}>Made with Sustena</AppText>
         </View>
       </ViewShot>
@@ -330,7 +302,7 @@ function ShareCard({
   );
 }
 
-async function shareViewShot(shotRef: React.RefObject<ViewShot | null>) {
+async function shareViewShot(shotRef: React.RefObject<ViewShotRef | null>) {
   try {
     const uri = await shotRef.current?.capture?.();
     if (!uri) return;
@@ -358,329 +330,12 @@ async function shareViewShot(shotRef: React.RefObject<ViewShot | null>) {
   }
 }
 
-function DefaultListDetail() {
-  const db = useSQLiteContext();
-  const shotRef = useRef<ViewShot | null>(null);
 
-  const items = useShoppingListStore((state) => state.items);
-  const hydrateItems = useShoppingListStore((state) => state.hydrateItems);
-  const toggleItem = useShoppingListStore((state) => state.toggleItem);
-  const removeItemLocal = useShoppingListStore((state) => state.removeItem);
-  const clearCheckedItems = useShoppingListStore(
-    (state) => state.clearCheckedItems
-  );
-  const shoppingListQuery = useShoppingListQuery();
-  const updateShoppingItemMutation = useUpdateShoppingListItemMutation();
-  const addShoppingItemMutation = useAddShoppingListItemMutation();
-  const clearCheckedMutation = useClearCheckedShoppingListItemsMutation();
-  const apiItems = useMemo(
-    () =>
-      shoppingListQuery.data?.items.map((item) => ({
-        ...apiShoppingItemToLocalItem(item),
-        listId: DEFAULT_SHOPPING_LIST_ID,
-      })) ?? [],
-    [shoppingListQuery.data]
-  );
-  const visibleItems = shoppingListQuery.data ? apiItems : items;
-
-  useEffect(() => {
-    if (!shoppingListQuery.data) {
-      return;
-    }
-
-    hydrateItems(apiItems);
-    replaceShoppingListItemsForList(
-      db,
-      DEFAULT_SHOPPING_LIST_ID,
-      apiItems
-    ).catch((error) => {
-      console.error("Failed to cache the current shopping list", error);
-    });
-  }, [apiItems, db, hydrateItems, shoppingListQuery.data]);
-
-  const visibleItemCount = visibleItems.length;
-  const visibleListName = shoppingListQuery.data?.name ?? "My Shopping List";
-  const visibleCheckedCount = visibleItems.filter(
-    (item) => item.checked
-  ).length;
-  const visibleTotalEstimatedCost = visibleItems.reduce(
-    (total, item) => total + item.estimatedPrice,
-    0
-  );
-  const sections = groupShoppingListItems(visibleItems);
-
-  async function handleToggleItem(itemId: string) {
-    const item = visibleItems.find((currentItem) => currentItem.id === itemId);
-    if (!item) return;
-
-    const nextChecked = !item.checked;
-
-    toggleItem(itemId);
-    updateShoppingListItemChecked(db, itemId, nextChecked).catch((error) => {
-      console.error("Failed to persist shopping item locally", error);
-    });
-
-    try {
-      await updateShoppingItemMutation.mutateAsync({
-        itemId,
-        payload: { checked: nextChecked },
-      });
-    } catch (error) {
-      console.error("Failed to sync shopping item, queuing for retry", error);
-      await enqueueSyncOperation(db, "shopping_toggle", {
-        itemId,
-        checked: nextChecked,
-      }).catch((queueError) => {
-        console.error("Failed to queue shopping item sync", queueError);
-      });
-    }
-  }
-
-  async function handleToggleSelectAll() {
-    const allChecked =
-      visibleItemCount > 0 && visibleCheckedCount === visibleItemCount;
-    const nextChecked = !allChecked;
-    const itemsToFlip = visibleItems.filter(
-      (item) => item.checked !== nextChecked
-    );
-
-    await Promise.all(itemsToFlip.map((item) => handleToggleItem(item.id)));
-    showToast(allChecked ? "All items deselected" : "All items selected");
-  }
-
-  async function handleClearCheckedItems() {
-    clearCheckedItems();
-    deleteCheckedShoppingListItems(db).catch((error) => {
-      console.error("Failed to clear shopping items locally", error);
-    });
-
-    try {
-      await clearCheckedMutation.mutateAsync();
-    } catch (error) {
-      console.error(
-        "Failed to sync shopping list clear, queuing for retry",
-        error
-      );
-      await enqueueSyncOperation(db, "shopping_clear_checked", {}).catch(
-        (queueError) => {
-          console.error("Failed to queue shopping list clear", queueError);
-        }
-      );
-    }
-    showToast("Checked items removed", "success");
-  }
-
-  async function handleAddItem(name: string, quantity: string) {
-    const now = new Date().toISOString();
-    const trimmedName = name.trim();
-    const trimmedQuantity = quantity.trim() || "1";
-    const localId = createLocalId("shopping_item");
-    const newItem: ShoppingListItem = {
-      id: localId,
-      name: trimmedName,
-      emoji: "🛒",
-      quantity: trimmedQuantity,
-      category: "Pantry",
-      estimatedPrice: 0,
-      checked: false,
-      createdAt: now,
-      updatedAt: now,
-      listId: DEFAULT_SHOPPING_LIST_ID,
-    };
-
-    useShoppingListStore.getState().addItems([newItem]);
-    await insertShoppingListItem(db, newItem);
-    try {
-      const created = await addShoppingItemMutation.mutateAsync({
-        name: trimmedName,
-        quantity: trimmedQuantity,
-        category: "Pantry",
-      });
-      const reconciled = apiShoppingItemToLocalItem(created);
-
-      removeItemLocal(localId);
-      await deleteShoppingListItem(db, localId);
-      useShoppingListStore.getState().addItems([reconciled]);
-      await insertShoppingListItem(db, reconciled);
-    } catch (error) {
-      console.error("Failed to sync new item, queuing for retry", error);
-      await enqueueSyncOperation(db, "shopping_add", {
-        name: trimmedName,
-        quantity: trimmedQuantity,
-        category: "Pantry",
-      }).catch((queueError) => {
-        console.error("Failed to queue new item sync", queueError);
-      });
-    }
-  }
-
-  function openAddItemSheet() {
-    openSheet(
-      <AddItemSheet
-        listName={visibleListName}
-        existingItems={visibleItems.map((item) => item.name)}
-        onAdd={handleAddItem}
-      />
-    );
-  }
-
-  function openRenameSheet() {
-    openSheet(
-      <RenameListSheet
-        initialName={visibleListName}
-        onRename={async (name) => {
-          const shoppingListId = shoppingListQuery.data?.id;
-          if (!shoppingListId) return;
-
-          try {
-            await shoppingListsApi.updateShoppingListById(shoppingListId, {
-              name: name.trim(),
-            });
-            closeSheet();
-            await shoppingListQuery.refetch();
-            showToast("List renamed", "success");
-          } catch (error) {
-            showToast(getApiErrorMessage(error), "danger");
-          }
-        }}
-      />
-    );
-  }
-
-  function openDeleteSheet() {
-    openSheet(
-      <DeleteListSheet
-        listName={visibleListName}
-        onDelete={async () => {
-          const shoppingListId = shoppingListQuery.data?.id;
-          if (!shoppingListId) return;
-
-          try {
-            await shoppingListsApi.deleteShoppingListById(shoppingListId);
-            await Promise.all(
-              visibleItems.map(async (item) => {
-                removeItemLocal(item.id);
-                await deleteShoppingListItem(db, item.id);
-              })
-            );
-            closeSheet();
-            router.back();
-            showToast("Shopping list deleted", "success");
-          } catch (error) {
-            showToast(getApiErrorMessage(error), "danger");
-          }
-        }}
-      />
-    );
-  }
-
-  function openMenuSheet() {
-    openSheet(
-      <View style={styles.menuSheet}>
-        <MenuSheetRow
-          icon="check"
-          label="Clear Checked Items"
-          onPress={() => {
-            closeSheet();
-            handleClearCheckedItems();
-          }}
-        />
-        <MenuSheetRow
-          icon="pencil"
-          label="Rename Shopping List"
-          onPress={() => {
-            closeSheet();
-            openRenameSheet();
-          }}
-        />
-        <MenuSheetRow
-          icon="share"
-          label="Share Shopping List"
-          onPress={() => {
-            closeSheet();
-            shareViewShot(shotRef);
-          }}
-        />
-        <MenuSheetRow
-          icon="trash"
-          label="Delete Shopping List"
-          destructive
-          onPress={() => {
-            closeSheet();
-            openDeleteSheet();
-          }}
-        />
-      </View>
-    );
-  }
-
-  return (
-    <View style={styles.screen}>
-      <ListHeader
-        title={visibleListName}
-        onAddPress={openAddItemSheet}
-        onMenuPress={openMenuSheet}
-      />
-
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <ShareCard
-          shotRef={shotRef}
-          title={visibleListName}
-          items={visibleItems}
-          totalEstimatedCost={visibleTotalEstimatedCost}
-        />
-
-        <SummaryCard
-          listName={visibleListName}
-          total={visibleTotalEstimatedCost}
-          itemCount={visibleItemCount}
-          checkedCount={visibleCheckedCount}
-          onToggleSelectAll={handleToggleSelectAll}
-        />
-
-        <View style={styles.body}>
-          {shoppingListQuery.isLoading ? (
-            <ProgressLoader />
-          ) : shoppingListQuery.isError && visibleItemCount === 0 ? (
-            <View style={styles.errorState}>
-              <EmptyState
-                iconName="offline"
-                title="Could not load list"
-                message={getApiErrorMessage(shoppingListQuery.error)}
-              />
-              <Button
-                title="Try again"
-                onPress={() => shoppingListQuery.refetch()}
-              />
-            </View>
-          ) : visibleItemCount === 0 ? (
-            <ShoppingEmptyState onAddPress={openAddItemSheet} />
-          ) : (
-            sections.map((section) => (
-              <ShoppingListSection
-                key={section.category}
-                category={section.category}
-                items={section.items}
-                onToggleItem={handleToggleItem}
-              />
-            ))
-          )}
-        </View>
-
-        {!shoppingListQuery.isLoading ? <CheckoutButton /> : null}
-      </ScrollView>
-    </View>
-  );
-}
-
-function LocalListDetail({ listId }: { listId: string }) {
+function LocalListDetail({ listId, shareOnOpen }: { listId: string; shareOnOpen: boolean }) {
   const db = useSQLiteContext();
   const isOnline = useIsOnline();
-  const shotRef = useRef<ViewShot | null>(null);
+  const queryClient = useQueryClient();
+  const shotRef = useRef<ViewShotRef | null>(null);
   const list = useShoppingListsStore((state) =>
     state.lists.find((item) => item.id === listId)
   );
@@ -690,6 +345,16 @@ function LocalListDetail({ listId }: { listId: string }) {
   const deleteShoppingListMutation = useDeleteShoppingListMutation();
   const [items, setItems] = useState<ShoppingListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [pantryExpanded, setPantryExpanded] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState("All");
+  const didShareOnOpen = useRef(false);
+
+  useEffect(() => {
+    if (!shareOnOpen || isLoading || didShareOnOpen.current) return;
+    didShareOnOpen.current = true;
+    const frame = requestAnimationFrame(() => { void shareViewShot(shotRef); });
+    return () => cancelAnimationFrame(frame);
+  }, [shareOnOpen, isLoading]);
 
   const loadItems = useCallback(async () => {
     const rows = await getStoredShoppingListItems(db, listId);
@@ -706,13 +371,11 @@ function LocalListDetail({ listId }: { listId: string }) {
         .filter((item) => !item.deletedAt)
         .map((item) => ({ ...apiShoppingItemToLocalItem(item), listId }));
 
-      for (const item of serverItems) {
-        await insertShoppingListItem(db, item);
-      }
+      await replaceShoppingListItemsForList(db, listId, serverItems);
 
       setItems(serverItems);
     } catch (error) {
-      // Best-effort refresh — the local cache is still shown either way.
+      // Best-effort refresh. The local cache is still shown either way.
       console.error("Failed to refresh shopping list from server", error);
     }
   }, [db, isOnline, listId]);
@@ -724,11 +387,14 @@ function LocalListDetail({ listId }: { listId: string }) {
   );
 
   const checkedCount = items.filter((item) => item.checked).length;
-  const totalEstimatedCost = items.reduce(
-    (total, item) => total + item.estimatedPrice,
-    0
-  );
-  const sections = groupShoppingListItems(items);
+  const neededItems = items.filter((item) => !item.checked);
+  const pantryItems = items.filter((item) => item.checked);
+  const sections = groupShoppingListItems(neededItems);
+  const categoryOptions = ["All", ...sections.map((section) => section.category)];
+  const activeCategory = categoryOptions.includes(selectedCategory) ? selectedCategory : "All";
+  const visibleNeededItems = activeCategory === "All"
+    ? neededItems
+    : sections.find((section) => section.category === activeCategory)?.items ?? neededItems;
 
   async function handleToggleItem(itemId: string) {
     const item = items.find((current) => current.id === itemId);
@@ -750,6 +416,7 @@ function LocalListDetail({ listId }: { listId: string }) {
       await shoppingListsApi.updateShoppingListItemInList(listId, itemId, {
         checked: nextChecked,
       });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.pantry.me });
     } catch (error) {
       console.error("Failed to sync list item, queuing for retry", error);
       await enqueueSyncOperation(db, "shopping_list_item_toggle", {
@@ -767,56 +434,82 @@ function LocalListDetail({ listId }: { listId: string }) {
     const nextChecked = !allChecked;
     const itemsToFlip = items.filter((item) => item.checked !== nextChecked);
 
-    await Promise.all(itemsToFlip.map((item) => handleToggleItem(item.id)));
+    const itemIds = itemsToFlip.map((item) => item.id);
+    setItems((current) =>
+      current.map((item) =>
+        itemIds.includes(item.id) ? { ...item, checked: nextChecked } : item
+      )
+    );
+    await Promise.all(
+      itemIds.map((itemId) => updateShoppingListItemChecked(db, itemId, nextChecked))
+    );
+    if (itemIds.length) {
+      try {
+        await shoppingListsApi.setShoppingListItemsChecked(listId, itemIds, nextChecked);
+        await queryClient.invalidateQueries({ queryKey: queryKeys.pantry.me });
+      } catch (error) {
+        console.error("Failed to sync bulk checkbox update", error);
+        await Promise.all(
+          itemIds.map((itemId) =>
+            enqueueSyncOperation(db, "shopping_list_item_toggle", {
+              listId,
+              itemId,
+              checked: nextChecked,
+            })
+          )
+        );
+      }
+    }
     showToast(allChecked ? "All items deselected" : "All items selected");
   }
 
   async function handleClearChecked() {
+    closeSheet();
     const checkedIds = items
       .filter((item) => item.checked)
       .map((item) => item.id);
     setItems((current) => current.filter((item) => !item.checked));
 
-    await Promise.all(
-      checkedIds.map(async (itemId) => {
-        await deleteShoppingListItem(db, itemId);
-
-        try {
-          await shoppingListsApi.deleteShoppingListItemFromList(listId, itemId);
-        } catch (error) {
-          console.error(
-            "Failed to sync item removal, queuing for retry",
-            error
-          );
-          await enqueueSyncOperation(db, "shopping_list_item_remove", {
-            listId,
-            itemId,
-          }).catch((queueError) => {
-            console.error("Failed to queue item removal sync", queueError);
-          });
-        }
-      })
-    );
+    await deleteCheckedShoppingListItems(db, listId);
+    try {
+      await shoppingListsApi.clearCheckedShoppingListItems(listId);
+    } catch (error) {
+      console.error("Failed to sync checked item removal", error);
+      await Promise.all(
+        checkedIds.map((itemId) =>
+          enqueueSyncOperation(db, "shopping_list_item_remove", { listId, itemId })
+        )
+      );
+    }
     showToast("Checked items removed", "success");
   }
 
-  async function handleAddItem(name: string, quantity: string) {
+  async function handleAddItem(name: string, quantity: string, ingredientId?: string, category = "Pantry") {
     const now = new Date().toISOString();
     const trimmedName = name.trim();
     const trimmedQuantity = quantity.trim() || "1";
+    const structuredQuantity = structureShoppingQuantity(trimmedQuantity);
     const localId = createLocalId("shopping_item");
+    const clientMutationId = createLocalId("shopping_mutation");
     const newItem: ShoppingListItem = {
       id: localId,
+      ingredientId,
       name: trimmedName,
       emoji: "🛒",
-      quantity: trimmedQuantity,
-      category: "Pantry",
-      estimatedPrice: 0,
+      quantity: structuredQuantity.displayQuantity,
+      amount: structuredQuantity.amount ?? undefined,
+      displayQuantity: structuredQuantity.displayQuantity,
+      unit: structuredQuantity.unit ?? undefined,
+      category,
+      estimatedPrice: null,
+      priceStatus: "unknown",
+      clientMutationId,
       checked: false,
       createdAt: now,
       updatedAt: now,
       listId,
     };
+    let savedItem = newItem;
 
     // Local-first: show the item immediately under a client-generated id,
     // then best-effort create it server-side and adopt the real id.
@@ -824,15 +517,22 @@ function LocalListDetail({ listId }: { listId: string }) {
     setItems((current) => [...current, newItem]);
     try {
       const created = await shoppingListsApi.addShoppingListItemToList(listId, {
+        ingredientId,
         name: trimmedName,
-        quantity: trimmedQuantity,
-        category: "Pantry",
+        quantity: structuredQuantity.quantity,
+        amount: structuredQuantity.amount,
+        displayQuantity: structuredQuantity.displayQuantity,
+        unit: structuredQuantity.unit,
+        category,
+        clientMutationId,
       });
       const reconciled: ShoppingListItem = {
         ...apiShoppingItemToLocalItem(created),
         listId,
       };
+      savedItem = reconciled;
 
+      await saveSyncIdMapping(db, localId, created.id, "shopping_list_item");
       await deleteShoppingListItem(db, localId);
       await insertShoppingListItem(db, reconciled);
       setItems((current) =>
@@ -842,13 +542,20 @@ function LocalListDetail({ listId }: { listId: string }) {
       console.error("Failed to sync new item, queuing for retry", error);
       await enqueueSyncOperation(db, "shopping_list_item_add", {
         listId,
+        temporaryId: localId,
+        ingredientId,
         name: trimmedName,
-        quantity: trimmedQuantity,
-        category: "Pantry",
+        quantity: structuredQuantity.quantity,
+        amount: structuredQuantity.amount,
+        displayQuantity: structuredQuantity.displayQuantity,
+        unit: structuredQuantity.unit,
+        category,
+        clientMutationId,
       }).catch((queueError) => {
         console.error("Failed to queue new item sync", queueError);
       });
     }
+    return savedItem;
   }
 
   async function handleRename(name: string) {
@@ -876,6 +583,65 @@ function LocalListDetail({ listId }: { listId: string }) {
     }
   }
 
+  function openItemMenu(item: ShoppingListItem) {
+    openSheet(
+      <ShoppingListItemEditSheet
+        item={item}
+        onSave={async (update) => {
+          try {
+            const structuredQuantity = structureShoppingQuantity(update.quantity, update.unit);
+            const updated = await shoppingListsApi.updateShoppingListItemInList(listId, item.id, {
+              name: update.name,
+              quantity: structuredQuantity.quantity,
+              amount: structuredQuantity.amount,
+              displayQuantity: structuredQuantity.displayQuantity,
+              unit: structuredQuantity.unit,
+              category: update.category,
+            });
+            const local = { ...apiShoppingItemToLocalItem(updated), listId };
+            await insertShoppingListItem(db, local);
+            setItems((current) => current.map((entry) => entry.id === item.id ? local : entry));
+            closeSheet();
+            showToast("Item updated", "success");
+          } catch (error) {
+            showToast(getApiErrorMessage(error), "danger");
+          }
+        }}
+        onRemove={async () => {
+          closeSheet();
+          setItems((current) => current.filter((entry) => entry.id !== item.id));
+          await deleteShoppingListItem(db, item.id);
+          try {
+            await shoppingListsApi.deleteShoppingListItemFromList(listId, item.id);
+          } catch {
+            await enqueueSyncOperation(db, "shopping_list_item_remove", {
+              listId,
+              itemId: item.id,
+            });
+          }
+          showToast("Item removed", "default", {
+            label: "Undo",
+            onPress: async () => {
+              await cancelQueuedShoppingListItemRemoval(db, listId, item.id);
+              let restored = item;
+              try {
+                const response = await shoppingListsApi.restoreShoppingListItemInList(
+                  listId,
+                  item.id
+                );
+                restored = { ...apiShoppingItemToLocalItem(response), listId };
+              } catch {
+                // The original server row still exists when its delete never synced.
+              }
+              await insertShoppingListItem(db, restored);
+              setItems((current) => [...current, restored]);
+            },
+          });
+        }}
+      />
+    );
+  }
+
   async function handleDelete() {
     if (!isOnline) {
       closeSheet();
@@ -898,10 +664,11 @@ function LocalListDetail({ listId }: { listId: string }) {
 
   function openAddItemSheet() {
     openSheet(
-      <AddItemSheet
+      <AddShoppingItemSheet
         listName={list?.name ?? "Shopping List"}
-        existingItems={items.map((item) => item.name)}
+        existingItems={items}
         onAdd={handleAddItem}
+        onEdit={openItemMenu}
       />
     );
   }
@@ -916,16 +683,8 @@ function LocalListDetail({ listId }: { listId: string }) {
     openSheet(
       <View style={styles.menuSheet}>
         <MenuSheetRow
-          icon="check"
-          label="Clear Checked Items"
-          onPress={() => {
-            closeSheet();
-            handleClearChecked();
-          }}
-        />
-        <MenuSheetRow
           icon="pencil"
-          label="Rename Shopping List"
+          label="Rename list"
           onPress={() => {
             closeSheet();
             openRenameSheet();
@@ -933,26 +692,44 @@ function LocalListDetail({ listId }: { listId: string }) {
         />
         <MenuSheetRow
           icon="share"
-          label="Share Shopping List"
+          label="Share as image"
           onPress={() => {
             closeSheet();
             shareViewShot(shotRef);
           }}
         />
-        <MenuSheetRow
-          icon="trash"
-          label="Delete Shopping List"
-          destructive
-          onPress={() => {
-            closeSheet();
-            openSheet(
-              <DeleteListSheet
-                listName={list?.name ?? "Shopping List"}
-                onDelete={handleDelete}
-              />
-            );
-          }}
-        />
+        {checkedCount > 0 ? (
+          <MenuSheetRow
+            icon="check"
+            label="Remove pantry items from list"
+            onPress={() => {
+              closeSheet();
+              openSheet(
+                <DeleteListSheet
+                  listName={`${checkedCount} ${checkedCount === 1 ? "item" : "items"} you’ve marked as already in your pantry. Items you still need to buy stay on the list`}
+                  onDelete={handleClearChecked}
+                  pantryOnly
+                />
+              );
+            }}
+          />
+        ) : null}
+        {!list?.isDefaultSyncedList ? (
+          <MenuSheetRow
+            icon="trash"
+            label="Delete list"
+            destructive
+            onPress={() => {
+              closeSheet();
+              openSheet(
+                <DeleteListSheet
+                  listName={list?.name ?? "Shopping List"}
+                  onDelete={handleDelete}
+                />
+              );
+            }}
+          />
+        ) : null}
       </View>
     );
   }
@@ -974,16 +751,16 @@ function LocalListDetail({ listId }: { listId: string }) {
           shotRef={shotRef}
           title={list?.name ?? "Shopping List"}
           items={items}
-          totalEstimatedCost={totalEstimatedCost}
         />
 
-        <SummaryCard
-          listName={list?.name ?? "Shopping List"}
-          total={totalEstimatedCost}
-          itemCount={items.length}
-          checkedCount={checkedCount}
-          onToggleSelectAll={handleToggleSelectAll}
-        />
+        {items.length ? (
+          <SummaryCard
+            itemCount={items.length}
+            neededCount={neededItems.length}
+            checkedCount={checkedCount}
+            onToggleSelectAll={handleToggleSelectAll}
+          />
+        ) : null}
 
         <View style={styles.body}>
           {isLoading ? (
@@ -991,165 +768,48 @@ function LocalListDetail({ listId }: { listId: string }) {
           ) : items.length === 0 ? (
             <ShoppingEmptyState onAddPress={openAddItemSheet} />
           ) : (
-            sections.map((section) => (
-              <ShoppingListSection
-                key={section.category}
-                category={section.category}
-                items={section.items}
+            <>
+              <View style={styles.neededHeading}>
+                <AppText style={styles.neededTitle}>Need to buy</AppText>
+                <AppText style={styles.neededCount}>{neededItems.length} {neededItems.length === 1 ? "item" : "items"}</AppText>
+              </View>
+              {neededItems.length === 0 ? (
+                <View style={styles.allInPantryNotice}>
+                  <View style={styles.allInPantryIcon}>
+                    <Icon name="check" size={18} color={theme.colors.linkGreen} />
+                  </View>
+                  <AppText style={styles.allInPantryText}>
+                    Everything on this list is marked as in your pantry.
+                  </AppText>
+                </View>
+              ) : (
+                <>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll} contentContainerStyle={styles.categoryContent}>
+                    {categoryOptions.map((category) => (
+                      <Pressable key={category} onPress={() => setSelectedCategory(category)} style={[styles.categoryPill, activeCategory === category && styles.categoryPillSelected]} accessibilityRole="button" accessibilityState={{ selected: activeCategory === category }}>
+                        <AppText style={[styles.categoryPillText, activeCategory === category && styles.categoryPillTextSelected]}>{category}</AppText>
+                      </Pressable>
+                    ))}
+                  </ScrollView>
+                  <View style={styles.itemsPanel}>
+                    {visibleNeededItems.map((item) => (
+                      <ShoppingListItemRow key={item.id} item={item} onToggle={handleToggleItem} onMenu={openItemMenu} />
+                    ))}
+                  </View>
+                </>
+              )}
+              <InPantrySection
+                items={pantryItems}
+                expanded={pantryExpanded}
+                onToggleExpanded={() => setPantryExpanded((current) => !current)}
                 onToggleItem={handleToggleItem}
+                onItemMenu={openItemMenu}
               />
-            ))
+            </>
           )}
         </View>
 
-        {!isLoading ? <CheckoutButton /> : null}
       </ScrollView>
-    </View>
-  );
-}
-
-function AddItemSheet({
-  listName,
-  existingItems,
-  onAdd,
-}: {
-  listName: string;
-  existingItems: string[];
-  onAdd: (name: string, quantity: string) => Promise<void>;
-}) {
-  const ingredientsQuery = useIngredientCatalogQuery();
-  const [search, setSearch] = useState("");
-  const [addedItems, setAddedItems] = useState(
-    () => new Set(existingItems.map((item) => item.toLowerCase()))
-  );
-  const [pendingItem, setPendingItem] = useState<string | null>(null);
-  const normalizedSearch = search.trim().toLowerCase();
-  const ingredients = (ingredientsQuery.data ?? []).filter((ingredient) =>
-    normalizedSearch
-      ? [
-          ingredient.displayName,
-          ingredient.canonicalName,
-          ...ingredient.aliases,
-        ]
-          .join(" ")
-          .toLowerCase()
-          .includes(normalizedSearch)
-      : true
-  );
-
-  async function addItem(name: string) {
-    const trimmedName = name.trim();
-    const normalizedName = trimmedName.toLowerCase();
-
-    if (!trimmedName || addedItems.has(normalizedName) || pendingItem) {
-      return;
-    }
-
-    setPendingItem(normalizedName);
-    try {
-      await onAdd(trimmedName, "1");
-      setAddedItems((current) => new Set(current).add(normalizedName));
-      setSearch("");
-    } finally {
-      setPendingItem(null);
-    }
-  }
-
-  return (
-    <View style={styles.addItemSheet}>
-      <AppText style={styles.addItemTitle}>Add Items</AppText>
-      <AppText style={styles.addItemSubtitle}>to {listName}</AppText>
-
-      <View style={styles.addItemInputRow}>
-        <TextInput
-          value={search}
-          onChangeText={setSearch}
-          placeholder="Search or type a new item…"
-          placeholderTextColor={theme.colors.textMuted}
-          style={styles.addItemInput}
-          autoFocus
-          returnKeyType="done"
-          onSubmitEditing={() => addItem(search)}
-        />
-        <Pressable
-          onPress={() => addItem(search)}
-          disabled={!search.trim() || Boolean(pendingItem)}
-          style={({ pressed }) => [
-            styles.addItemPlus,
-            (!search.trim() || pendingItem) &&
-              styles.sheetPrimaryButtonDisabled,
-            pressed && styles.pressed,
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel="Add typed item"
-        >
-          {pendingItem === search.trim().toLowerCase() ? (
-            <ActivityIndicator size="small" color={theme.colors.onDark} />
-          ) : (
-            <Icon name="plus" size={20} color={theme.colors.onDark} />
-          )}
-        </Pressable>
-      </View>
-
-      <ScrollView
-        style={styles.addItemGridScroll}
-        contentContainerStyle={styles.addItemGrid}
-        showsVerticalScrollIndicator={false}
-        nestedScrollEnabled
-        keyboardShouldPersistTaps="handled"
-      >
-        {ingredientsQuery.isLoading ? (
-          <View style={styles.addItemLoading}>
-            <ActivityIndicator size="small" color={theme.colors.green} />
-          </View>
-        ) : ingredients.length === 0 ? (
-          <AppText style={styles.addItemEmpty}>No ingredients found</AppText>
-        ) : (
-          ingredients.map((ingredient) => {
-            const normalizedName = ingredient.displayName.toLowerCase();
-            const selected = addedItems.has(normalizedName);
-            const pending = pendingItem === normalizedName;
-
-            return (
-              <Pressable
-                key={ingredient.id}
-                onPress={() => addItem(ingredient.displayName)}
-                disabled={selected || Boolean(pendingItem)}
-                style={({ pressed }) => [
-                  styles.addItemChip,
-                  selected && styles.addItemChipSelected,
-                  pressed && styles.pressed,
-                ]}
-              >
-                {selected ? (
-                  <Icon name="check" size={12} color={theme.colors.onDark} />
-                ) : null}
-                <AppText
-                  style={[
-                    styles.addItemChipText,
-                    selected && styles.addItemChipTextSelected,
-                  ]}
-                >
-                  {ingredient.displayName}
-                </AppText>
-                {pending ? (
-                  <ActivityIndicator
-                    size="small"
-                    color={theme.colors.textMuted}
-                  />
-                ) : null}
-              </Pressable>
-            );
-          })
-        )}
-      </ScrollView>
-
-      <Pressable
-        onPress={closeSheet}
-        style={({ pressed }) => [styles.addItemDone, pressed && styles.pressed]}
-      >
-        <AppText style={styles.addItemDoneText}>Done</AppText>
-      </Pressable>
     </View>
   );
 }
@@ -1157,19 +817,24 @@ function AddItemSheet({
 function DeleteListSheet({
   listName,
   onDelete,
+  pantryOnly = false,
 }: {
   listName: string;
   onDelete: () => void | Promise<void>;
+  pantryOnly?: boolean;
 }) {
   return (
     <View style={styles.sheetContent}>
-      <AppText style={styles.sheetTitle}>Delete Shopping List?</AppText>
+      <AppText style={styles.sheetTitle}>{pantryOnly ? "Remove pantry items?" : `Delete “${listName}”?`}</AppText>
       <AppText style={styles.deleteSheetText}>
-        {listName} and all its items will be permanently deleted.
+        {pantryOnly ? `This removes the ${listName}.` : "This will permanently remove the list and its items."}
       </AppText>
-      <Pressable onPress={onDelete} style={styles.deleteConfirmButton}>
-        <AppText style={styles.deleteConfirmButtonText}>Delete List</AppText>
-      </Pressable>
+      <View style={styles.confirmActions}>
+        <Pressable onPress={closeSheet} style={styles.cancelButton}><AppText style={styles.cancelButtonText}>Cancel</AppText></Pressable>
+        <Pressable onPress={onDelete} style={[styles.deleteConfirmButton, pantryOnly && styles.pantryConfirmButton]}>
+          <AppText style={styles.deleteConfirmButtonText}>{pantryOnly ? "Remove items" : "Delete"}</AppText>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -1214,7 +879,7 @@ function RenameListSheet({
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: theme.colors.white,
+    backgroundColor: "#FAFAFA",
   },
   scroll: {
     flex: 1,
@@ -1233,28 +898,19 @@ const styles = StyleSheet.create({
   iconButton: {
     width: 44,
     height: 44,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.card,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
     alignItems: "center",
     justifyContent: "center",
   },
-  menuIconButton: {
-    shadowColor: theme.colors.text,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.14,
-    shadowRadius: 3,
-    elevation: 2,
-  },
+  headerAddButton: { width: 80, height: 44, borderRadius: 999, backgroundColor: theme.colors.navy, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5 },
+  headerAddText: { fontFamily: theme.fontFamily.bodyBold, fontSize: 13.5, color: "#FAFAFA" },
   headerTitle: {
     flex: 1,
     textAlign: "center",
     fontFamily: theme.fontFamily.display,
     fontSize: 18,
     letterSpacing: 0,
-    color: theme.colors.navy,
-    paddingHorizontal: 10,
+    color: theme.colors.text,
+    paddingHorizontal: 4,
   },
   pressed: {
     opacity: 0.85,
@@ -1262,25 +918,36 @@ const styles = StyleSheet.create({
   body: {
     paddingHorizontal: 20,
   },
+  neededHeading: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginHorizontal: 1, marginTop: 3, marginBottom: 9 },
+  neededTitle: { fontFamily: theme.fontFamily.display, fontSize: 16, color: theme.colors.navy },
+  neededCount: { fontFamily: theme.fontFamily.body, fontSize: 12.5, color: theme.colors.textMedium },
+  categoryScroll: { marginHorizontal: -20, marginBottom: 12 },
+  categoryContent: { paddingHorizontal: 20, paddingRight: 52, gap: 6 },
+  categoryPill: { minHeight: 32, paddingHorizontal: 11, borderRadius: 999, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.white, alignItems: "center", justifyContent: "center" },
+  categoryPillSelected: { backgroundColor: theme.colors.navy, borderColor: theme.colors.navy },
+  categoryPillText: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 11.75, color: theme.colors.textMedium },
+  categoryPillTextSelected: { color: "#FAFAFA" },
+  itemsPanel: { paddingVertical: 3, borderWidth: 1, borderColor: theme.colors.border, borderRadius: 16, backgroundColor: theme.colors.white, overflow: "hidden" },
+  allInPantryNotice: { padding: 14, marginBottom: 15, borderWidth: 1, borderColor: theme.colors.border, borderRadius: 14, backgroundColor: theme.colors.card2, flexDirection: "row", alignItems: "center", gap: 11 },
+  allInPantryIcon: { width: 34, height: 34, borderRadius: 10, backgroundColor: theme.colors.white, alignItems: "center", justifyContent: "center" },
+  allInPantryText: { flex: 1, fontFamily: theme.fontFamily.body, fontSize: 13.5, lineHeight: 20, color: theme.colors.text },
   errorState: {
     gap: theme.spacing.md,
   },
   summaryCard: {
     marginHorizontal: 20,
-    marginBottom: 18,
-    backgroundColor: "#17291E",
-    borderRadius: 20,
-    padding: 20,
-    shadowColor: theme.colors.navy,
-    shadowOffset: { width: 0, height: 22 },
-    shadowOpacity: 0.32,
-    shadowRadius: 24,
-    elevation: 8,
+    marginBottom: 16,
+    backgroundColor: theme.colors.white,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    paddingVertical: 15,
+    paddingHorizontal: 16,
   },
   summaryRow: {
     flexDirection: "row",
-    alignItems: "flex-end",
-    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 15,
     marginBottom: 14,
   },
   summaryLeft: {
@@ -1289,44 +956,38 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   summaryRight: {
-    alignItems: "flex-end",
-    marginLeft: 16,
+    flex: 1,
   },
+  summaryDivider: { width: 1, height: 40, backgroundColor: theme.colors.border },
+  summaryValueRow: { flexDirection: "row", alignItems: "baseline", gap: 6 },
   summaryEyebrow: {
-    fontFamily: theme.fontFamily.mono,
+    fontFamily: theme.fontFamily.body,
     fontSize: 12,
-    color: "#9FB0A3",
+    color: theme.colors.textMuted,
     letterSpacing: 0,
-    textTransform: "uppercase",
-    marginBottom: 5,
-  },
-  summaryName: {
-    fontFamily: theme.fontFamily.display,
-    fontSize: 17,
-    color: theme.colors.onDark,
+    marginBottom: 3,
   },
   summaryTotal: {
     fontFamily: theme.fontFamily.display,
-    fontSize: 28,
-    lineHeight: 30,
-    color: theme.colors.onDark,
+    fontSize: 27,
+    lineHeight: 29,
+    color: theme.colors.text,
   },
   summaryCount: {
-    fontFamily: theme.fontFamily.mono,
-    fontSize: 13,
-    color: "#9FB0A3",
-    marginTop: 3,
+    fontFamily: theme.fontFamily.body,
+    fontSize: 12.5,
+    color: theme.colors.textMuted,
   },
   summaryProgressTrack: {
-    height: 8,
+    height: 5,
     borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.12)",
+    backgroundColor: theme.colors.card2,
     overflow: "hidden",
   },
   summaryProgressFill: {
     height: "100%",
     borderRadius: 999,
-    backgroundColor: theme.colors.green,
+    backgroundColor: theme.colors.navy3,
   },
   summaryFooterRow: {
     flexDirection: "row",
@@ -1335,14 +996,14 @@ const styles = StyleSheet.create({
     marginTop: 9,
   },
   summaryFooterLabel: {
-    fontFamily: theme.fontFamily.mono,
+    fontFamily: theme.fontFamily.body,
     fontSize: 12,
-    color: "#9FB0A3",
+    color: theme.colors.textMuted,
   },
   summarySelectAll: {
     fontFamily: theme.fontFamily.bodyBold,
     fontSize: 12,
-    color: "#7FD9A6",
+    color: theme.colors.navy3,
   },
   summarySelectAllDisabled: {
     opacity: 0.45,
@@ -1391,27 +1052,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: theme.colors.onDark,
   },
-  checkoutButton: {
-    marginHorizontal: 20,
-    minHeight: 56,
-    borderRadius: 999,
-    backgroundColor: theme.colors.navy,
+  emptyStateLinks: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    marginTop: 4,
-    marginBottom: 20,
-    shadowColor: theme.colors.navy,
-    shadowOffset: { width: 0, height: 14 },
-    shadowOpacity: 0.22,
-    shadowRadius: 13,
-    elevation: 5,
+    gap: 22,
+    marginTop: 18,
   },
-  checkoutButtonText: {
+  emptyStateLink: {
     fontFamily: theme.fontFamily.bodySemiBold,
-    fontSize: 15.5,
-    color: theme.colors.onDark,
+    fontSize: 13,
+    color: theme.colors.primary,
   },
   menuRow: {
     flexDirection: "row",
@@ -1469,108 +1119,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: theme.colors.onDark,
   },
-  addItemSheet: {
-    paddingBottom: theme.spacing.xl,
-  },
-  addItemTitle: {
-    fontFamily: theme.fontFamily.display,
-    fontSize: 19,
-    color: theme.colors.text,
-    marginBottom: 4,
-  },
-  addItemSubtitle: {
-    fontFamily: theme.fontFamily.body,
-    fontSize: 13,
-    color: theme.colors.textMedium,
-    marginBottom: 14,
-  },
-  addItemInputRow: {
-    flexDirection: "row",
-    gap: 8,
-    marginBottom: 14,
-  },
-  addItemInput: {
-    flex: 1,
-    minWidth: 0,
-    height: 48,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.card2,
-    paddingHorizontal: 16,
-    fontFamily: theme.fontFamily.body,
-    fontSize: 14.5,
-    color: theme.colors.text,
-  },
-  addItemPlus: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: theme.colors.navy,
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  },
-  addItemGridScroll: {
-    maxHeight: 260,
-    marginBottom: 16,
-  },
-  addItemGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    paddingBottom: 2,
-  },
-  addItemLoading: {
-    width: "100%",
-    minHeight: 80,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  addItemEmpty: {
-    width: "100%",
-    paddingVertical: 24,
-    textAlign: "center",
-    fontFamily: theme.fontFamily.body,
-    fontSize: 13.5,
-    color: theme.colors.textMedium,
-  },
-  addItemChip: {
-    minHeight: 38,
-    paddingHorizontal: 14,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.onDark,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  addItemChipSelected: {
-    borderColor: theme.colors.navy,
-    backgroundColor: theme.colors.navy,
-  },
-  addItemChipText: {
-    fontFamily: theme.fontFamily.bodyMedium,
-    fontSize: 13,
-    color: theme.colors.text,
-  },
-  addItemChipTextSelected: {
-    color: theme.colors.onDark,
-  },
-  addItemDone: {
-    width: "100%",
-    minHeight: 48,
-    borderRadius: 999,
-    backgroundColor: theme.colors.text,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  addItemDoneText: {
-    fontFamily: theme.fontFamily.bodySemiBold,
-    fontSize: 15,
-    color: theme.colors.onDark,
-  },
   deleteSheetText: {
     fontFamily: theme.fontFamily.body,
     fontSize: 14,
@@ -1578,6 +1126,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textMedium,
   },
   deleteConfirmButton: {
+    flex: 1,
     minHeight: 48,
     borderRadius: 999,
     backgroundColor: theme.colors.red,
@@ -1589,6 +1138,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: theme.colors.onDark,
   },
+  confirmActions: { flexDirection: "row", gap: 10, marginTop: 6 },
+  cancelButton: { flex: 1, minHeight: 48, borderRadius: 999, backgroundColor: theme.colors.card2, alignItems: "center", justifyContent: "center" },
+  cancelButtonText: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 14, color: theme.colors.navy },
+  pantryConfirmButton: { backgroundColor: theme.colors.navy },
   shareCardOffscreen: {
     position: "absolute",
     top: 0,
@@ -1651,26 +1204,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: theme.colors.textMuted,
     marginTop: 8,
-  },
-  shareCardTotal: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 18,
-    paddingTop: 14,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-  },
-  shareCardTotalLabel: {
-    fontFamily: theme.fontFamily.bodyBold,
-    fontSize: 12,
-    color: theme.colors.textMuted,
-    textTransform: "uppercase",
-  },
-  shareCardTotalValue: {
-    fontFamily: theme.fontFamily.display,
-    fontSize: 20,
-    color: theme.colors.green,
   },
   shareCardFooter: {
     marginTop: 20,

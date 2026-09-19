@@ -24,7 +24,7 @@ export function ProfileDatePickerModal({ visible, values, selected, onSelect, on
 const styles = StyleSheet.create({
   screen: { flex: 1, justifyContent: "center", paddingHorizontal: 36, backgroundColor: "rgba(0,0,0,0.45)" },
   panel: { width: "100%", maxWidth: 420, maxHeight: 430, alignSelf: "center", overflow: "hidden", borderRadius: 18, backgroundColor: "#FFFFFF", paddingHorizontal: 18, paddingVertical: 8 },
-  row: { minHeight: 50, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomWidth: 1, borderBottomColor: "#D8E3CA" },
+  row: { minHeight: 50, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomWidth: 1, borderBottomColor: "#E1E1E1" },
   label: { fontSize: 14.5, color: "#17291E" },
   active: { fontFamily: theme.fontFamily.bodySemiBold, color: "#1f7048" },
 });

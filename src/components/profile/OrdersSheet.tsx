@@ -21,7 +21,7 @@ export function OrdersSheet() {
 const styles = StyleSheet.create({
   content: { paddingBottom: 18 },
   title: { marginBottom: 14, fontFamily: theme.fontFamily.display, fontSize: 18, color: "#17291E" },
-  row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: "#D8E3CA" },
+  row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: "#E1E1E1" },
   number: { fontSize: 14, color: "#17291E" },
   status: { fontFamily: theme.fontFamily.mono, fontSize: 12, color: "#1f7048" },
 });

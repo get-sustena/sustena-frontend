@@ -1,156 +1,45 @@
-import { useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { router, useLocalSearchParams } from "expo-router";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Animated, {
-  FadeInDown,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from "react-native-reanimated";
 import { BudgetPlannerPane } from "../../src/components/planner/BudgetPlannerPane";
-import { KitchenPlannerPane } from "../../src/components/planner/KitchenPlannerPane";
-import { PlannerTabButton } from "../../src/components/planner/PlannerTabButton";
+import { PantryPane } from "../../src/components/pantry/PantryPane";
 import { AppText } from "../../src/components/ui/AppText";
+import { Icon } from "../../src/components/ui/Icon";
+import { usePantryStore } from "../../src/store/pantryStore";
 import { theme } from "../../src/theme/theme";
-import { PlannerTab } from "../../src/types/planner";
 
-const PLANNER_TABS: {
-  label: string;
-  value: PlannerTab;
-}[] = [
-  {
-    label: "Budget",
-    value: "budget",
-  },
-  {
-    label: "Kitchen",
-    value: "kitchen",
-  },
-];
-
-export default function PlannerScreen() {
+export default function PantryScreen() {
   const insets = useSafeAreaInsets();
-  const { tab, category } = useLocalSearchParams<{
-    tab?: string;
-    category?: string;
-  }>();
-  const requestedTab = isPlannerTab(tab) ? tab : "budget";
-  const [activeTab, setActiveTab] = useState<PlannerTab>(requestedTab);
-  const [trackWidth, setTrackWidth] = useState(0);
-  const activeIndex = Math.max(
-    0,
-    PLANNER_TABS.findIndex((tab) => tab.value === activeTab)
-  );
-  const indicatorPosition = useSharedValue(0);
-  const segmentWidth =
-    trackWidth > 0 ? (trackWidth - 10) / PLANNER_TABS.length : 0;
-
-  useEffect(() => {
-    indicatorPosition.value = withTiming(activeIndex * segmentWidth, {
-      duration: 320,
-    });
-  }, [activeIndex, indicatorPosition, segmentWidth]);
-
-  useEffect(() => {
-    setActiveTab(requestedTab);
-  }, [requestedTab]);
-
-  const indicatorStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: indicatorPosition.value }],
-  }));
+  const { tab, category } = useLocalSearchParams<{ tab?: string; category?: string }>();
+  const isBudget = tab === "budget";
+  const pantryCount = usePantryStore((state) => state.ingredientIds.length);
 
   return (
-    <Animated.View
-      entering={FadeInDown.duration(320)}
-      style={styles.screen}
-    >
-      <View
-        style={[styles.header, { paddingTop: Math.max(insets.top, 52) }]}
-      >
-        <AppText style={styles.title}>What&apos;s your goal?</AppText>
-      </View>
-
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: Math.max(insets.bottom, 16) + 100 },
-        ]}
-      >
-        <View
-          style={styles.tabsWrapper}
-          onLayout={(event) => setTrackWidth(event.nativeEvent.layout.width)}
-        >
-          {trackWidth > 0 ? (
-            <Animated.View
-              style={[styles.indicator, { width: segmentWidth }, indicatorStyle]}
-            />
-          ) : null}
-
-          {PLANNER_TABS.map((plannerTab) => (
-            <PlannerTabButton
-              key={plannerTab.value}
-              label={plannerTab.label}
-              value={plannerTab.value}
-              active={activeTab === plannerTab.value}
-              onPress={setActiveTab}
-            />
-          ))}
-        </View>
-
-        {activeTab === "budget" ? <BudgetPlannerPane /> : null}
-
-        {activeTab === "kitchen" ? (
-          <KitchenPlannerPane initialCategory={category} />
+    <View style={styles.screen}>
+      <View style={[styles.header, !isBudget && styles.kitchenHeader, { paddingTop: Math.max(insets.top + 6, 48) }]}>
+        {isBudget ? (
+          <Pressable onPress={() => router.back()} style={styles.back} accessibilityLabel="Back">
+            <Icon name="chevronLeft" size={19} color={theme.colors.text} />
+          </Pressable>
         ) : null}
+        <AppText style={[styles.title, !isBudget && styles.kitchenTitle]}>{isBudget ? "Budget planner" : "Your Pantry"}</AppText>
+        <AppText style={[styles.meta, !isBudget && styles.kitchenMeta]}>{isBudget ? "" : `${pantryCount} ingredient${pantryCount === 1 ? "" : "s"}`}</AppText>
+      </View>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 16) + 100 }]}>
+        {isBudget ? <BudgetPlannerPane /> : <PantryPane key={category ?? "All"} initialCategory={category} />}
       </ScrollView>
-    </Animated.View>
+    </View>
   );
-}
-
-function isPlannerTab(value?: string): value is PlannerTab {
-  return value === "budget" || value === "kitchen";
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: theme.colors.white,
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-    backgroundColor: theme.colors.white,
-  },
-  title: {
-    fontFamily: theme.fontFamily.display,
-    fontSize: 26,
-    color: theme.colors.navy,
-  },
-  scrollContent: {
-    backgroundColor: theme.colors.white,
-  },
-  tabsWrapper: {
-    position: "relative",
-    marginHorizontal: 20,
-    marginBottom: 24,
-    padding: 5,
-    borderRadius: 16,
-    backgroundColor: "#EDF2E3",
-    flexDirection: "row",
-  },
-  indicator: {
-    position: "absolute",
-    top: 5,
-    bottom: 5,
-    left: 5,
-    borderRadius: 12,
-    backgroundColor: theme.colors.card,
-    shadowColor: theme.colors.text,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.18,
-    shadowRadius: 10,
-    elevation: 2,
-  },
+  screen: { flex: 1, backgroundColor: "#FAFAFA" },
+  header: { minHeight: 94, paddingHorizontal: 20, paddingBottom: 16, flexDirection: "row", alignItems: "center" },
+  kitchenHeader: { paddingBottom: 18, alignItems: "flex-end" },
+  back: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
+  title: { flex: 1, fontFamily: theme.fontFamily.display, fontSize: 24, color: theme.colors.text, textAlign: "center" },
+  kitchenTitle: { fontSize: 34, lineHeight: 37, letterSpacing: -0.85, color: theme.colors.navy, textAlign: "left" },
+  meta: { width: 76, fontFamily: theme.fontFamily.bodyMedium, fontSize: 11.5, color: theme.colors.textMuted, textAlign: "right" },
+  kitchenMeta: { width: "auto", fontFamily: theme.fontFamily.bodySemiBold, fontSize: 12.5, color: theme.colors.textMedium, paddingBottom: 2 },
+  content: { paddingHorizontal: 20 },
 });

@@ -2,6 +2,7 @@
 
 import * as Haptics from "expo-haptics";
 import { Pressable, StyleSheet, View } from "react-native";
+import { usePreferencesStore } from "../../store/preferencesStore";
 import { theme } from "../../theme/theme";
 import { AppText } from "../ui/AppText";
 
@@ -18,6 +19,8 @@ export function ServingSizeControl({
   max = 25,
   onChange,
 }: Props) {
+  const hapticsEnabled = usePreferencesStore((state) => state.hapticsEnabled);
+
   function updateServing(nextValue: number) {
     const boundedValue = Math.max(min, Math.min(max, nextValue));
 
@@ -25,7 +28,9 @@ export function ServingSizeControl({
       return;
     }
 
-    Haptics.selectionAsync();
+    if (hapticsEnabled) {
+      void Haptics.selectionAsync();
+    }
     onChange(boundedValue);
   }
 

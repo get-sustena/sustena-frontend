@@ -20,7 +20,7 @@ function MenuRow({ label, onPress, danger = false }: { label: string; onPress: (
 const styles = StyleSheet.create({
   content: { paddingBottom: 18 },
   title: { marginBottom: 14, fontFamily: theme.fontFamily.display, fontSize: 18, textAlign: "center", color: "#17291E" },
-  row: { minHeight: 50, justifyContent: "center", paddingHorizontal: 2, borderBottomWidth: 1, borderBottomColor: "#D8E3CA" },
+  row: { minHeight: 50, justifyContent: "center", paddingHorizontal: 2, borderBottomWidth: 1, borderBottomColor: "#E1E1E1" },
   rowText: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 14, color: "#17291E" },
   danger: { color: "#C0392E" },
 });

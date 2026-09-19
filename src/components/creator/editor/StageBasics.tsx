@@ -1,30 +1,19 @@
 import { Image } from "expo-image";
 import { Dispatch, SetStateAction } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
-import {
-  getClassificationValues,
-  RecipeEditorState,
-  setClassificationValues,
-} from "../../../lib/creatorRecipes/editorState";
+import { RecipeEditorState } from "../../../lib/creatorRecipes/editorState";
 import { theme } from "../../../theme/theme";
-import { RecipeAuthoringVocabulary } from "../../../types/api";
 import { AppText } from "../../ui/AppText";
 import { Icon } from "../../ui/Icon";
 import {
   EditorField,
-  EditorGroupCard,
-  EditorGroupLabel,
+  EditorStageIntro,
   EditorTextInput,
-  formatVocabularyValues,
-  openVocabularyPicker,
-  SelectionField,
-  StageRequirementNote,
 } from "./EditorCommon";
 
 type Props = {
   state: RecipeEditorState;
   setState: Dispatch<SetStateAction<RecipeEditorState>>;
-  vocabulary: RecipeAuthoringVocabulary;
   coverUrl: string | null;
   uploadingCover: boolean;
   onChooseCover: () => void;
@@ -33,22 +22,20 @@ type Props = {
 export function StageBasics({
   state,
   setState,
-  vocabulary,
   coverUrl,
   uploadingCover,
   onChooseCover,
 }: Props) {
-  const categories = getClassificationValues(state, "category");
-  const bases = getClassificationValues(state, "main_ingredient_base");
-  const cuisines = getClassificationValues(state, "cuisine");
-
   return (
     <>
-      <StageRequirementNote />
+      <EditorStageIntro eyebrow="Start" title="Start your recipe">
+        Give it a name. Add a photo now or come back to it later.
+      </EditorStageIntro>
 
       <EditorField
         label="Cover photo"
-        helper="Recommended · Use a clear landscape photo of the finished dish."
+        meta="Optional"
+        helper="Use a clear landscape photo of the finished dish."
       >
         <Pressable
           disabled={uploadingCover}
@@ -59,7 +46,7 @@ export function StageBasics({
             <Image
               source={{ uri: coverUrl }}
               contentFit="cover"
-              style={StyleSheet.absoluteFillObject}
+              style={StyleSheet.absoluteFill}
             />
           ) : (
             <View style={styles.coverFallback}>
@@ -85,13 +72,13 @@ export function StageBasics({
           value={state.name}
           onChangeText={(name) => setState((current) => ({ ...current, name }))}
           maxLength={80}
-          placeholder="e.g. Smoky party jollof rice"
+          placeholder="Smoky party jollof rice"
         />
       </EditorField>
 
       <EditorField
         label="Short recipe description"
-        required
+        meta="Optional"
         helper="Describe the taste and when someone might enjoy it."
         count={`${state.description?.length ?? 0}/240`}
       >
@@ -106,83 +93,19 @@ export function StageBasics({
         />
       </EditorField>
 
-      <EditorGroupLabel>Classification</EditorGroupLabel>
-      <EditorGroupCard>
-        <SelectionField
-          label="Categories"
-          required
-          values={formatVocabularyValues(categories, vocabulary.categories)}
-          placeholder="Choose categories"
-          helper="e.g. Soup, Rice dish, Snack. Pick every category that fits."
-          onPress={() =>
-            openVocabularyPicker({
-              title: "Choose recipe categories",
-              options: vocabulary.categories,
-              selected: categories,
-              onDone: (values) =>
-                setState((current) =>
-                  setClassificationValues(current, "category", values)
-                ),
-            })
-          }
-        />
-
-        <SelectionField
-          label="Main ingredient bases"
-          values={formatVocabularyValues(bases, vocabulary.mainIngredientBases)}
-          placeholder="Choose ingredient bases"
-          helper="The core ingredients this dish is built around. You’ll add exact quantities later, in Ingredients."
-          onPress={() =>
-            openVocabularyPicker({
-              title: "Choose main ingredient bases",
-              options: vocabulary.mainIngredientBases,
-              selected: bases,
-              showGroups: false,
-              onDone: (values) =>
-                setState((current) =>
-                  setClassificationValues(
-                    current,
-                    "main_ingredient_base",
-                    values
-                  )
-                ),
-            })
-          }
-        />
-
-        <SelectionField
-          label="Cuisine or tribe"
-          required
-          values={formatVocabularyValues(cuisines, vocabulary.cuisines)}
-          placeholder="Choose cuisines"
-          helper="The cuisines or ethnic traditions this recipe belongs to."
-          onPress={() =>
-            openVocabularyPicker({
-              title: "Choose cuisine or tribe",
-              options: vocabulary.cuisines,
-              selected: cuisines,
-              groupSeparator: " > ",
-              onDone: (values) =>
-                setState((current) =>
-                  setClassificationValues(current, "cuisine", values)
-                ),
-            })
-          }
-        />
-      </EditorGroupCard>
     </>
   );
 }
 
 const styles = StyleSheet.create({
   cover: {
-    aspectRatio: 16 / 9,
+    aspectRatio: 16 / 10,
     overflow: "hidden",
-    borderRadius: 16,
+    borderRadius: 18,
     borderWidth: 1,
     borderStyle: "dashed",
-    borderColor: "rgba(0,0,0,0.25)",
-    backgroundColor: "rgba(0,0,0,0.04)",
+    borderColor: "#C7C7C7",
+    backgroundColor: "#F2F2F2",
   },
   coverFallback: {
     flex: 1,
@@ -202,7 +125,7 @@ const styles = StyleSheet.create({
     textDecorationLine: "underline",
   },
   uploading: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: "center",
     justifyContent: "center",
     gap: 8,

@@ -5,12 +5,17 @@ import { runWriteTransaction } from "./writeTransaction";
 
 type ShoppingListItemRow = {
   id: string;
+  ingredient_id: string | null;
   name: string;
   emoji: string;
   quantity: string;
+  amount: number | null;
+  display_quantity: string | null;
   unit: string | null;
   category: string;
-  estimated_price: number;
+  estimated_price: number | null;
+  price_status: "unknown" | "estimated" | "confirmed";
+  client_mutation_id: string | null;
   checked: number;
   source_recipe_id: string | null;
   created_at: string;
@@ -51,28 +56,38 @@ export async function insertShoppingListItem(
     `
     INSERT OR REPLACE INTO shopping_list_items (
       id,
+      ingredient_id,
       name,
       emoji,
       quantity,
+      amount,
+      display_quantity,
       unit,
       category,
       estimated_price,
+      price_status,
+      client_mutation_id,
       checked,
       source_recipe_id,
       created_at,
       updated_at,
       list_id
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
     [
       item.id,
+      item.ingredientId ?? null,
       item.name,
       item.emoji,
       item.quantity,
+      item.amount ?? null,
+      item.displayQuantity ?? null,
       item.unit ?? null,
       item.category,
       item.estimatedPrice,
+      item.priceStatus ?? (item.estimatedPrice === null ? "unknown" : "estimated"),
+      item.clientMutationId ?? null,
       item.checked ? 1 : 0,
       item.sourceRecipeId ?? null,
       item.createdAt,
@@ -145,12 +160,16 @@ export async function deleteShoppingListItem(
   );
 }
 
-export async function deleteCheckedShoppingListItems(db: SQLiteDatabase) {
+export async function deleteCheckedShoppingListItems(
+  db: SQLiteDatabase,
+  listId: string
+) {
   await db.runAsync(
     `
     DELETE FROM shopping_list_items
-    WHERE checked = 1
-    `
+    WHERE checked = 1 AND list_id = ?
+    `,
+    [listId]
   );
 }
 
@@ -195,12 +214,17 @@ export function mapShoppingListRowToItem(
 ): ShoppingListItem {
   return {
     id: row.id,
+    ingredientId: row.ingredient_id ?? undefined,
     name: row.name,
     emoji: row.emoji,
     quantity: row.quantity,
+    amount: row.amount ?? undefined,
+    displayQuantity: row.display_quantity ?? undefined,
     unit: row.unit ?? undefined,
     category: row.category,
     estimatedPrice: row.estimated_price,
+    priceStatus: row.price_status,
+    clientMutationId: row.client_mutation_id ?? undefined,
     checked: Boolean(row.checked),
     sourceRecipeId: row.source_recipe_id ?? undefined,
     createdAt: row.created_at,

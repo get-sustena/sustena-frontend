@@ -34,6 +34,7 @@ export function useUpdatePreferencesMutation() {
     mutationFn: preferencesApi.updatePreferences,
     onSuccess: (preferences) => {
       queryClient.setQueryData(queryKeys.preferences.me, preferences);
+      queryClient.invalidateQueries({ queryKey: queryKeys.recommendations.home });
       hydrateLocalPreferences(preferences);
     },
   });

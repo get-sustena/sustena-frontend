@@ -30,6 +30,7 @@ export function useUpdateProfileAnswersMutation() {
     mutationFn: profileAnswersApi.updateProfileAnswers,
     onSuccess: (answers) => {
       queryClient.setQueryData(queryKeys.profileAnswers.me, answers);
+      queryClient.invalidateQueries({ queryKey: queryKeys.recommendations.home });
     },
   });
 }

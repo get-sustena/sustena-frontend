@@ -17,7 +17,7 @@ import { Button } from "../../ui/Button";
 import { Icon, IconName } from "../../ui/Icon";
 
 export function EditorStageIntro({
-  eyebrow,
+  eyebrow: _eyebrow,
   title,
   children,
 }: {
@@ -27,7 +27,6 @@ export function EditorStageIntro({
 }) {
   return (
     <View style={styles.intro}>
-      <AppText style={styles.eyebrow}>{eyebrow}</AppText>
       <AppText style={styles.stageTitle}>{title}</AppText>
       <AppText style={styles.stageCopy}>{children}</AppText>
     </View>
@@ -75,18 +74,25 @@ export function EditorField({
   label,
   helper,
   required,
+  meta,
   count,
   children,
 }: {
   label: string;
   helper?: string;
   required?: boolean;
+  meta?: string;
   count?: string;
   children: ReactNode;
 }) {
   return (
     <View style={styles.field}>
-      <AppText style={styles.label}>{label}</AppText>
+      <View style={styles.labelRow}>
+        <AppText style={styles.label}>{label}</AppText>
+        {required || meta ? (
+          <AppText style={styles.labelMeta}>{required ? "Required" : meta}</AppText>
+        ) : null}
+      </View>
       {children}
       {helper || count ? (
         <View style={styles.fieldMeta}>
@@ -402,7 +408,7 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     backgroundColor: theme.colors.white,
   },
-  intro: { gap: 7 },
+  intro: { paddingTop: 8, paddingBottom: 24 },
   eyebrow: {
     fontFamily: theme.fontFamily.monoMedium,
     fontSize: 10,
@@ -413,28 +419,31 @@ const styles = StyleSheet.create({
   stageTitle: {
     fontFamily: theme.fontFamily.display,
     fontSize: 28,
-    lineHeight: 33,
+    lineHeight: 30,
+    letterSpacing: -0.8,
     color: theme.colors.navy,
   },
-  stageCopy: { fontSize: 13, lineHeight: 20, color: theme.colors.textMedium },
-  section: { gap: 13 },
+  stageCopy: { marginTop: 9, fontSize: 13, lineHeight: 20, color: theme.colors.textMedium },
+  section: { marginBottom: 26, paddingBottom: 26, gap: 13, borderBottomWidth: 1, borderBottomColor: "#D9D9D9" },
   sectionTitle: {
     fontFamily: theme.fontFamily.displaySemiBold,
     fontSize: 19,
     color: theme.colors.navy,
   },
   sectionDescription: { marginTop: -7, fontSize: 12, lineHeight: 18, color: theme.colors.textMuted },
-  field: { marginBottom: 18 },
-  label: { marginBottom: 6, fontFamily: theme.fontFamily.body, fontSize: 13, color: theme.colors.text },
+  field: { marginBottom: 20 },
+  labelRow: { marginBottom: 7, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
+  label: { fontFamily: theme.fontFamily.bodyMedium, fontSize: 13, color: theme.colors.text },
+  labelMeta: { fontSize: 11, color: theme.colors.textMuted },
   fieldMeta: { marginTop: 6, flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 10 },
   count: { fontFamily: theme.fontFamily.mono, fontSize: 11.5, color: theme.colors.textMuted },
   helper: { flex: 1, fontSize: 12, lineHeight: 17, color: theme.colors.textMuted },
   input: {
     minHeight: 50,
     paddingHorizontal: 14,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: theme.colors.border,
-    borderRadius: 13,
+    borderRadius: 14,
     backgroundColor: theme.colors.white,
     color: theme.colors.text,
     fontFamily: theme.fontFamily.body,
@@ -446,9 +455,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     flexDirection: "row",
     alignItems: "center",
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: theme.colors.border,
-    borderRadius: 13,
+    borderRadius: 14,
     backgroundColor: theme.colors.white,
   },
   numberInput: { flex: 1, paddingVertical: 0, fontFamily: theme.fontFamily.body, fontSize: 14, color: theme.colors.text },
@@ -470,7 +479,7 @@ const styles = StyleSheet.create({
   valueChip: { paddingHorizontal: 12, paddingVertical: 6, flexDirection: "row", alignItems: "center", gap: 5, borderWidth: 1, borderColor: theme.colors.navy, borderRadius: 999, backgroundColor: theme.colors.navy },
   valueChipText: { fontSize: 12.5, color: theme.colors.onDark },
   choiceRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  choice: { flexGrow: 1, minWidth: 82, paddingHorizontal: 10, paddingVertical: 11, alignItems: "center", borderWidth: 1.5, borderColor: theme.colors.border, borderRadius: 11, backgroundColor: theme.colors.white },
+  choice: { flexGrow: 1, minWidth: 82, minHeight: 42, paddingHorizontal: 10, paddingVertical: 11, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: theme.colors.border, borderRadius: 999, backgroundColor: theme.colors.white },
   choiceSelected: { borderColor: theme.colors.navy, backgroundColor: theme.colors.navy },
   choiceText: { fontFamily: theme.fontFamily.body, fontSize: 12, color: theme.colors.textMedium },
   choiceTextSelected: { color: theme.colors.white },

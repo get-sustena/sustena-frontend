@@ -8,6 +8,8 @@ import { useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { RecipePhoto } from "../../src/components/recipe/RecipePhoto";
+import { IngredientImage } from "../../src/components/ingredient/IngredientImage";
+import { ShoppingListDestinationSheet } from "../../src/components/shopping/ShoppingListDestinationSheet";
 import { AppText } from "../../src/components/ui/AppText";
 import { Button } from "../../src/components/ui/Button";
 import { Icon } from "../../src/components/ui/Icon";
@@ -18,7 +20,10 @@ import {
   deleteFavoriteRecipe,
   insertFavoriteRecipe,
 } from "../../src/db/favoritesRepository";
-import { insertShoppingListItems } from "../../src/db/shoppingListRepository";
+import {
+  insertShoppingListItems,
+  replaceShoppingListItemsForList,
+} from "../../src/db/shoppingListRepository";
 import { enqueueSyncOperation } from "../../src/db/syncQueueRepository";
 import {
   useAddFavoriteMutation,
@@ -28,13 +33,13 @@ import { useIngredientCatalogQuery } from "../../src/hooks/api/useIngredients";
 import {
   useRecipeDetailWithLocalFallback,
 } from "../../src/hooks/api/useRecipes";
-import { useAddShoppingListItemMutation } from "../../src/hooks/api/useShoppingList";
 import { useUnitsQuery } from "../../src/hooks/api/useUnits";
 import {
   apiRecipeToLocalRecipe,
   apiShoppingItemToLocalItem,
 } from "../../src/lib/api/adapters";
 import { getApiErrorMessage } from "../../src/lib/api/errors";
+import { shoppingListsApi } from "../../src/lib/api";
 import { formatNaira } from "../../src/lib/formatters";
 import {
   createInitialIngredientUnitSelections,
@@ -43,7 +48,6 @@ import { formatScaledInstruction } from "../../src/lib/instructionScaling";
 import { scaleAmountText, scaleCost } from "../../src/lib/scaling";
 import {
   generateShoppingListItemsFromRecipe,
-  isPurchasableRecipeIngredient,
 } from "../../src/lib/shoppingListGenerator";
 import { capitalizeWords } from "../../src/lib/textFormatters";
 import {
@@ -59,13 +63,14 @@ import {
 import { useFavoritesStore } from "../../src/store/favoritesStore";
 import { usePreferencesStore } from "../../src/store/preferencesStore";
 import { useShoppingListStore } from "../../src/store/shoppingListStore";
-import { closeSheet, openSheet } from "../../src/store/uiStore";
+import { useShoppingListsStore } from "../../src/store/shoppingListsStore";
+import { closeSheet, openSheet, showToast } from "../../src/store/uiStore";
 import { theme } from "../../src/theme/theme";
 import type {
   RecipeDetail as ApiRecipeDetail,
   RecipeIngredient as ApiRecipeIngredient,
 } from "../../src/types/api";
-import { DEFAULT_SHOPPING_LIST_ID } from "../../src/types/shoppingList";
+import { createLocalId } from "../../src/lib/id";
 
 export default function RecipeDetailScreen() {
   const db = useSQLiteContext();
@@ -80,7 +85,6 @@ export default function RecipeDetailScreen() {
     : undefined;
   const addFavoriteMutation = useAddFavoriteMutation();
   const removeFavoriteMutation = useRemoveFavoriteMutation();
-  const addShoppingListItemMutation = useAddShoppingListItemMutation();
 
   const defaultServingSize = usePreferencesStore(
     (state) => state.defaultServingSize
@@ -89,6 +93,9 @@ export default function RecipeDetailScreen() {
   const hapticsEnabled = usePreferencesStore((state) => state.hapticsEnabled);
 
   const addItems = useShoppingListStore((state) => state.addItems);
+  const hydrateItems = useShoppingListStore((state) => state.hydrateItems);
+  const activeListId = useShoppingListsStore((state) => state.activeListId);
+  const shoppingLists = useShoppingListsStore((state) => state.lists);
 
   const [servings, setServings] = useState(defaultServingSize);
   const [globalUnitMode, setGlobalUnitMode] =
@@ -405,7 +412,7 @@ export default function RecipeDetailScreen() {
     );
   }
 
-  async function handleAddToShoppingList() {
+  async function handleAddToShoppingList(destinationListId: string) {
     if (!recipe) return;
 
     const ingredientAmountOverrides = recipeDetail
@@ -432,78 +439,46 @@ export default function RecipeDetailScreen() {
       ingredientAmountOverrides,
     });
 
-    let itemsToPersist = items;
-
-    if (shouldSyncApi && recipeDetail) {
-      const apiIngredients = recipeDetail.ingredients.filter(
-        isPurchasableRecipeIngredient
-      );
-      const itemPayloads = apiIngredients.map((ingredient) => {
-        const selectedUnit = getSelectedApiIngredientOption(
-          ingredient
-        ).selectedOption;
-
-        return {
-          recipeId: recipeDetail.id,
-          name:
-            ingredient.ingredientName ??
-            ingredient.canonicalIngredientName ??
-            ingredient.rawText,
-          canonicalIngredientName: ingredient.canonicalIngredientName,
-          emoji: null,
-          quantity:
-            selectedUnit?.preview ??
-            ingredient.displayText ??
-            ingredient.quantityText ??
-            ingredient.rawText,
-          unit: selectedUnit?.unit ?? ingredient.unit,
-          category: ingredient.category,
-          estimatedPrice: null,
-        };
-      });
-
-      const results = await Promise.allSettled(
-        itemPayloads.map((payload) =>
-          addShoppingListItemMutation.mutateAsync(payload)
-        )
-      );
-
-      itemsToPersist = results.map((result, index) =>
-        result.status === "fulfilled"
-          ? apiShoppingItemToLocalItem(result.value)
-          : items[index]
-      );
-
-      const rejectedResults = results
-        .map((result, index) => ({ result, payload: itemPayloads[index] }))
-        .filter(
-          (entry): entry is { result: PromiseRejectedResult; payload: typeof itemPayloads[number] } =>
-            entry.result.status === "rejected"
-        );
-
-      if (rejectedResults.length > 0) {
-        console.error(
-          "Failed to sync shopping list items, queuing for retry",
-          rejectedResults[0].result.reason
-        );
-
-        await Promise.all(
-          rejectedResults.map((entry) =>
-            enqueueSyncOperation(db, "shopping_add", entry.payload).catch(
-              (queueError) => {
-                console.error("Failed to queue shopping item sync", queueError);
-              }
-            )
-          )
-        );
-      }
-    }
-
+    const batchPayload = {
+      clientMutationId: createLocalId("recipe_shopping"),
+      recipes: [
+        {
+          recipeId: recipe.id,
+          servings,
+          unitOverrides: (recipeDetail?.ingredients ?? []).flatMap(
+            (ingredient) => {
+              const unit = getSelectedApiIngredientOption(ingredient)
+                .selectedOption?.unit;
+              return unit ? [{ ingredientId: ingredient.id, unit }] : [];
+            }
+          ),
+        },
+      ],
+    };
     try {
-      addItems(itemsToPersist);
-      await insertShoppingListItems(db, itemsToPersist);
-    } catch (error) {
-      console.error("Failed to persist shopping list items", error);
+      if (!shouldSyncApi) throw new Error("Recipe is only available offline");
+      const updatedList = await shoppingListsApi.addRecipesToShoppingList(
+        destinationListId,
+        batchPayload
+      );
+      const authoritativeItems = updatedList.items.map((item) => ({
+        ...apiShoppingItemToLocalItem(item),
+        listId: destinationListId,
+      }));
+      if (destinationListId === activeListId) {
+        hydrateItems(authoritativeItems);
+      }
+      await replaceShoppingListItemsForList(db, destinationListId, authoritativeItems);
+    } catch {
+      const localItems = items.map((item) => ({ ...item, listId: destinationListId }));
+      if (destinationListId === activeListId) {
+        addItems(localItems);
+      }
+      await insertShoppingListItems(db, localItems);
+      await enqueueSyncOperation(db, "shopping_list_recipe_batch", {
+        listId: destinationListId,
+        ...batchPayload,
+      });
     }
 
     if (hapticsEnabled) {
@@ -512,8 +487,85 @@ export default function RecipeDetailScreen() {
 
     router.push({
       pathname: "/shopping/[id]",
-      params: { id: DEFAULT_SHOPPING_LIST_ID },
+      params: { id: destinationListId },
     });
+  }
+
+  function chooseShoppingListDestination() {
+    if (shoppingLists.length <= 1) {
+      handleAddToShoppingList(activeListId);
+      return;
+    }
+    openSheet(
+      <ShoppingListDestinationSheet
+        lists={shoppingLists}
+        activeListId={activeListId}
+        onSelect={(listId) => {
+          closeSheet();
+          handleAddToShoppingList(listId);
+        }}
+      />
+    );
+  }
+
+  async function addToolToShoppingList(tool: { id: string; name: string }) {
+    const clientMutationId = createLocalId("tool_shopping");
+    const now = new Date().toISOString();
+
+    try {
+      const created = await shoppingListsApi.addShoppingListItemToList(
+        activeListId,
+        {
+          name: tool.name,
+          quantity: "1 item",
+          displayQuantity: "1 item",
+          unit: "item",
+          category: "Tools",
+          estimatedPrice: null,
+          priceStatus: "unknown",
+          clientMutationId,
+        }
+      );
+      const item = {
+        ...apiShoppingItemToLocalItem(created),
+        listId: activeListId,
+      };
+      addItems([item]);
+      await insertShoppingListItems(db, [item]);
+    } catch {
+      const localItem = {
+        id: createLocalId("shopping_item"),
+        name: tool.name,
+        emoji: "",
+        quantity: "1 item",
+        amount: 1,
+        displayQuantity: "1 item",
+        unit: "item",
+        category: "Tools",
+        estimatedPrice: null,
+        priceStatus: "unknown" as const,
+        clientMutationId,
+        checked: false,
+        createdAt: now,
+        updatedAt: now,
+        listId: activeListId,
+      };
+      addItems([localItem]);
+      await insertShoppingListItems(db, [localItem]);
+      await enqueueSyncOperation(db, "shopping_list_item_add", {
+        listId: activeListId,
+        temporaryId: localItem.id,
+        name: tool.name,
+        quantity: "1 item",
+        amount: 1,
+        displayQuantity: "1 item",
+        unit: "item",
+        category: "Tools",
+        clientMutationId,
+      });
+    }
+
+    showToast(`${tool.name} added to your shopping list`, "success");
   }
 
   if (recipeQuery.isLoading && !recipe) {
@@ -568,7 +620,7 @@ export default function RecipeDetailScreen() {
           <Icon
             name="bookmark"
             size={22}
-            color={isFavorite ? theme.colors.onDark : theme.colors.text}
+            color={theme.colors.text}
             filled={isFavorite}
           />
         </Pressable>
@@ -666,7 +718,7 @@ export default function RecipeDetailScreen() {
         <View style={styles.body}>
           {recipeDetail && !recipeDetail.baseServings ? null : (
             <>
-              <SectionHeader title="Serving Size" />
+              <SectionHeader title="Adjust recipe" />
               <View style={styles.servingCard}>
                 <Pressable
                   onPress={() => setServings((current) => Math.max(1, current - 1))}
@@ -678,7 +730,7 @@ export default function RecipeDetailScreen() {
                 <View style={styles.servingValueWrap}>
                   <AppText style={styles.servingValue}>{servings}</AppText>
                   <AppText style={styles.servingLabel}>
-                    {servings === 1 ? "person" : "people"}
+                    servings
                   </AppText>
                 </View>
 
@@ -694,12 +746,12 @@ export default function RecipeDetailScreen() {
             </>
           )}
 
-          <SectionHeader title="Default Units" />
+          <SectionHeader title="Ingredients" />
           <View style={styles.unitModeRow}>
             {[
               { value: "metric" as const, label: "Metric" },
               { value: "imperial" as const, label: "Imperial" },
-              { value: "cups" as const, label: "Nigerian" },
+              { value: "cups" as const, label: "Nigerian Units" },
             ].map((option) => {
               const selected = globalUnitMode === option.value;
 
@@ -728,8 +780,6 @@ export default function RecipeDetailScreen() {
               );
             })}
           </View>
-
-          <SectionHeader title="Ingredients" />
 
           <View style={styles.ingredientsCard}>
             {recipe.ingredients.map((ingredient, index) => {
@@ -765,6 +815,11 @@ export default function RecipeDetailScreen() {
                       !isLast && styles.ingredientItemDivider,
                     ]}
                   >
+                    <IngredientImage
+                      ingredientId={apiIngredient.ingredientId}
+                      name={ingredient.name}
+                      size={44}
+                    />
                     <AppText style={styles.ingredientName}>
                       {capitalizeWords(ingredient.name)}
                     </AppText>
@@ -879,6 +934,7 @@ export default function RecipeDetailScreen() {
                     !isLast && styles.ingredientItemDivider,
                   ]}
                 >
+                  <IngredientImage name={ingredient.name} size={44} />
                   <AppText style={styles.ingredientName}>
                     {capitalizeWords(ingredient.name)}
                   </AppText>
@@ -919,17 +975,17 @@ export default function RecipeDetailScreen() {
               <SectionHeader title="Estimated Cost" />
               <View style={styles.costRow}>
                 <View style={styles.costMain}>
-                  <AppText style={styles.costLabel}>Total Cost</AppText>
+                  <AppText style={styles.costLabel}>Estimated cost</AppText>
                   <AppText style={styles.costValue}>
                     {formatNaira(scaledCost)}
                   </AppText>
                 </View>
 
                 <View style={styles.costPer}>
-                  <AppText style={styles.costLabel}>Per Person</AppText>
                   <AppText style={styles.costValueSecondary}>
                     {costPerPerson !== null ? formatNaira(costPerPerson) : "--"}
                   </AppText>
+                  <AppText style={styles.costPerLabel}>per person</AppText>
                 </View>
               </View>
             </>
@@ -977,7 +1033,15 @@ export default function RecipeDetailScreen() {
                     </AppText>
                   </View>
 
-                  <Pressable style={styles.toolAddButton}>
+                  <Pressable
+                    onPress={() => void addToolToShoppingList(tool)}
+                    style={({ pressed }) => [
+                      styles.toolAddButton,
+                      pressed && styles.pressed,
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Add ${tool.name} to shopping list`}
+                  >
                     <AppText style={styles.toolAddText}>Add</AppText>
                   </Pressable>
                 </View>
@@ -1003,7 +1067,7 @@ export default function RecipeDetailScreen() {
         ) : null}
 
         <Pressable
-          onPress={handleAddToShoppingList}
+          onPress={chooseShoppingListDestination}
           style={({ pressed }) => [
             styles.ctaButton,
             pressed && styles.pressed,
@@ -1275,32 +1339,34 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.xl,
   },
   topBar: {
-    flexShrink: 0,
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
     paddingHorizontal: 12,
     paddingBottom: 8,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: theme.colors.white,
+    backgroundColor: "transparent",
     zIndex: 5,
   },
   photo: {
     height: 205,
   },
   topBarButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 44,
+    height: 44,
+    borderRadius: 0,
     alignItems: "center",
     justifyContent: "center",
   },
   favoriteButtonActive: {
-    backgroundColor: theme.colors.navy,
-    borderColor: theme.colors.navy,
+    backgroundColor: "transparent",
   },
   titleBlock: {
     paddingHorizontal: 20,
-    paddingTop: 16,
+    paddingTop: 22,
     paddingBottom: 4,
   },
   tagRow: {
@@ -1313,22 +1379,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 9,
     paddingVertical: 4,
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#D2D8CB",
-    backgroundColor: "#EAEDE6",
+    borderWidth: 0,
+    backgroundColor: "#F1F1EF",
   },
   tagText: {
     fontFamily: theme.fontFamily.bodySemiBold,
-    fontSize: 11,
+    fontSize: 10.5,
     letterSpacing: 0,
     textTransform: "uppercase",
     color: theme.colors.text,
   },
   heroTitle: {
     fontFamily: theme.fontFamily.display,
-    fontSize: 26,
-    letterSpacing: 0,
-    lineHeight: 30,
+    fontSize: 32,
+    letterSpacing: -1,
+    lineHeight: 34,
     color: theme.colors.navy,
     marginBottom: 10,
   },
@@ -1368,27 +1433,18 @@ const styles = StyleSheet.create({
   statsCard: {
     marginBottom: 8,
     flexDirection: "row",
-    backgroundColor: theme.colors.background,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
-    overflow: "hidden",
-    shadowColor: theme.colors.text,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.14,
-    shadowRadius: 6,
-    elevation: 2,
+    backgroundColor: "transparent",
   },
   statCell: {
     flex: 1,
     alignItems: "center",
-    paddingVertical: 13,
+    paddingVertical: 0,
     paddingHorizontal: 4,
     gap: 6,
+    flexDirection: "row",
   },
   statCellBorder: {
-    borderRightWidth: 1,
-    borderRightColor: theme.colors.border,
+    borderRightWidth: 0,
   },
   statCellValue: {
     fontFamily: theme.fontFamily.monoBold,
@@ -1396,11 +1452,7 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
   },
   statCellLabel: {
-    fontFamily: theme.fontFamily.mono,
-    fontSize: 11,
-    color: theme.colors.textMuted,
-    textTransform: "uppercase",
-    letterSpacing: 0,
+    display: "none",
   },
   body: {
     paddingHorizontal: 20,
@@ -1409,43 +1461,36 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: theme.spacing.md,
-    marginTop: 20,
-    marginBottom: 12,
+    marginTop: 34,
+    marginBottom: 14,
   },
   sectionTitle: {
-    fontFamily: theme.fontFamily.monoBold,
-    fontSize: 12,
-    color: theme.colors.textMuted,
-    letterSpacing: 0,
-    textTransform: "uppercase",
+    fontFamily: theme.fontFamily.display,
+    fontSize: 20,
+    color: theme.colors.text,
+    letterSpacing: -0.4,
   },
   sectionRule: {
-    flex: 1,
-    height: 1,
-    backgroundColor: theme.colors.border,
+    display: "none",
   },
   servingCard: {
-    backgroundColor: theme.colors.background,
+    width: 210,
+    alignSelf: "center",
+    backgroundColor: theme.colors.white,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    borderRadius: 16,
-    padding: theme.spacing.lg,
+    borderRadius: 999,
+    padding: 4,
     flexDirection: "row",
     alignItems: "center",
     gap: 16,
-    shadowColor: theme.colors.text,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.14,
-    shadowRadius: 6,
-    elevation: 2,
   },
   servingButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 11,
+    width: 40,
+    height: 40,
+    borderRadius: 999,
     backgroundColor: theme.colors.card2,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderWidth: 0,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1458,7 +1503,7 @@ const styles = StyleSheet.create({
   },
   servingValue: {
     fontFamily: theme.fontFamily.display,
-    fontSize: 30,
+    fontSize: 22,
     color: theme.colors.navy,
   },
   servingLabel: {
@@ -1472,9 +1517,9 @@ const styles = StyleSheet.create({
   },
   unitModeButton: {
     flex: 1,
-    height: 46,
+    height: 44,
     minWidth: 0,
-    borderRadius: 11,
+    borderRadius: 999,
     borderWidth: 1,
     borderColor: theme.colors.border,
     backgroundColor: theme.colors.cream,
@@ -1501,18 +1546,17 @@ const styles = StyleSheet.create({
   ingredientItem: {
     flexDirection: "row",
     alignItems: "center",
-    gap: theme.spacing.md,
-    paddingVertical: 17,
-    paddingHorizontal: 2,
+    gap: 11,
+    minHeight: 62,
+    paddingVertical: 4,
   },
   ingredientItemDivider: {
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomWidth: 0,
   },
   ingredientName: {
     flex: 1,
-    fontFamily: theme.fontFamily.body,
-    fontSize: 15.5,
+    fontFamily: theme.fontFamily.bodySemiBold,
+    fontSize: 15,
     color: theme.colors.text,
   },
   ingredientChip: {
@@ -1521,10 +1565,10 @@ const styles = StyleSheet.create({
     gap: 4,
     flexShrink: 0,
     maxWidth: "48%",
-    backgroundColor: theme.colors.card2,
+    backgroundColor: "#F5F3EC",
     borderWidth: 1,
     borderColor: theme.colors.border,
-    borderRadius: 9,
+    borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 7,
   },
@@ -1545,20 +1589,14 @@ const styles = StyleSheet.create({
     opacity: 0.85,
   },
   costRow: {
-    backgroundColor: theme.colors.background,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    backgroundColor: "#F5F3EC",
+    borderWidth: 0,
     borderRadius: 16,
     padding: theme.spacing.lg,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: theme.spacing.lg,
-    shadowColor: theme.colors.text,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.14,
-    shadowRadius: 6,
-    elevation: 2,
   },
   costMain: {
     flex: 1,
@@ -1567,45 +1605,51 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
   },
   costLabel: {
-    fontFamily: theme.fontFamily.monoBold,
-    fontSize: 12,
+    fontFamily: theme.fontFamily.body,
+    fontSize: 13,
     color: theme.colors.textMuted,
     letterSpacing: 0,
-    textTransform: "uppercase",
+    textTransform: "none",
     marginBottom: 5,
   },
   costValue: {
     fontFamily: theme.fontFamily.display,
     fontSize: 26,
     lineHeight: 28,
-    color: theme.colors.navy3,
+    color: theme.colors.text,
   },
   costValueSecondary: {
     fontFamily: theme.fontFamily.monoBold,
     fontSize: 16,
     color: theme.colors.navy,
   },
+  costPerLabel: {
+    fontFamily: theme.fontFamily.body,
+    fontSize: 11.5,
+    color: theme.colors.textMuted,
+    marginTop: 2,
+  },
   stepsCard: {
     position: "relative",
   },
   stepsLine: {
     position: "absolute",
-    left: 13,
+    left: 42,
     top: 14,
     bottom: 14,
-    width: 2,
+    width: 1,
     backgroundColor: theme.colors.border,
   },
   stepItem: {
     flexDirection: "row",
-    gap: 14,
-    marginBottom: 20,
+    gap: 30,
+    marginBottom: 26,
   },
   stepNumber: {
     width: 28,
     height: 28,
-    borderRadius: 14,
-    backgroundColor: theme.colors.navy,
+    borderRadius: 0,
+    backgroundColor: theme.colors.white,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 1,
@@ -1613,8 +1657,8 @@ const styles = StyleSheet.create({
   },
   stepNumberText: {
     fontFamily: theme.fontFamily.display,
-    fontSize: 13,
-    color: theme.colors.onDark,
+    fontSize: 21,
+    color: theme.colors.text,
   },
   stepText: {
     flex: 1,
@@ -1625,10 +1669,10 @@ const styles = StyleSheet.create({
     paddingTop: 3,
   },
   toolSection: {
-    marginTop: 24,
-    backgroundColor: "#F5F8F1",
-    borderRadius: 16,
-    paddingHorizontal: 18,
+    marginTop: 30,
+    backgroundColor: "transparent",
+    borderTopWidth: 0.75,
+    borderTopColor: theme.colors.border,
     paddingVertical: 16,
   },
   toolSectionTitle: {
@@ -1643,7 +1687,7 @@ const styles = StyleSheet.create({
     gap: theme.spacing.md,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(216,227,202,0.7)",
+    borderBottomColor: theme.colors.border,
   },
   toolItemLast: {
     borderBottomWidth: 0,

@@ -9,6 +9,7 @@ import {
   resetLocalAccountStores,
 } from "../../lib/accountSession";
 import { authApi } from "../../lib/api";
+import { waitForAccountBackgroundTasks } from "../../lib/accountBackgroundTasks";
 import { queryKeys } from "../../lib/query/queryKeys";
 import { useAuthStore } from "../../store/authStore";
 
@@ -75,9 +76,15 @@ export function useLogoutMutation() {
   const db = useSQLiteContext();
   const queryClient = useQueryClient();
   const clearAuth = useAuthStore((state) => state.clearAuth);
+  const beginSignOut = useAuthStore((state) => state.beginSignOut);
 
   return useMutation({
-    mutationFn: authApi.logout,
+    mutationFn: async () => {
+      beginSignOut();
+      await queryClient.cancelQueries();
+      await waitForAccountBackgroundTasks();
+      return authApi.logout();
+    },
     onSettled: () => finalizeLocalLogout(db, queryClient, clearAuth),
   });
 }
@@ -86,9 +93,15 @@ export function useLogoutAllMutation() {
   const db = useSQLiteContext();
   const queryClient = useQueryClient();
   const clearAuth = useAuthStore((state) => state.clearAuth);
+  const beginSignOut = useAuthStore((state) => state.beginSignOut);
 
   return useMutation({
-    mutationFn: authApi.logoutAll,
+    mutationFn: async () => {
+      beginSignOut();
+      await queryClient.cancelQueries();
+      await waitForAccountBackgroundTasks();
+      return authApi.logoutAll();
+    },
     onSettled: () => finalizeLocalLogout(db, queryClient, clearAuth),
   });
 }

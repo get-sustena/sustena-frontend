@@ -103,7 +103,7 @@ export function ProgressLoader({ variant = "inline" }: Props) {
             colors={[theme.colors.green, theme.colors.orange]}
             start={{ x: 0, y: 0.5 }}
             end={{ x: 1, y: 0.5 }}
-            style={StyleSheet.absoluteFillObject}
+            style={StyleSheet.absoluteFill}
           />
         </Animated.View>
       </View>

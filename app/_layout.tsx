@@ -89,7 +89,7 @@ export default function RootLayout() {
             <AppBootstrapGate>
               <PersistenceEffects />
 
-              <StatusBar style="dark" backgroundColor={theme.colors.background} />
+              <StatusBar style="dark" />
               <Stack
                 screenOptions={{
                   headerShown: false,

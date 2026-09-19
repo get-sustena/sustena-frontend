@@ -31,6 +31,7 @@ import {
 } from "../../../src/db/creatorRecipeDraftRepository";
 import {
   useAuthoringVocabularyQuery,
+  useCreateRecipeDraftMutation,
   useMyRecipeQuery,
   usePublishRecipeMutation,
   useSavePublishedRecipeEditMutation,
@@ -55,6 +56,7 @@ import {
 import { queryKeys } from "../../../src/lib/query/queryKeys";
 import { queryClient } from "../../../src/lib/query/queryClient";
 import { pickAndUploadImage } from "../../../src/lib/media/uploadImage";
+import { createLocalId } from "../../../src/lib/id";
 import { closeSheet, openSheet, showToast } from "../../../src/store/uiStore";
 import { theme } from "../../../src/theme/theme";
 import { RecipeDraft } from "../../../src/types/api";
@@ -91,11 +93,13 @@ export default function RecipeEditorScreen() {
     invalidateLibraries: false,
   });
   const publishMutation = usePublishRecipeMutation();
+  const createMutation = useCreateRecipeDraftMutation();
   const savePublishedEditMutation = useSavePublishedRecipeEditMutation();
   const [state, setState] = useState<RecipeEditorState | null>(null);
   const [stage, setStage] = useState(1);
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [uploadingCover, setUploadingCover] = useState(false);
+  const [publishedName, setPublishedName] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("saved");
   const [serverValidationErrors, setServerValidationErrors] = useState<
     RecipeEditorValidationError[]
@@ -412,7 +416,7 @@ export default function RecipeEditorScreen() {
           : "Recipe published",
         "success"
       );
-      router.replace("/profile" as Href);
+      setPublishedName(state.name.trim() || currentRecipe.name);
     } catch (error) {
       const publishErrors = getPublishValidationErrors(error);
       if (publishErrors.length) setServerValidationErrors(publishErrors);
@@ -456,6 +460,22 @@ export default function RecipeEditorScreen() {
   function exitEditor() {
     queryClient.invalidateQueries({ queryKey: queryKeys.creatorRecipes.all });
     router.back();
+  }
+
+  async function createAnotherRecipe() {
+    try {
+      const draft = await createMutation.mutateAsync({
+        id: createLocalId("recipe"),
+        name: "",
+        editorStage: 1,
+      });
+      router.push({
+        pathname: "/creator/recipes/[id]",
+        params: { id: draft.id, mode: "create" },
+      });
+    } catch (error) {
+      showToast(getApiErrorMessage(error), "danger");
+    }
   }
 
   function updateEditorState(
@@ -536,6 +556,28 @@ export default function RecipeEditorScreen() {
     );
   }
 
+  if (publishedName) {
+    return (
+      <View style={[styles.successScreen, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 20 }]}>
+        <View style={styles.successIcon}>
+          <Icon name="check" size={31} color={theme.colors.onDark} strokeWidth={3} />
+        </View>
+        <AppText style={styles.successTitle}>Your recipe is live</AppText>
+        <AppText style={styles.successCopy}>
+          “{publishedName}” now appears on your creator profile.
+        </AppText>
+        <View style={styles.successActions}>
+          <Pressable onPress={() => router.replace("/profile" as Href)} style={({ pressed }) => [styles.primaryButton, styles.successActionButton, pressed && styles.pressed]}>
+            <AppText style={styles.primaryButtonText}>Back to profile</AppText>
+          </Pressable>
+          <Pressable disabled={createMutation.isPending} onPress={createAnotherRecipe} style={({ pressed }) => [styles.secondaryButton, styles.successActionButton, pressed && styles.pressed]}>
+            <AppText style={styles.secondaryButtonText}>{createMutation.isPending ? "Creating..." : "Create another recipe"}</AppText>
+          </Pressable>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -562,7 +604,7 @@ export default function RecipeEditorScreen() {
           </Pressable>
         </View>
         <AppText style={styles.progressText}>
-          Step {stage} of 5 · {STAGE_NAMES[stage - 1]}
+          {stage} of 5&nbsp;&nbsp;{STAGE_NAMES[stage - 1]}
         </AppText>
         <View style={styles.progressTrack}>
           <View
@@ -597,7 +639,6 @@ export default function RecipeEditorScreen() {
           <StageBasics
             state={state}
             setState={updateEditorState}
-            vocabulary={vocabulary}
             coverUrl={coverUrl}
             uploadingCover={uploadingCover}
             onChooseCover={chooseCover}
@@ -625,6 +666,7 @@ export default function RecipeEditorScreen() {
           <StageReview
             state={state}
             setState={updateEditorState}
+            vocabulary={vocabulary}
             validationErrors={validationErrors}
             onJumpToStage={goToStage}
           />
@@ -632,44 +674,41 @@ export default function RecipeEditorScreen() {
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: Math.max(12, insets.bottom) }]}>
-        <Pressable
-          onPress={() => (stage === 1 ? closeEditor() : goToStage(stage - 1))}
-          style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
-        >
-          <AppText style={styles.secondaryButtonText}>
-          Back
-          </AppText>
-        </Pressable>
-        {stage < 5 ? (
+        {stage === 1 ? (
           <Pressable
             onPress={continueToNextStage}
-            style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
+            style={({ pressed }) => [styles.primaryButton, styles.fullWidthButton, pressed && styles.pressed]}
           >
             <AppText style={styles.primaryButtonText}>Continue</AppText>
           </Pressable>
-        ) : (
+        ) : stage < 5 ? (
           <>
             <Pressable
-              onPress={saveAndExit}
+              onPress={() => goToStage(stage - 1)}
               style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
             >
-              <AppText style={styles.secondaryButtonText}>Save as draft</AppText>
+              <AppText style={styles.secondaryButtonText}>Back</AppText>
             </Pressable>
             <Pressable
-              disabled={publishMutation.isPending || saveStatus === "conflict"}
-              onPress={publish}
+              onPress={continueToNextStage}
               style={({ pressed }) => [
-                styles.publishButton,
+                styles.primaryButton,
                 pressed && styles.pressed,
-                (publishMutation.isPending || saveStatus === "conflict") &&
-                  styles.disabled,
               ]}
             >
-              <AppText style={styles.publishButtonText}>
-                {publishMutation.isPending ? "Publishing..." : "Publish recipe"}
-              </AppText>
+              <AppText style={styles.primaryButtonText}>Continue</AppText>
             </Pressable>
           </>
+        ) : (
+          <View style={styles.publishActions}>
+            <View style={styles.publishSecondaryRow}>
+              <Pressable onPress={() => goToStage(4)} style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}><AppText style={styles.secondaryButtonText}>Back</AppText></Pressable>
+              <Pressable onPress={saveAndExit} style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}><AppText style={styles.secondaryButtonText}>Save as draft</AppText></Pressable>
+            </View>
+            <Pressable disabled={publishMutation.isPending || saveStatus === "conflict"} onPress={publish} style={({ pressed }) => [styles.publishButton, pressed && styles.pressed, (publishMutation.isPending || saveStatus === "conflict") && styles.disabled]}>
+              <AppText style={styles.publishButtonText}>{publishMutation.isPending ? "Publishing..." : "Publish recipe"}</AppText>
+            </Pressable>
+          </View>
         )}
       </View>
     </KeyboardAvoidingView>
@@ -715,26 +754,29 @@ function mergeValidationErrors(
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#FBFCFA" },
-  header: { paddingHorizontal: 20, paddingBottom: 10, backgroundColor: "#FBFCFA" },
+  screen: { flex: 1, backgroundColor: "#FFFFFF" },
+  header: { paddingHorizontal: 20, paddingBottom: 10, backgroundColor: "#FFFFFF" },
   headerRow: { minHeight: 42, marginBottom: 10, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  headerButton: { width: 42, height: 42, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#D8E3CA", borderRadius: 12, backgroundColor: "#FBFBF7" },
+  headerButton: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   headerTitle: { position: "absolute", left: 70, right: 70, textAlign: "center", fontFamily: theme.fontFamily.display, fontSize: 15, color: "#17291E" },
   headerSave: { minHeight: 42, paddingLeft: 10, alignItems: "flex-end", justifyContent: "center" },
   headerSaveText: { fontFamily: theme.fontFamily.bodyBold, fontSize: 13, color: "#279A5F" },
-  progressText: { marginBottom: 6, fontFamily: theme.fontFamily.mono, fontSize: 11, color: "#8A9187" },
-  progressTrack: { height: 4, overflow: "hidden", borderRadius: 999, backgroundColor: "#D8E3CA" },
-  progressFill: { height: "100%", borderRadius: 999, backgroundColor: "#279A5F" },
+  progressText: { marginBottom: 7, fontFamily: theme.fontFamily.body, fontSize: 10.5, letterSpacing: 0.4, color: "#8A9187" },
+  progressTrack: { height: 3, overflow: "hidden", borderRadius: 999, backgroundColor: "#E3E3E3" },
+  progressFill: { height: "100%", borderRadius: 999, backgroundColor: "#17291E" },
   conflictBanner: { minHeight: 48, paddingHorizontal: 16, flexDirection: "row", alignItems: "center", gap: 9, borderBottomWidth: 1, borderBottomColor: "#E8C4BE", backgroundColor: "#FBF0EE" },
   conflictText: { flex: 1, fontSize: 11.5, lineHeight: 16, color: theme.colors.redText },
   content: { paddingHorizontal: 20, paddingTop: 0 },
-  footer: { position: "absolute", left: 0, right: 0, bottom: 0, paddingTop: 12, paddingHorizontal: 20, flexDirection: "row", gap: 8, borderTopWidth: 1, borderTopColor: "#D8E3CA", backgroundColor: "#FBFCFA" },
-  secondaryButton: { minHeight: 48, paddingHorizontal: 10, flex: 1, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#D8E3CA", borderRadius: 999, backgroundColor: "#FFFFFF" },
+  footer: { position: "absolute", left: 0, right: 0, bottom: 0, paddingTop: 10, paddingHorizontal: 20, flexDirection: "row", gap: 8, backgroundColor: "#FFFFFF" },
+  secondaryButton: { minHeight: 48, paddingHorizontal: 10, flex: 1, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#E1E1E1", borderRadius: 999, backgroundColor: "#FFFFFF" },
   secondaryButtonText: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 13.5, textAlign: "center", color: "#1B211C" },
   primaryButton: { minHeight: 48, flex: 2, alignItems: "center", justifyContent: "center", borderRadius: 999, backgroundColor: "#17291E" },
   primaryButtonText: { fontFamily: theme.fontFamily.bodyBold, fontSize: 14.5, color: "#FBFBF7" },
-  publishButton: { minHeight: 48, paddingHorizontal: 10, flex: 1.4, alignItems: "center", justifyContent: "center", borderRadius: 999, backgroundColor: "#E3A62E" },
-  publishButtonText: { fontFamily: theme.fontFamily.bodyBold, fontSize: 13.5, textAlign: "center", color: "#17291E" },
+  fullWidthButton: { flex: 1 },
+  publishActions: { flex: 1, gap: 8 },
+  publishSecondaryRow: { flexDirection: "row", gap: 8 },
+  publishButton: { minHeight: 50, paddingHorizontal: 10, alignItems: "center", justifyContent: "center", borderRadius: 999, backgroundColor: "#17291E" },
+  publishButtonText: { fontFamily: theme.fontFamily.bodyBold, fontSize: 14.5, textAlign: "center", color: "#FBFBF7" },
   pressed: { opacity: 0.82, transform: [{ scale: 0.985 }] },
   disabled: { opacity: 0.45 },
   notFound: { flex: 1, paddingHorizontal: 30, alignItems: "center", justifyContent: "center", gap: 12, backgroundColor: theme.colors.background },
@@ -742,4 +784,10 @@ const styles = StyleSheet.create({
   notFoundCopy: { maxWidth: 300, textAlign: "center", fontSize: 12.5, lineHeight: 19, color: theme.colors.textMuted },
   notFoundButton: { marginTop: 5, paddingHorizontal: 18, paddingVertical: 12, borderRadius: 12, backgroundColor: theme.colors.navy },
   notFoundButtonText: { fontFamily: theme.fontFamily.bodyBold, fontSize: 13, color: theme.colors.white },
+  successScreen: { flex: 1, paddingHorizontal: 24, alignItems: "center", justifyContent: "center", backgroundColor: "#FFFFFF" },
+  successIcon: { width: 72, height: 72, alignItems: "center", justifyContent: "center", borderRadius: 36, backgroundColor: "#17291E" },
+  successTitle: { marginTop: 22, fontFamily: theme.fontFamily.display, fontSize: 28, lineHeight: 32, textAlign: "center", color: "#17291E" },
+  successCopy: { maxWidth: 310, marginTop: 9, fontSize: 13.5, lineHeight: 20, textAlign: "center", color: theme.colors.textMuted },
+  successActions: { width: "100%", maxWidth: 420, marginTop: 28, gap: 10 },
+  successActionButton: { width: "100%", flex: 0 },
 });

@@ -60,14 +60,14 @@ export default function ProductOnboardingScreen() {
 
   return (
     <View style={styles.screen}>
-      <StatusBar style="light" backgroundColor={theme.colors.navy} />
+      <StatusBar style="light" />
 
       <LinearGradient
         colors={
           SLIDE_GRADIENTS[slide] as unknown as [string, string, ...string[]]
         }
         locations={isLast ? LAST_GRADIENT_LOCATIONS : GRADIENT_LOCATIONS}
-        style={StyleSheet.absoluteFillObject}
+        style={StyleSheet.absoluteFill}
       />
 
       <View

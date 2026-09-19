@@ -18,6 +18,9 @@ export const queryKeys = {
     categories: ["ingredients", "categories"] as const,
     catalog: ["ingredients", "catalog"] as const,
   },
+  pantry: {
+    me: ["pantry", "me"] as const,
+  },
   preferences: {
     me: ["preferences", "me"] as const,
   },
@@ -31,6 +34,9 @@ export const queryKeys = {
     detail: (id: string) => ["recipes", "detail", id] as const,
     slug: (slug: string) => ["recipes", "slug", slug] as const,
     tags: ["recipes", "tags"] as const,
+  },
+  recommendations: {
+    home: ["recommendations", "home"] as const,
   },
   creators: {
     all: ["creators"] as const,

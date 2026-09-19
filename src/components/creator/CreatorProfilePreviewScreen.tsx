@@ -55,7 +55,7 @@ export function CreatorProfilePreviewScreen() {
       <ScrollView showsVerticalScrollIndicator={false} stickyHeaderIndices={recipes.length ? [collections.length > 1 ? 2 : 1] : undefined} onScroll={(event) => setScrolled(event.nativeEvent.contentOffset.y > 76)} scrollEventThrottle={16} contentContainerStyle={{ paddingBottom: insets.bottom + 44 }}>
         <View style={styles.profile}>
           <View style={styles.identity}>
-            <View style={styles.avatar}>{draft.avatarUrl ? <Image source={{ uri: draft.avatarUrl }} contentFit="cover" style={StyleSheet.absoluteFillObject} /> : <AppText style={styles.initials}>{initials(draft.displayName)}</AppText>}</View>
+            <View style={styles.avatar}>{draft.avatarUrl ? <Image source={{ uri: draft.avatarUrl }} contentFit="cover" style={StyleSheet.absoluteFill} /> : <AppText style={styles.initials}>{initials(draft.displayName)}</AppText>}</View>
             <View style={styles.identityCopy}><AppText style={styles.name}>{draft.displayName}</AppText><AppText style={styles.handle}>@{draft.handle}</AppText></View>
           </View>
           {draft.bio ? <AppText style={styles.bio}>{draft.bio}</AppText> : null}
@@ -104,11 +104,11 @@ const styles = StyleSheet.create({
   handle: { fontSize: 14, color: "#5C6459" },
   bio: { marginBottom: 10, fontSize: 14.5, lineHeight: 21.75, color: "#1B211C" },
   specialities: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 16 },
-  speciality: { paddingHorizontal: 11, paddingVertical: 5, borderRadius: 999, borderWidth: 1, borderColor: "#D8E3CA", backgroundColor: "#EEF2E7", fontFamily: theme.fontFamily.bodySemiBold, fontSize: 12, color: "#1f7048" },
+  speciality: { paddingHorizontal: 11, paddingVertical: 5, borderRadius: 999, borderWidth: 1, borderColor: "#E1E1E1", backgroundColor: "#EEF2E7", fontFamily: theme.fontFamily.bodySemiBold, fontSize: 12, color: "#1f7048" },
   actions: { flexDirection: "row", gap: 10 },
   previewNotice: { flex: 1, minHeight: 46, alignItems: "center", justifyContent: "center", borderRadius: 999, borderWidth: 1, borderColor: "#E3EAD5", backgroundColor: "#F3F6EC" },
   previewNoticeText: { fontSize: 13.5, color: "#5C6459" },
-  shareButton: { width: 46, height: 46, borderRadius: 23, borderWidth: 1, borderColor: "#D8E3CA", backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
+  shareButton: { width: 46, height: 46, borderRadius: 23, borderWidth: 1, borderColor: "#E1E1E1", backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
   grid: { width: "100%", flexDirection: "row", flexWrap: "wrap" },
   gridItem: { width: "33.333333%", padding: 1 },
   empty: { alignItems: "center", paddingHorizontal: 24, paddingTop: 34 },

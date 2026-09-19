@@ -53,11 +53,11 @@ export function BottomSheetHost() {
 
         <KeyboardAvoidingView
           style={styles.keyboardAvoider}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          behavior={Platform.OS === "ios" ? "padding" : Platform.OS === "android" ? "height" : undefined}
           pointerEvents="box-none"
         >
           <Animated.View style={[styles.panel, panelStyle]}>
-            <SafeAreaView>
+            <SafeAreaView edges={["bottom"]} style={styles.safeArea}>
               <View style={styles.handle} />
               {content}
             </SafeAreaView>
@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: theme.colors.black,
   },
   keyboardAvoider: {
@@ -86,11 +86,19 @@ const styles = StyleSheet.create({
   panel: {
     width: "100%",
     maxWidth: 480,
+    maxHeight: "100%",
+    flexShrink: 1,
+    overflow: "hidden",
     backgroundColor: theme.colors.card,
     borderTopLeftRadius: theme.radius.xl,
     borderTopRightRadius: theme.radius.xl,
     paddingTop: theme.spacing.sm,
     paddingHorizontal: theme.spacing.xl,
+  },
+  safeArea: {
+    flexShrink: 1,
+    minHeight: 0,
+    maxHeight: "100%",
   },
   handle: {
     alignSelf: "center",

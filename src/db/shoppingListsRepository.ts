@@ -53,6 +53,7 @@ export async function upsertShoppingList(
     VALUES (?, ?, ?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET
       name = excluded.name,
+      is_default_synced_list = excluded.is_default_synced_list,
       updated_at = excluded.updated_at
     `,
     [

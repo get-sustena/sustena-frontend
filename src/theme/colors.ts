@@ -1,6 +1,6 @@
 // New palette (CookEase v2 redesign) — source of truth: redesign/CookEase App v2.html
 // INK/ASH = text, BASIL = primary dark green (was navy), LEAF = success green,
-// MARI = mustard accent (was orange), FENNEL = border green, COCO = bg/on-dark,
+// MARI = mustard accent (was orange), COCO = bg/on-dark,
 // PIST = light surface, OCHRE = gold, CHILI = danger red.
 export const lightColors = {
   cream: "#FBFBF7", // COCO
@@ -44,7 +44,7 @@ export const lightColors = {
   goldText: "#8A5F13", // OCHRET — deeper gold for text-on-light-warning-bg
   textMutedAlt: "#93A184", // MUT2
 
-  border: "#D8E3CA", // FENNEL
+  border: "#E1E1E1", // v6.5 neutral line
   border2: "rgba(23,41,30,0.16)",
   borderStrong: "rgba(23,41,30,0.22)",
   borderOrange: "rgba(227,166,46,0.25)",

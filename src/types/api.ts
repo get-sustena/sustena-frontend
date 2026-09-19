@@ -216,6 +216,20 @@ export interface RecipeListItem {
   isFavorited: boolean;
 }
 
+export interface RecipeRecommendation {
+  recipe: RecipeListItem;
+  score: number;
+  pantryMatchPercentage: number;
+  matchedPantryIngredientCount: number;
+  reasons: string[];
+}
+
+export interface RecommendationListResponse {
+  items: RecipeRecommendation[];
+  pantryIngredientCount: number;
+  personalized: boolean;
+}
+
 export interface RecipeCreatorSummary {
   id: UUIDString;
   displayName: string;
@@ -238,7 +252,8 @@ export type IngredientConversionContext =
   | "rice"
   | "plain_flour"
   | "millet"
-  | "sorghum";
+  | "sorghum"
+  | "seasoning_cube";
 
 export interface IngredientLocalName {
   name: string;
@@ -271,6 +286,17 @@ export interface IngredientSearchParams {
   search?: string;
   limit?: number;
   offset?: number;
+}
+
+export interface PantryItem {
+  ingredientId: string;
+  ingredient: Ingredient;
+  createdAt: ISODateTimeString;
+  updatedAt: ISODateTimeString;
+}
+
+export interface PantryResponse {
+  items: PantryItem[];
 }
 
 export interface Unit {
@@ -645,13 +671,20 @@ export interface ShoppingListItem {
   id: UUIDString;
   shoppingListId: UUIDString;
   recipeId: string | null;
+  ingredientId: string | null;
   name: string;
   canonicalIngredientName: string | null;
   emoji: string | null;
   quantity: string | null;
+  amount: DecimalString | number | null;
+  displayQuantity: string | null;
   unit: string | null;
   category: string | null;
   estimatedPrice: number | null;
+  priceStatus: "unknown" | "estimated" | "confirmed";
+  priceSource: string | null;
+  pricedAt: ISODateTimeString | null;
+  clientMutationId: string | null;
   checked: boolean;
   createdAt: ISODateTimeString;
   updatedAt: ISODateTimeString;
@@ -666,6 +699,8 @@ export interface ShoppingList {
   createdAt: ISODateTimeString;
   updatedAt: ISODateTimeString;
   items: ShoppingListItem[];
+  knownSubtotal: number;
+  unpricedItemCount: number;
 }
 
 export interface PlannerMeal {
@@ -701,6 +736,19 @@ export interface BudgetPlannerResponse {
   totalBudget: number;
   totalEstimatedCost: number;
   message: string | null;
+  recommendedBudget: number | null;
+  shortfall: {
+    reason:
+      | "budget"
+      | "maximum_cooking_time"
+      | "dietary_preference"
+      | "health_exclusion"
+      | "avoided_recipes"
+      | "insufficient_slot_recipes";
+    requestedMealCount: number;
+    generatedMealCount: number;
+    recommendedBudget: number | null;
+  } | null;
 }
 
 export interface KitchenPlannerResponse {
@@ -713,6 +761,73 @@ export interface MealPlanResponse {
   meals: PlannerMeal[];
   matches: [];
   totalEstimatedCost: number;
+}
+
+export type SavedMealPlanType = "budget" | "timetable" | "pantry";
+export type SavedMealPlanStatus = "active" | "archived";
+
+export interface SavedMealPlanItemCreateRequest {
+  recipeId: string;
+  day: number;
+  plannedDate?: ISODateString | null;
+  mealSlot: MealSlot;
+  servings: number;
+  estimatedCost?: number | null;
+}
+
+export interface SavedMealPlanCreateRequest {
+  name?: string | null;
+  startDate?: ISODateString | null;
+  endDate?: ISODateString | null;
+  plannerType: SavedMealPlanType;
+  budget?: number | null;
+  servingSize: number;
+  requestedMealCount: number;
+  totalEstimatedCost?: number | null;
+  shortfallReason?: string | null;
+  recommendedBudget?: number | null;
+  configuration?: Record<string, unknown>;
+  items: SavedMealPlanItemCreateRequest[];
+}
+
+export interface SavedMealPlanItem {
+  id: UUIDString;
+  recipeId: string;
+  day: number;
+  position: number;
+  plannedDate: ISODateString | null;
+  mealSlot: MealSlot;
+  servings: number;
+  estimatedCost: number | null;
+  recipe: RecipeListItem;
+  createdAt: ISODateTimeString;
+  updatedAt: ISODateTimeString;
+}
+
+export interface SavedMealPlan {
+  id: UUIDString;
+  userId: UUIDString;
+  name: string | null;
+  startDate: ISODateString | null;
+  endDate: ISODateString | null;
+  plannerType: SavedMealPlanType;
+  status: SavedMealPlanStatus;
+  budget: number | null;
+  servingSize: number;
+  requestedMealCount: number;
+  generatedMealCount: number;
+  totalEstimatedCost: number | null;
+  shortfallReason: string | null;
+  recommendedBudget: number | null;
+  configuration: Record<string, unknown>;
+  items: SavedMealPlanItem[];
+  createdAt: ISODateTimeString;
+  updatedAt: ISODateTimeString;
+}
+
+export interface SavedMealPlanUpdateRequest {
+  name?: string | null;
+  status?: SavedMealPlanStatus;
 }
 
 export type TimetablePlannerResponse = MealPlanResponse;
@@ -789,13 +904,18 @@ export interface RecipeSearchParams {
 
 export interface ShoppingListItemCreateRequest {
   recipeId?: string | null;
+  ingredientId?: string | null;
   name: string;
   canonicalIngredientName?: string | null;
   emoji?: string | null;
   quantity?: string | null;
+  amount?: DecimalString | number | null;
+  displayQuantity?: string | null;
   unit?: string | null;
   category?: string | null;
   estimatedPrice?: number | null;
+  priceStatus?: "unknown" | "estimated" | "confirmed";
+  clientMutationId?: string | null;
 }
 
 export type ShoppingListItemCreate = ShoppingListItemCreateRequest;
@@ -803,9 +923,22 @@ export type ShoppingListItemCreate = ShoppingListItemCreateRequest;
 export interface ShoppingListItemUpdateRequest {
   checked?: boolean;
   quantity?: string | null;
+  amount?: DecimalString | number | null;
+  displayQuantity?: string | null;
+  unit?: string | null;
   estimatedPrice?: number | null;
   name?: string;
   category?: string | null;
+  priceStatus?: "unknown" | "estimated" | "confirmed";
+}
+
+export interface ShoppingListRecipeBatchRequest {
+  clientMutationId: string;
+  recipes: {
+    recipeId: string;
+    servings: number;
+    unitOverrides?: { ingredientId: string; unit: string }[];
+  }[];
 }
 
 export type ShoppingListItemUpdate = ShoppingListItemUpdateRequest;

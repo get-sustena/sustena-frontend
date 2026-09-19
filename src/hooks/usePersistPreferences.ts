@@ -3,6 +3,7 @@
 import { useSQLiteContext } from "expo-sqlite";
 import { useEffect } from "react";
 import { saveStoredPreferences } from "../db/preferencesRepository";
+import { trackAccountBackgroundTask } from "../lib/accountBackgroundTasks";
 import { usePreferencesStore } from "../store/preferencesStore";
 
 export function usePersistPreferences(enabled = true) {
@@ -34,7 +35,7 @@ export function usePersistPreferences(enabled = true) {
       return;
     }
 
-    saveStoredPreferences(db, {
+    trackAccountBackgroundTask(saveStoredPreferences(db, {
       healthConditions,
       dietaryPreference,
       defaultUnitMode,
@@ -43,7 +44,7 @@ export function usePersistPreferences(enabled = true) {
       dataSaverEnabled,
       mealRemindersEnabled,
       hasCompletedOnboarding,
-    }).catch((error) => {
+    })).catch((error) => {
       console.error("Failed to persist preferences", error);
     });
   }, [

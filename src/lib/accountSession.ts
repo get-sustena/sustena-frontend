@@ -11,6 +11,7 @@ import {
   getStoredPlannerSettings,
   mapStoredPlannerSettings,
 } from "../db/plannerSettingsRepository";
+import { getStoredPantryIngredientIds } from "../db/pantryRepository";
 import {
   getStoredPreferences,
   mapStoredPreferencesRow,
@@ -27,6 +28,7 @@ import { DEFAULT_PLAN_SETUP } from "../types/planner";
 import { DEFAULT_SHOPPING_LIST_ID } from "../types/shoppingList";
 import { useCreatorProfileEditStore } from "../store/creatorProfileEditStore";
 import { useFavoritesStore } from "../store/favoritesStore";
+import { usePantryStore } from "../store/pantryStore";
 import { usePlannerStore } from "../store/plannerStore";
 import { usePreferencesStore } from "../store/preferencesStore";
 import { useProfileAnswersStore } from "../store/profileAnswersStore";
@@ -44,6 +46,7 @@ export function resetLocalAccountStores() {
   usePreferencesStore.getState().resetPreferences();
   useProfileAnswersStore.getState().resetProfileAnswers();
   usePlannerStore.getState().hydratePlanSetup(DEFAULT_PLAN_SETUP);
+  usePantryStore.getState().clearPantry();
   useCreatorProfileEditStore.getState().hydrate({
     displayName: "",
     handle: "",
@@ -64,6 +67,7 @@ export async function hydrateLocalAccountStores(db: SQLiteDatabase) {
     profileAnswersRow,
     plannerSettingsRow,
     shoppingListRows,
+    pantryIngredientIds,
   ] = await Promise.all([
     getStoredPreferences(db),
     getStoredShoppingListItems(db, DEFAULT_SHOPPING_LIST_ID),
@@ -71,6 +75,7 @@ export async function hydrateLocalAccountStores(db: SQLiteDatabase) {
     getStoredProfileAnswers(db),
     getStoredPlannerSettings(db),
     getStoredShoppingLists(db),
+    getStoredPantryIngredientIds(db),
   ]);
 
   const preferences = mapStoredPreferencesRow(preferencesRow);
@@ -98,4 +103,5 @@ export async function hydrateLocalAccountStores(db: SQLiteDatabase) {
   useShoppingListsStore
     .getState()
     .hydrateLists(shoppingListRows.map(mapShoppingListRowToMeta));
+  usePantryStore.getState().hydratePantry(pantryIngredientIds);
 }

@@ -7,7 +7,7 @@
 
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useState } from "react";
 import { StyleSheet, View, ViewStyle } from "react-native";
 import { AppText } from "../ui/AppText";
 import { theme } from "../../theme/theme";
@@ -51,12 +51,8 @@ export function RecipePhoto({
   fallbackLabel,
   fallbackLabelVariant = "default",
 }: Props) {
-  const [hasImageError, setHasImageError] = useState(false);
-  const showImage = Boolean(imageUrl) && !hasImageError;
-
-  useEffect(() => {
-    setHasImageError(false);
-  }, [imageUrl]);
+  const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null);
+  const showImage = Boolean(imageUrl) && failedImageUrl !== imageUrl;
 
   return (
     <View style={[styles.container, style]}>
@@ -65,10 +61,10 @@ export function RecipePhoto({
       {showImage ? (
         <Image
           source={{ uri: imageUrl ?? undefined }}
-          style={[StyleSheet.absoluteFillObject, styles.imageLayer]}
+          style={[StyleSheet.absoluteFill, styles.imageLayer]}
           contentFit="cover"
           transition={150}
-          onError={() => setHasImageError(true)}
+          onError={() => setFailedImageUrl(imageUrl ?? null)}
         />
       ) : null}
 
@@ -78,7 +74,7 @@ export function RecipePhoto({
           locations={scrim === "compact" ? SCRIM_COMPACT_LOCATIONS : SCRIM_FULL_LOCATIONS}
           start={{ x: 0, y: 0 }}
           end={{ x: 0, y: 1 }}
-          style={[StyleSheet.absoluteFillObject, styles.scrimLayer]}
+          style={[StyleSheet.absoluteFill, styles.scrimLayer]}
           pointerEvents="none"
         />
       ) : null}
@@ -106,7 +102,7 @@ export function RecipePhoto({
       {children ? (
         <View
           pointerEvents="box-none"
-          style={[StyleSheet.absoluteFillObject, styles.contentLayer]}
+          style={[StyleSheet.absoluteFill, styles.contentLayer]}
         >
           {children}
         </View>
@@ -117,7 +113,7 @@ export function RecipePhoto({
 
 function RecipeStripe() {
   return (
-    <View style={[StyleSheet.absoluteFillObject, styles.fallbackLayer]}>
+    <View style={[StyleSheet.absoluteFill, styles.fallbackLayer]}>
       <View style={styles.stripeCanvas}>
         {Array.from({ length: STRIPE_COUNT }, (_, index) => (
           <View
@@ -179,7 +175,7 @@ const styles = StyleSheet.create({
     height: "100%",
   },
   stripeTone: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(23,41,30,0.035)",
   },
   imageLayer: {

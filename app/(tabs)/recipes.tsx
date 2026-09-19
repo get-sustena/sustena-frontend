@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { FlatList, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { RecipeTile } from "../../src/components/recipe/RecipeTile";
@@ -11,7 +11,7 @@ import { Icon } from "../../src/components/ui/Icon";
 import { SearchInput } from "../../src/components/ui/SearchInput";
 import { RECIPE_FILTERS } from "../../src/data/recipeFilters";
 import type { Recipe } from "../../src/data/recipes";
-import { useRecipesWithLocalFallback } from "../../src/hooks/api/useRecipes";
+import { useInfiniteRecipesWithLocalFallback } from "../../src/hooks/api/useRecipes";
 import {
   useProfileAnswersQuery,
   useUpdateProfileAnswersMutation,
@@ -32,11 +32,8 @@ const EXPERIENCE_OPTIONS = [
 
 export default function RecipesScreen() {
   const insets = useSafeAreaInsets();
-  const listRef = useRef<FlatList>(null);
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
-  const [page, setPage] = useState(1);
-  const [recipePages, setRecipePages] = useState<Record<number, Recipe[]>>({});
   const [experienceCardDismissed, setExperienceCardDismissed] = useState(false);
   const experience = useProfileAnswersStore((state) => state.experience);
   const habitTime = useProfileAnswersStore((state) => state.habitTime);
@@ -63,47 +60,19 @@ export default function RecipesScreen() {
       maxTotalTimeMinutes: activeFilter === "quick" ? 45 : undefined,
       preferredMaxTotalTimeMinutes: finiteTimeCap(habitTime),
       preferredDifficulty,
-      page,
       pageSize: PAGE_SIZE,
     }),
-    [activeFilter, habitTime, page, preferredDifficulty, search]
+    [activeFilter, habitTime, preferredDifficulty, search]
   );
-  const recipesQuery = useRecipesWithLocalFallback(recipeParams);
-  const storedRecipes = useMemo(
+  const recipesQuery = useInfiniteRecipesWithLocalFallback(recipeParams);
+  const recipes = useMemo<Recipe[]>(
     () =>
-      Object.keys(recipePages)
-        .map(Number)
-        .sort((a, b) => a - b)
-        .flatMap((pageNumber) => recipePages[pageNumber]),
-    [recipePages]
+      recipesQuery.data?.pages.flatMap((result) =>
+        result.data.items.map(apiRecipeToLocalRecipe)
+      ) ?? [],
+    [recipesQuery.data]
   );
-  const recipes = useMemo(() => {
-    if (storedRecipes.length > 0 || !recipesQuery.data) {
-      return storedRecipes;
-    }
-
-    return recipesQuery.data.items.map(apiRecipeToLocalRecipe);
-  }, [recipesQuery.data, storedRecipes]);
-  const totalRecipes = recipesQuery.data?.total ?? recipes.length;
-  const totalPages = Math.max(1, Math.ceil(totalRecipes / PAGE_SIZE));
-  const canLoadMore = page < totalPages;
-
-  useEffect(() => {
-    setPage(1);
-    setRecipePages({});
-    listRef.current?.scrollToOffset({ offset: 0, animated: false });
-  }, [activeFilter, habitTime, preferredDifficulty, search]);
-
-  useEffect(() => {
-    if (!recipesQuery.data) {
-      return;
-    }
-
-    const items = recipesQuery.data.items.map(apiRecipeToLocalRecipe);
-    setRecipePages((current) =>
-      page === 1 ? { 1: items } : { ...current, [page]: items }
-    );
-  }, [page, recipesQuery.data]);
+  const totalRecipes = recipesQuery.data?.pages[0]?.data.total ?? recipes.length;
 
   return (
     <View style={styles.screen}>
@@ -131,7 +100,6 @@ export default function RecipesScreen() {
       </View>
 
       <FlatList
-        ref={listRef}
         data={recipes}
         keyExtractor={(item) => item.id}
         numColumns={2}
@@ -190,8 +158,8 @@ export default function RecipesScreen() {
           />
         )}
         onEndReached={() => {
-          if (canLoadMore && !recipesQuery.isFetching) {
-            setPage((current) => current + 1);
+          if (recipesQuery.hasNextPage && !recipesQuery.isFetchingNextPage) {
+            void recipesQuery.fetchNextPage();
           }
         }}
         onEndReachedThreshold={0.55}
@@ -216,9 +184,9 @@ export default function RecipesScreen() {
           )
         }
         ListFooterComponent={
-          recipes.length > 0 && recipesQuery.isFetching ? (
+          recipes.length > 0 && recipesQuery.isFetchingNextPage ? (
             <RecipeGridSkeleton rows={1} />
-          ) : recipes.length > 0 && !canLoadMore ? (
+          ) : recipes.length > 0 && !recipesQuery.hasNextPage ? (
             <AppText style={styles.endOfList}>You&apos;re all caught up.</AppText>
           ) : null
         }

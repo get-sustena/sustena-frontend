@@ -1,7 +1,7 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   Keyboard,
   Pressable,
@@ -11,7 +11,7 @@ import {
   View,
 } from "react-native";
 import type { Recipe } from "../../data/recipes";
-import { insertShoppingListItems } from "../../db/shoppingListRepository";
+import { replaceShoppingListItemsForList } from "../../db/shoppingListRepository";
 import {
   useBudgetPlannerMutation,
   usePlannerSettingsQuery,
@@ -22,13 +22,12 @@ import {
   useProfileAnswersQuery,
   useUpdateProfileAnswersMutation,
 } from "../../hooks/api/useProfileAnswers";
-import { useAddShoppingListItemMutation } from "../../hooks/api/useShoppingList";
-import { apiRecipeToLocalRecipe } from "../../lib/api/adapters";
+import { apiRecipeToLocalRecipe, apiShoppingItemToLocalItem } from "../../lib/api/adapters";
 import {
   getApiErrorMessage,
   toApiClientError,
 } from "../../lib/api/errors";
-import { recipesApi } from "../../lib/api";
+import { mealPlansApi, shoppingListsApi } from "../../lib/api";
 import { formatNaira } from "../../lib/formatters";
 import {
   SERVINGS_BY_HABIT_WHO,
@@ -36,26 +35,28 @@ import {
   VALID_HABIT_TIME,
   VALID_HABIT_WHO,
 } from "../../lib/plannerQuickSetup";
-import { scaleAmountText } from "../../lib/scaling";
-import {
-  generateShoppingListItemsFromRecipe,
-  isPurchasableRecipeIngredient,
-} from "../../lib/shoppingListGenerator";
+import { createLocalId } from "../../lib/id";
 import { usePreferencesStore } from "../../store/preferencesStore";
 import { usePlannerStore } from "../../store/plannerStore";
 import { useProfileAnswersStore } from "../../store/profileAnswersStore";
 import { useShoppingListStore } from "../../store/shoppingListStore";
+import { useShoppingListsStore } from "../../store/shoppingListsStore";
 import { closeSheet, openSheet, showToast } from "../../store/uiStore";
 import { theme } from "../../theme/theme";
-import type { MealSlot } from "../../types/api";
+import type {
+  BudgetPlannerResponse,
+  MealSlot,
+  SavedMealPlan,
+} from "../../types/api";
 import type { PlanSetupValue } from "../../types/planner";
-import { DEFAULT_SHOPPING_LIST_ID } from "../../types/shoppingList";
 import { RecipePhoto } from "../recipe/RecipePhoto";
 import { AppText } from "../ui/AppText";
 import { EmptyState } from "../ui/EmptyState";
 import { Icon } from "../ui/Icon";
 import { ProgressLoader } from "../ui/ProgressLoader";
 import { PlanSetupModal } from "./PlanSetupModal";
+import { BudgetShortfallSheet } from "./BudgetShortfallSheet";
+import { ShoppingListDestinationSheet } from "../shopping/ShoppingListDestinationSheet";
 import {
   QuickPlanSetupModal,
   QuickPlanSetupValue,
@@ -72,6 +73,7 @@ const MEAL_SLOT_META = {
 } as const;
 
 type BudgetMeal = {
+  planItemId?: string;
   recipe: Recipe;
   estimatedCost: number | null;
   mealSlot: MealSlot;
@@ -87,13 +89,17 @@ export function BudgetPlannerPane() {
   const [plannedMeals, setPlannedMeals] = useState<BudgetMeal[]>([]);
   const [selectedDay, setSelectedDay] = useState(1);
   const [isAddingAll, setIsAddingAll] = useState(false);
+  const [savedPlanId, setSavedPlanId] = useState<string | null>(null);
+  const [isUpdatingSavedPlan, setIsUpdatingSavedPlan] = useState(false);
+  const generationRequestRef = useRef(0);
   const budgetPlannerMutation = useBudgetPlannerMutation();
   const updatePlannerSettingsMutation =
     useUpdatePlannerSettingsMutation();
   const updatePreferencesMutation = useUpdatePreferencesMutation();
   const updateProfileAnswersMutation = useUpdateProfileAnswersMutation();
-  const addShoppingListItemMutation = useAddShoppingListItemMutation();
-  const addItems = useShoppingListStore((state) => state.addItems);
+  const hydrateItems = useShoppingListStore((state) => state.hydrateItems);
+  const activeListId = useShoppingListsStore((state) => state.activeListId);
+  const shoppingLists = useShoppingListsStore((state) => state.lists);
   const planSetup = usePlannerStore((state) => state.planSetup);
   const habitWho = useProfileAnswersStore((state) => state.habitWho);
   const habitTime = useProfileAnswersStore((state) => state.habitTime);
@@ -148,11 +154,13 @@ export function BudgetPlannerPane() {
   ) {
     if (!nextBudget || nextBudget < 1000) return;
 
+    const requestId = ++generationRequestRef.current;
     const servingSize = SERVINGS_BY_HABIT_WHO[setup.habitWho] ?? 1;
     const timeCap =
       TIME_CAP_BY_HABIT[setup.habitTime] ?? Number.POSITIVE_INFINITY;
 
     setPlannedMeals([]);
+    setSavedPlanId(null);
     setSelectedDay(1);
     budgetPlannerMutation.mutate(
       {
@@ -171,26 +179,121 @@ export function BudgetPlannerPane() {
       },
       {
         onSuccess: (data) => {
-          setPlannedMeals(
-            sortMealsBySlot(
-              data.meals.map((meal) => ({
-                recipe: apiRecipeToLocalRecipe(meal.recipe),
-                estimatedCost: meal.estimatedCost,
-                mealSlot: meal.mealSlot,
-                day: meal.day,
-                servings: meal.servings ?? servingSize,
-              }))
-            )
+          if (
+            data.recommendedBudget &&
+            data.shortfall?.reason === "budget" &&
+            data.generatedMealCount < data.requestedMealCount
+          ) {
+            setPlannedMeals([]);
+            openSheet(
+              <BudgetShortfallSheet
+                currentBudget={nextBudget}
+                recommendedBudget={data.recommendedBudget}
+                days={data.days}
+                mealSlots={data.mealSlots}
+                onUseRecommended={() => {
+                  closeSheet();
+                  updateBudget(String(data.recommendedBudget));
+                  showToast(
+                    `Budget updated to ${formatNaira(data.recommendedBudget!)}`,
+                    "success"
+                  );
+                  requestBudgetPlan(data.recommendedBudget!, setup, avoidRecipeIds);
+                }}
+                onKeepBudget={() => {
+                  closeSheet();
+                  void acceptBudgetPlan(
+                    data,
+                    nextBudget,
+                    servingSize,
+                    timeCap,
+                    requestId
+                  );
+                }}
+              />
+            );
+            return;
+          }
+          void acceptBudgetPlan(
+            data,
+            nextBudget,
+            servingSize,
+            timeCap,
+            requestId
           );
-          setSelectedDay(1);
         },
       }
     );
   }
 
+  async function acceptBudgetPlan(
+    data: BudgetPlannerResponse,
+    acceptedBudget: number,
+    servingSize: number,
+    timeCap: number,
+    requestId: number
+  ) {
+    const generatedMeals = sortMealsBySlot(
+      data.meals.map((meal) => ({
+        recipe: apiRecipeToLocalRecipe(meal.recipe),
+        estimatedCost: meal.estimatedCost,
+        mealSlot: meal.mealSlot,
+        day: meal.day,
+        servings: meal.servings ?? servingSize,
+      }))
+    );
+
+    if (generationRequestRef.current !== requestId) return;
+    setPlannedMeals(generatedMeals);
+    setSelectedDay(1);
+    if (generatedMeals.length === 0) return;
+
+    setIsUpdatingSavedPlan(true);
+    try {
+      const saved = await mealPlansApi.createMealPlan({
+        plannerType: "budget",
+        budget: acceptedBudget,
+        servingSize,
+        requestedMealCount: data.requestedMealCount,
+        totalEstimatedCost: data.totalEstimatedCost,
+        shortfallReason: data.shortfall?.reason ?? null,
+        recommendedBudget: data.recommendedBudget,
+        configuration: {
+          days: data.days,
+          mealSlots: data.mealSlots,
+          ...(Number.isFinite(timeCap)
+            ? { maxTotalTimeMinutes: timeCap }
+            : {}),
+          dietaryPreference,
+          healthConditions,
+        },
+        items: data.meals.map((meal) => ({
+          recipeId: meal.recipe.id,
+          day: meal.day,
+          plannedDate: meal.plannedDate,
+          mealSlot: meal.mealSlot,
+          servings: meal.servings ?? servingSize,
+          estimatedCost: meal.estimatedCost,
+        })),
+      });
+      if (generationRequestRef.current !== requestId) return;
+      setSavedPlanId(saved.id);
+      setPlannedMeals(savedMealPlanToBudgetMeals(saved));
+    } catch (error) {
+      console.error("Failed to save accepted meal plan", error);
+      showToast("Your plan was generated but could not be saved");
+    } finally {
+      if (generationRequestRef.current === requestId) {
+        setIsUpdatingSavedPlan(false);
+      }
+    }
+  }
+
   function updateBudget(value: string) {
+    generationRequestRef.current += 1;
     setBudget(value.replace(/[^0-9]/g, ""));
     setPlannedMeals([]);
+    setSavedPlanId(null);
     budgetPlannerMutation.reset();
   }
 
@@ -201,7 +304,9 @@ export function BudgetPlannerPane() {
 
   function handlePlanSetupComplete(value: PlanSetupValue) {
     setIsPlanSetupOpen(false);
+    generationRequestRef.current += 1;
     setPlannedMeals([]);
+    setSavedPlanId(null);
     budgetPlannerMutation.reset();
     updatePlannerSettingsMutation.mutate(
       {
@@ -264,68 +369,50 @@ export function BudgetPlannerPane() {
     requestBudgetPlan(numericBudget, value);
   }
 
-  async function handleAddAllToShoppingList() {
-    if (plannedMeals.length === 0 || isAddingAll) return;
+  async function handleAddAllToShoppingList(destinationListId: string) {
+    if (plannedMeals.length === 0 || isAddingAll || isUpdatingSavedPlan) return;
 
     setIsAddingAll(true);
 
     try {
-      const planRecipes = await Promise.all(
-        plannedMeals.map(async (meal) => ({
-          meal,
-          recipeDetail: await recipesApi.getRecipeById(meal.recipe.id),
-        }))
-      );
-
-      await Promise.all(
-        planRecipes.flatMap(({ meal, recipeDetail }) =>
-          recipeDetail.ingredients
-            .filter(isPurchasableRecipeIngredient)
-            .map((ingredient) => {
-              const selectedUnit = ingredient.availableUnits[0];
-              const baseAmount =
-                selectedUnit?.label ??
-                ingredient.displayText ??
-                ingredient.quantityText ??
-                ingredient.rawText;
-
-              return addShoppingListItemMutation.mutateAsync({
-                recipeId: recipeDetail.id,
-                name:
-                  ingredient.ingredientName ??
-                  ingredient.canonicalIngredientName ??
-                  ingredient.rawText,
-                canonicalIngredientName: ingredient.canonicalIngredientName,
-                emoji: null,
-                quantity: scaleAmountText({
-                  amount: baseAmount,
-                  baseServings:
-                    recipeDetail.baseServings ?? meal.servings,
-                  selectedServings: meal.servings,
-                }),
-                unit: selectedUnit?.unit ?? ingredient.unit,
-                category: ingredient.category,
-                estimatedPrice: null,
-              });
-            })
-        )
-      );
-
-      const localItems = planRecipes.flatMap(({ meal, recipeDetail }) => {
-        const recipe = apiRecipeToLocalRecipe(recipeDetail);
-
-        return generateShoppingListItemsFromRecipe({
-          recipe,
-          selectedServings: meal.servings,
-          unitMode: "metric",
-        });
-      });
-
-      addItems(localItems);
-      await insertShoppingListItems(db, localItems);
+      const clientMutationId = createLocalId("plan_shopping");
+      let updatedList;
+      if (savedPlanId) {
+        updatedList = await mealPlansApi.addMealPlanToShoppingList(
+          savedPlanId,
+          destinationListId,
+          clientMutationId
+        );
+      } else {
+        const servingsByRecipe = new Map<string, number>();
+        for (const meal of plannedMeals) {
+          servingsByRecipe.set(
+            meal.recipe.id,
+            (servingsByRecipe.get(meal.recipe.id) ?? 0) + meal.servings
+          );
+        }
+        updatedList = await shoppingListsApi.addRecipesToShoppingList(
+          destinationListId,
+          {
+            clientMutationId,
+            recipes: Array.from(servingsByRecipe, ([recipeId, servings]) => ({
+              recipeId,
+              servings,
+            })),
+          }
+        );
+      }
+      const localItems = updatedList.items.map((item) => ({
+        ...apiShoppingItemToLocalItem(item),
+        listId: destinationListId,
+      }));
+      if (destinationListId === activeListId) {
+        hydrateItems(localItems);
+      }
+      await replaceShoppingListItemsForList(db, destinationListId, localItems);
       router.push({
         pathname: "/shopping/[id]",
-        params: { id: DEFAULT_SHOPPING_LIST_ID },
+        params: { id: destinationListId },
       });
     } catch (error) {
       console.error("Failed to add budget plan to shopping list", error);
@@ -334,7 +421,26 @@ export function BudgetPlannerPane() {
     }
   }
 
+  function chooseShoppingListDestination() {
+    if (shoppingLists.length <= 1) {
+      handleAddAllToShoppingList(activeListId);
+      return;
+    }
+    openSheet(
+      <ShoppingListDestinationSheet
+        lists={shoppingLists}
+        activeListId={activeListId}
+        onSelect={(listId) => {
+          closeSheet();
+          handleAddAllToShoppingList(listId);
+        }}
+      />
+    );
+  }
+
   function openMealSwap(sourcePosition: string) {
+    if (isUpdatingSavedPlan) return;
+
     const sourceMeal = plannedMeals.find(
       (meal) => getMealPositionKey(meal) === sourcePosition
     );
@@ -347,15 +453,49 @@ export function BudgetPlannerPane() {
       <MealSwapSheet
         sourceMeal={sourceMeal}
         meals={plannedMeals}
-        onSelect={(targetPosition) => {
-          setPlannedMeals((current) =>
-            swapMealAssignments(current, sourcePosition, targetPosition)
-          );
-          closeSheet();
-          showToast("Meals swapped!", "success");
-        }}
+        onSelect={(targetPosition) =>
+          void handleMealSwap(sourcePosition, targetPosition)
+        }
       />
     );
+  }
+
+  async function handleMealSwap(
+    sourcePosition: string,
+    targetPosition: string
+  ) {
+    const source = plannedMeals.find(
+      (meal) => getMealPositionKey(meal) === sourcePosition
+    );
+    const target = plannedMeals.find(
+      (meal) => getMealPositionKey(meal) === targetPosition
+    );
+    closeSheet();
+
+    if (!source || !target) return;
+    if (!savedPlanId || !source.planItemId || !target.planItemId) {
+      setPlannedMeals((current) =>
+        swapMealAssignments(current, sourcePosition, targetPosition)
+      );
+      showToast("Meals swapped!", "success");
+      return;
+    }
+
+    setIsUpdatingSavedPlan(true);
+    try {
+      const saved = await mealPlansApi.swapMealPlanItems(
+        savedPlanId,
+        source.planItemId,
+        target.planItemId
+      );
+      setPlannedMeals(savedMealPlanToBudgetMeals(saved));
+      showToast("Meals swapped!", "success");
+    } catch (error) {
+      console.error("Failed to save meal swap", error);
+      showToast(getApiErrorMessage(error));
+    } finally {
+      setIsUpdatingSavedPlan(false);
+    }
   }
 
   return (
@@ -371,7 +511,7 @@ export function BudgetPlannerPane() {
           colors={["#1D3327", "#152119"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFillObject}
+          style={StyleSheet.absoluteFill}
         />
 
         <View style={styles.setupIconWrap}>
@@ -442,7 +582,7 @@ export function BudgetPlannerPane() {
           colors={["#1D3327", "#0F1B12"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFillObject}
+          style={StyleSheet.absoluteFill}
         />
         <AppText style={styles.generateButtonText}>
           Create My Meal Plan
@@ -598,12 +738,12 @@ export function BudgetPlannerPane() {
             </View>
 
             <Pressable
-              onPress={handleAddAllToShoppingList}
-              disabled={isAddingAll}
+              onPress={chooseShoppingListDestination}
+              disabled={isAddingAll || isUpdatingSavedPlan}
               style={({ pressed }) => [
                 styles.addAllButton,
                 pressed && styles.pressed,
-                isAddingAll && styles.disabledButton,
+                (isAddingAll || isUpdatingSavedPlan) && styles.disabledButton,
               ]}
             >
               <AppText style={styles.addAllText}>
@@ -696,6 +836,19 @@ function MealSwapSheet({
 
 function getMealPositionKey(meal: Pick<BudgetMeal, "day" | "mealSlot">) {
   return `${meal.day}:${meal.mealSlot}`;
+}
+
+function savedMealPlanToBudgetMeals(plan: SavedMealPlan): BudgetMeal[] {
+  return sortMealsBySlot(
+    plan.items.map((item) => ({
+      planItemId: item.id,
+      recipe: apiRecipeToLocalRecipe(item.recipe),
+      estimatedCost: item.estimatedCost,
+      mealSlot: item.mealSlot,
+      day: item.day,
+      servings: item.servings,
+    }))
+  );
 }
 
 function swapMealAssignments(

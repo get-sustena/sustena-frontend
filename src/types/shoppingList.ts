@@ -5,16 +5,21 @@ export type ShoppingListItem = {
   name: string;
   emoji: string;
   quantity: string;
+  amount?: number;
+  displayQuantity?: string;
   unit?: string;
   category: string;
-  estimatedPrice: number;
+  estimatedPrice: number | null;
+  priceStatus?: "unknown" | "estimated" | "confirmed";
+  clientMutationId?: string;
   checked: boolean;
   sourceRecipeId?: string;
+  ingredientId?: string;
   createdAt: string;
   updatedAt: string;
   // Which local shopping_lists row this item belongs to. Only the default
   // synced list (see ShoppingListMeta.isDefaultSyncedList) round-trips
-  // through the real API/sync queue — every other list is local-only.
+  // through the real API/sync queue. Every other list is local-only.
   listId?: string;
 };
 

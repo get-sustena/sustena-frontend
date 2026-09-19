@@ -102,14 +102,15 @@ export async function logout() {
 }
 
 export async function logoutAll() {
-  const response = await apiRequest<LogoutAllResponse>({
-    url: "/auth/logout-all",
-    method: "POST",
-  });
-
-  await clearAuthTokens();
-
-  return response;
+  try {
+    return await apiRequest<LogoutAllResponse>({
+      url: "/auth/logout-all",
+      method: "POST",
+    });
+  } finally {
+    // Local sign-out proceeds even when the server cannot revoke every session.
+    await clearAuthTokens();
+  }
 }
 
 export function forgotPassword(payload: ForgotPasswordRequest) {

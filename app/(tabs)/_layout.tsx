@@ -1,8 +1,8 @@
 // app/(tabs)/_layout.tsx
 
-import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
+import type { BottomTabBarProps } from "expo-router/js-tabs";
 import { BlurView } from "expo-blur";
-import { Tabs } from "expo-router";
+import { router, Tabs } from "expo-router";
 import { useState } from "react";
 import {
   LayoutChangeEvent,
@@ -23,7 +23,7 @@ import { theme } from "../../src/theme/theme";
 
 const TAB_ICONS: Record<string, IconName> = {
   home: "home",
-  planner: "plan",
+  planner: "pantry",
   recipes: "cook",
   shopping: "shop",
   profile: "profile",
@@ -36,7 +36,7 @@ export default function TabsLayout() {
       tabBar={(props) => <FloatingTabBar {...props} />}
     >
       <Tabs.Screen name="home" options={{ title: "Home" }} />
-      <Tabs.Screen name="planner" options={{ title: "Planner" }} />
+      <Tabs.Screen name="planner" options={{ title: "Pantry" }} />
       <Tabs.Screen name="recipes" options={{ title: "Recipes" }} />
       <Tabs.Screen name="shopping" options={{ title: "Shopping" }} />
       <Tabs.Screen name="profile" options={{ title: "Profile" }} />
@@ -74,7 +74,7 @@ function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
         <BlurView
           intensity={40}
           tint="dark"
-          style={StyleSheet.absoluteFillObject}
+          style={StyleSheet.absoluteFill}
         />
         <View style={styles.tint} />
 
@@ -98,7 +98,11 @@ function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
               canPreventDefault: true,
             });
 
-            if (!isFocused && !event.defaultPrevented) {
+            if (event.defaultPrevented) return;
+
+            if (route.name === "planner") {
+              router.navigate("/(tabs)/planner");
+            } else if (!isFocused) {
               navigation.navigate(route.name);
             }
           }
@@ -169,7 +173,7 @@ const styles = StyleSheet.create({
     elevation: 12,
   },
   tint: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(19,34,25,0.55)",
   },
   row: {

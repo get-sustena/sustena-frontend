@@ -14,7 +14,8 @@ export type SyncQueueKind =
   | "planner_settings_update"
   | "shopping_list_item_add"
   | "shopping_list_item_toggle"
-  | "shopping_list_item_remove";
+  | "shopping_list_item_remove"
+  | "shopping_list_recipe_batch";
 
 export type SyncQueueOperation = {
   id: string;
@@ -74,5 +75,22 @@ export async function incrementSyncAttempt(db: SQLiteDatabase, id: string) {
   await db.runAsync(
     `UPDATE sync_queue SET attempts = attempts + 1 WHERE id = ?`,
     [id]
+  );
+}
+
+export async function cancelQueuedShoppingListItemRemoval(
+  db: SQLiteDatabase,
+  listId: string,
+  itemId: string
+) {
+  const operations = await getPendingSyncOperations(db);
+  await Promise.all(
+    operations
+      .filter((operation) => {
+        if (operation.kind !== "shopping_list_item_remove") return false;
+        const payload = operation.payload as { listId?: string; itemId?: string };
+        return payload.listId === listId && payload.itemId === itemId;
+      })
+      .map((operation) => deleteSyncOperation(db, operation.id))
   );
 }

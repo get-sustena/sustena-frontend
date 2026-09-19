@@ -1,20 +1,26 @@
 import { Dispatch, SetStateAction, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import {
+  getClassificationValues,
   RecipeEditorState,
   RecipeEditorValidationError,
+  setClassificationValues,
 } from "../../../lib/creatorRecipes/editorState";
 import { closeSheet, openSheet } from "../../../store/uiStore";
 import { theme } from "../../../theme/theme";
-import { RecipeSubstitutionInput } from "../../../types/api";
+import { RecipeAuthoringVocabulary, RecipeSubstitutionInput } from "../../../types/api";
 import { AppText } from "../../ui/AppText";
 import { Icon } from "../../ui/Icon";
 import {
   Card,
   EditorField,
+  EditorSection,
+  EditorStageIntro,
   EditorTextInput,
+  formatVocabularyValues,
   InlineNotice,
-  StageRequirementNote,
+  openVocabularyPicker,
+  SelectionField,
 } from "./EditorCommon";
 import { RecipeEditorActionSheet } from "./RecipeEditorActionSheet";
 
@@ -22,6 +28,7 @@ type Props = {
   state: RecipeEditorState;
   setState: Dispatch<SetStateAction<RecipeEditorState>>;
   validationErrors: RecipeEditorValidationError[];
+  vocabulary: RecipeAuthoringVocabulary;
   onJumpToStage: (stage: number) => void;
 };
 
@@ -29,9 +36,13 @@ export function StageReview({
   state,
   setState,
   validationErrors,
+  vocabulary,
   onJumpToStage,
 }: Props) {
   const [suggestion, setSuggestion] = useState("");
+  const categories = getClassificationValues(state, "category");
+  const bases = getClassificationValues(state, "main_ingredient_base");
+  const cuisines = getClassificationValues(state, "cuisine");
   const ingredientNames = useMemo(
     () =>
       new Map(
@@ -129,13 +140,59 @@ export function StageReview({
 
   return (
     <>
-      <StageRequirementNote />
+      <EditorStageIntro eyebrow="Finish" title="Ready it for others">
+        Add the details that help people find, serve and store your recipe.
+      </EditorStageIntro>
+
+      <EditorSection title="Help people find it" description="Choose the labels that genuinely fit.">
+        <View style={styles.pickerList}>
+          <SelectionField
+            label="Categories"
+            values={formatVocabularyValues(categories, vocabulary.categories)}
+            placeholder="Choose categories"
+            helper="Soup, rice dish, snack and more."
+            onPress={() => openVocabularyPicker({
+              title: "Choose recipe categories",
+              options: vocabulary.categories,
+              selected: categories,
+              onDone: (values) => setState((current) => setClassificationValues(current, "category", values)),
+            })}
+          />
+          <SelectionField
+            label="Main ingredients"
+            values={formatVocabularyValues(bases, vocabulary.mainIngredientBases)}
+            placeholder="Choose main ingredients"
+            helper="The ingredients the dish is built around."
+            onPress={() => openVocabularyPicker({
+              title: "Choose main ingredient bases",
+              options: vocabulary.mainIngredientBases,
+              selected: bases,
+              showGroups: false,
+              onDone: (values) => setState((current) => setClassificationValues(current, "main_ingredient_base", values)),
+            })}
+          />
+          <SelectionField
+            label="Cuisine or tribe"
+            values={formatVocabularyValues(cuisines, vocabulary.cuisines)}
+            placeholder="Choose cuisine or tribe"
+            helper="The food tradition this recipe belongs to."
+            onPress={() => openVocabularyPicker({
+              title: "Choose cuisine or tribe",
+              options: vocabulary.cuisines,
+              selected: cuisines,
+              groupSeparator: " > ",
+              onDone: (values) => setState((current) => setClassificationValues(current, "cuisine", values)),
+            })}
+          />
+        </View>
+      </EditorSection>
+
+      <View style={styles.serveSection}>
+        <AppText style={styles.sectionTitle}>Serve it well</AppText>
+        <AppText style={styles.sectionDescription}>These details are optional, but useful.</AppText>
 
       <View style={styles.sectionBlock}>
-        <AppText style={styles.sectionLabel}>Best served with</AppText>
-        <AppText style={styles.sectionHelper}>
-          Optional · Add one or more foods or drinks.
-        </AppText>
+        <View style={styles.labelRow}><AppText style={styles.sectionLabel}>Best served with</AppText><AppText style={styles.fieldMeta}>Optional</AppText></View>
         {state.servingSuggestions.length ? (
           <View style={styles.suggestionChips}>
             {state.servingSuggestions.map((item, index) => (
@@ -166,17 +223,14 @@ export function StageReview({
               onSubmitEditing={addSuggestion}
               returnKeyType="done"
               maxLength={220}
-              placeholder="Search recipes or foods"
+              placeholder="Add a food or drink, then press Enter"
             />
           </View>
         </View>
       </View>
 
       <View style={styles.sectionBlock}>
-        <AppText style={styles.sectionLabel}>Ingredient substitutions</AppText>
-        <AppText style={styles.sectionHelper}>
-          Optional · Show cooks what they can use instead.
-        </AppText>
+        <View style={styles.labelRow}><AppText style={styles.sectionLabel}>Ingredient substitutions</AppText><AppText style={styles.fieldMeta}>Optional</AppText></View>
         {state.substitutions.map((substitution, index) => (
           <Card key={`substitution-${index}`} style={styles.substitutionCard}>
             <View style={styles.substitutionHeader}>
@@ -285,7 +339,7 @@ export function StageReview({
       <EditorField
         label="Storage instructions"
         required
-        helper="How to store leftovers safely, or note that it’s best eaten fresh."
+        helper="If it does not store well, say that it is best eaten fresh."
       >
         <EditorTextInput
           value={state.storageInstructions ?? ""}
@@ -294,15 +348,16 @@ export function StageReview({
           }
           maxLength={3000}
           multiline
-          placeholder="e.g. Store in an airtight container in the fridge for up to 3 days. Reheat until steaming hot. (Or: Best eaten fresh, does not store well.)"
+          placeholder="Store in an airtight container in the fridge for up to 3 days."
           style={styles.storageInput}
         />
       </EditorField>
+      </View>
 
       <View style={styles.reviewSection}>
-        <AppText style={styles.reviewTitle}>Review your recipe</AppText>
+        <AppText style={styles.reviewTitle}>Publication check</AppText>
         <AppText style={styles.reviewCopy}>
-          Check how your recipe will appear before you publish it.
+          Review anything that still needs attention.
         </AppText>
         {validationErrors.length ? (
           <View style={styles.errorsCard}>
@@ -310,14 +365,7 @@ export function StageReview({
               Finish {validationErrors.length} item
               {validationErrors.length === 1 ? "" : "s"} before publishing
             </AppText>
-            {validationErrors.map((error, index) => (
-              <Pressable
-                key={`${error.field}-${index}`}
-                onPress={() => onJumpToStage(error.stage)}
-              >
-                <AppText style={styles.errorText}>• {error.message}</AppText>
-              </Pressable>
-            ))}
+            <AppText style={styles.errorsCopy}>Tap an item to return to that step.</AppText>
           </View>
         ) : (
           <View style={styles.readyCard}>
@@ -339,14 +387,14 @@ export function StageReview({
                   <AppText style={styles.fixStage}>
                     {[
                       "",
-                      "Basics",
-                      "Practical details",
+                      "Start",
+                      "Details",
                       "Ingredients",
-                      "Cooking steps",
-                      "Serve & publish",
+                      "Method",
+                      "Finish",
                     ][errorStage]}
                   </AppText>
-                  <AppText style={styles.fixText}>Fix</AppText>
+                  <View style={styles.fixAction}><AppText style={styles.fixText}>Review</AppText><Icon name="chevronRight" size={15} color={theme.colors.textMuted} /></View>
                 </Pressable>
               )
             )}
@@ -393,7 +441,13 @@ function openSourceIngredientPicker({
 }
 
 const styles = StyleSheet.create({
+  pickerList: { overflow: "hidden", borderWidth: 1, borderColor: "#D9D9D9", borderRadius: 16, backgroundColor: "#FFFFFF" },
+  serveSection: { marginBottom: 26, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: "#D9D9D9" },
+  sectionTitle: { fontFamily: theme.fontFamily.displaySemiBold, fontSize: 19, color: theme.colors.navy },
+  sectionDescription: { marginTop: 5, marginBottom: 18, fontSize: 12.5, lineHeight: 18, color: theme.colors.textMuted },
   sectionBlock: { marginBottom: 18 },
+  labelRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
+  fieldMeta: { fontSize: 11, color: theme.colors.textMuted },
   sectionLabel: { fontFamily: theme.fontFamily.body, fontSize: 13, color: theme.colors.text },
   sectionHelper: { marginTop: 4, marginBottom: 10, fontSize: 11.5, lineHeight: 16, color: theme.colors.textMuted },
   suggestionChips: { flexDirection: "row", flexWrap: "wrap", gap: 7 },
@@ -418,11 +472,13 @@ const styles = StyleSheet.create({
   reviewCopy: { marginTop: 4, marginBottom: 12, fontSize: 12.5, lineHeight: 18, color: theme.colors.textMedium },
   errorsCard: { padding: 14, borderWidth: 1, borderColor: "#E8C4BE", borderRadius: 14, backgroundColor: "#FBF0EE" },
   errorsTitle: { marginBottom: 7, fontFamily: theme.fontFamily.bodyBold, fontSize: 13.5, color: theme.colors.red },
+  errorsCopy: { fontSize: 12, lineHeight: 17, color: theme.colors.red },
   errorText: { paddingVertical: 6, fontSize: 13, lineHeight: 18, color: theme.colors.red, textDecorationLine: "underline" },
   fixLinks: { marginTop: 0 },
   fixRow: { minHeight: 42, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomWidth: 1, borderBottomColor: theme.colors.border },
   fixStage: { fontSize: 13.5, color: theme.colors.text },
   fixText: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 13, color: theme.colors.navy3 },
+  fixAction: { flexDirection: "row", alignItems: "center", gap: 6 },
   readyCard: { padding: 14, borderWidth: 1, borderColor: "#B7D6C3", borderRadius: 14, backgroundColor: "#F0F8F2" },
   readyTitle: { fontFamily: theme.fontFamily.bodyBold, fontSize: 13.5, color: theme.colors.navy3 },
   readyCopy: { marginTop: 4, fontSize: 11.5, lineHeight: 17, color: theme.colors.textMedium },

@@ -34,7 +34,7 @@ const HOW_TO = [
   {
     question: "Find recipes from ingredients you already have",
     answer:
-      'On the Recipes tab, use "Match My Kitchen": select what you have and we\'ll suggest recipes that use it.',
+      "Open Pantry, add what you have, and Sustena will suggest recipes that use those ingredients.",
   },
   {
     question: "Share a shopping list",

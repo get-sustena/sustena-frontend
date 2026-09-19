@@ -58,7 +58,7 @@ export const INGREDIENTS: Ingredient[] = [
   { id: "cheese", name: "Cheese", category: "Dairy" },
 ];
 
-export const INGREDIENT_CATEGORIES: Array<"All" | IngredientCategory> = [
+export const INGREDIENT_CATEGORIES: ("All" | IngredientCategory)[] = [
   "All",
   "Proteins",
   "Grains",

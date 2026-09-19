@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Modal,
   Platform,
@@ -66,14 +66,10 @@ export function PlanSetupModal({
     activeStep !== "selection" ||
     draft.mealSlots.length === draft.mealsPerDay;
 
-  useEffect(() => {
-    if (!visible) {
-      return;
-    }
-
+  function resetDraft() {
     setDraft(initialValue);
     setStepIndex(0);
-  }, [initialValue, visible]);
+  }
 
   function handleBack() {
     if (stepIndex === 0) {
@@ -117,6 +113,7 @@ export function PlanSetupModal({
       animationType={isDesktopWeb ? "fade" : "slide"}
       presentationStyle={isDesktopWeb ? "overFullScreen" : "fullScreen"}
       onRequestClose={handleBack}
+      onShow={resetDraft}
     >
       <View
         style={[

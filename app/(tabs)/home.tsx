@@ -1,6 +1,7 @@
 // app/(tabs)/home.tsx
 
 import { LinearGradient } from "expo-linear-gradient";
+import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
@@ -24,18 +25,21 @@ import {
   QuickRecipeCardsSkeleton,
   RecommendationCardSkeleton,
 } from "../../src/components/home/HomeRecipeSkeletons";
+import { NotificationsSheet } from "../../src/components/home/NotificationsSheet";
 import { FeaturedRecipeCard } from "../../src/components/recipe/FeaturedRecipeCard";
 import { RecipeCard } from "../../src/components/recipe/RecipeCard";
 import { AppText } from "../../src/components/ui/AppText";
 import { Icon } from "../../src/components/ui/Icon";
 import { useRecipesWithLocalFallback } from "../../src/hooks/api/useRecipes";
 import { useProfileAnswersQuery } from "../../src/hooks/api/useProfileAnswers";
+import { useHomeRecommendations } from "../../src/hooks/api/useRecommendations";
 import { apiRecipeToLocalRecipe } from "../../src/lib/api/adapters";
 import { finiteTimeCap } from "../../src/lib/plannerQuickSetup";
 import { useAuthStore } from "../../src/store/authStore";
 import { useProfileAnswersStore } from "../../src/store/profileAnswersStore";
-import { showToast } from "../../src/store/uiStore";
+import { openSheet, showToast } from "../../src/store/uiStore";
 import { theme } from "../../src/theme/theme";
+import { appImages } from "../../src/assets/appImages";
 
 const KITCHEN_QUICK_CATEGORIES = ["Proteins", "Produce", "Grains"];
 
@@ -73,12 +77,7 @@ export default function HomeScreen() {
     experience === "beginner" || experience === "intermediate"
       ? experience
       : undefined;
-  const recipesQuery = useRecipesWithLocalFallback({
-    preferredMaxTotalTimeMinutes: preferredTimeCap,
-    preferredDifficulty,
-    page: 1,
-    pageSize: 24,
-  });
+  const recommendationsQuery = useHomeRecommendations();
   const quickRecipesQuery = useRecipesWithLocalFallback({
     quickAndEasy: true,
     maxTotalTimeMinutes: Math.min(preferredTimeCap ?? 45, 45),
@@ -86,7 +85,10 @@ export default function HomeScreen() {
     page: 1,
     pageSize: 12,
   });
-  const recipes = recipesQuery.data?.items.map(apiRecipeToLocalRecipe) ?? [];
+  const recipes =
+    recommendationsQuery.data?.items.map((item) =>
+      apiRecipeToLocalRecipe(item.recipe)
+    ) ?? [];
   const quickRecipeResults =
     quickRecipesQuery.data?.items.map(apiRecipeToLocalRecipe) ?? [];
   const [featuredIndex, setFeaturedIndex] = useState(0);
@@ -115,13 +117,12 @@ export default function HomeScreen() {
         </Pressable>
 
         <Pressable
-          onPress={() => showToast("No new notifications")}
+          onPress={() => openSheet(<NotificationsSheet />)}
           style={styles.notifButton}
           accessibilityRole="button"
           accessibilityLabel="Notifications"
         >
           <Icon name="notification" size={18} color={theme.colors.text} />
-          <View style={styles.notifDot} />
         </Pressable>
       </View>
 
@@ -151,7 +152,7 @@ export default function HomeScreen() {
                 colors={["#1D3327", "#152119"]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
-                style={StyleSheet.absoluteFillObject}
+                style={StyleSheet.absoluteFill}
               />
               <Svg
                 pointerEvents="none"
@@ -168,11 +169,14 @@ export default function HomeScreen() {
                 <Circle cx={120} cy={120} r={120} fill="url(#kitchenGlow)" />
               </Svg>
 
-              <View style={styles.kitchenContent}>
-                <View style={styles.kitchenIconWrap}>
-                  <Icon name="cook" size={22} color={theme.colors.green} />
-                </View>
+              <Image
+                source={appImages.home.kitchenPepper}
+                contentFit="contain"
+                pointerEvents="none"
+                style={styles.kitchenPepper}
+              />
 
+              <View style={styles.kitchenContent}>
                 <AppText style={styles.kitchenTitle}>
                   What&apos;s in My Kitchen?
                 </AppText>
@@ -239,12 +243,12 @@ export default function HomeScreen() {
               accessibilityRole="button"
               accessibilityLabel="Shuffle recommendation"
             >
-              <Icon name="swap" size={13} color={theme.colors.linkGreen} />
+              <Icon name="shuffle" size={15} color={theme.colors.linkGreen} />
               <AppText style={styles.shuffleText}>Shuffle</AppText>
             </Pressable>
           </View>
 
-          {recipesQuery.isLoading ? (
+          {recommendationsQuery.isLoading ? (
             <RecommendationCardSkeleton />
           ) : featuredRecipe ? (
             <FeaturedRecipeCard
@@ -254,17 +258,19 @@ export default function HomeScreen() {
           ) : (
             <HomeSectionState
               title={
-                recipesQuery.isError
+                recommendationsQuery.isError
                   ? "Recommendations unavailable"
                   : "No recipes ready"
               }
               message={
-                recipesQuery.isError
+                recommendationsQuery.isError
                   ? "We couldn't load recipes right now."
                   : "Recipes will appear here once the library is ready."
               }
               onRetry={
-                recipesQuery.isError ? () => recipesQuery.refetch() : undefined
+                recommendationsQuery.isError
+                  ? () => recommendationsQuery.refetch()
+                  : undefined
               }
             />
           )}
@@ -532,18 +538,17 @@ const styles = StyleSheet.create({
     top: -54,
     right: -42,
   },
+  kitchenPepper: {
+    position: "absolute",
+    top: -8,
+    right: -10,
+    width: 118,
+    height: 100,
+    zIndex: 1,
+  },
   kitchenContent: {
     position: "relative",
     zIndex: 1,
-  },
-  kitchenIconWrap: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
-    backgroundColor: "rgba(52,182,115,0.18)",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 14,
   },
   kitchenTitle: {
     fontFamily: theme.fontFamily.display,

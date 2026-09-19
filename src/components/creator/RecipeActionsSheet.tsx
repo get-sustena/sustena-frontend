@@ -74,7 +74,7 @@ function MenuRow({ label, danger = false, onPress }: { label: string; danger?: b
 const styles = StyleSheet.create({
   sheet: { paddingBottom: 18 },
   title: { marginBottom: 10, fontFamily: theme.fontFamily.bodyBold, fontSize: 16, color: "#17291E" },
-  row: { paddingHorizontal: 4, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "#D8E3CA" },
+  row: { paddingHorizontal: 4, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "#E1E1E1" },
   label: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 14.5, color: "#17291E" },
   danger: { color: "#C0392E" },
 });

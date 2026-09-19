@@ -10,12 +10,14 @@ type Props = {
   category: string;
   items: ShoppingListItem[];
   onToggleItem: (itemId: string) => void;
+  onItemMenu?: (item: ShoppingListItem) => void;
 };
 
 export function ShoppingListSection({
   category,
   items,
   onToggleItem,
+  onItemMenu,
 }: Props) {
   return (
     <View style={styles.section}>
@@ -26,6 +28,7 @@ export function ShoppingListSection({
           key={item.id}
           item={item}
           onToggle={onToggleItem}
+          onMenu={onItemMenu}
         />
       ))}
     </View>

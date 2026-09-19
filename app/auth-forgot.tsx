@@ -16,7 +16,6 @@ import { PasswordMatchIndicator } from "../src/components/auth/PasswordMatchIndi
 import { PasswordStrengthMeter } from "../src/components/auth/PasswordStrengthMeter";
 import { AppText } from "../src/components/ui/AppText";
 import { Icon } from "../src/components/ui/Icon";
-import { InlineNotice } from "../src/components/ui/InlineNotice";
 import {
   useForgotPasswordMutation,
   useResetPasswordMutation,
@@ -246,14 +245,17 @@ function EmailStep({
         value={email}
         onChangeText={onChangeEmail}
         keyboardType="email-address"
+        marginBottom={8}
         error={error ?? undefined}
       />
 
-      <AuthPrimaryButton
-        title={isSubmitting ? "Sending..." : "Send Reset Code"}
-        onPress={onSubmit}
-        disabled={isSubmitting}
-      />
+      <View style={styles.stepAction}>
+        <AuthPrimaryButton
+          title={isSubmitting ? "Sending..." : "Send Reset Code"}
+          onPress={onSubmit}
+          disabled={isSubmitting}
+        />
+      </View>
 
       <Pressable
         onPress={() => router.replace("/auth")}
@@ -354,16 +356,18 @@ function CodeStep({
       </View>
 
       {error ? (
-        <View style={styles.notice}>
-          <InlineNotice tone="error" message={error} />
-        </View>
+        <AppText accessibilityRole="alert" style={styles.codeError}>
+          {error}
+        </AppText>
       ) : null}
 
-      <AuthPrimaryButton
-        title={isSubmitting ? "Verifying..." : "Verify Code"}
-        onPress={onSubmit}
-        disabled={isSubmitting}
-      />
+      <View style={styles.stepAction}>
+        <AuthPrimaryButton
+          title={isSubmitting ? "Verifying..." : "Verify Code"}
+          onPress={onSubmit}
+          disabled={isSubmitting}
+        />
+      </View>
 
       <Pressable
         onPress={onResend}
@@ -427,6 +431,7 @@ function PasswordStep({
         value={confirmPassword}
         onChangeText={onChangeConfirmPassword}
         secureTextEntry
+        marginBottom={8}
       />
       <PasswordMatchIndicator
         password={newPassword}
@@ -434,16 +439,18 @@ function PasswordStep({
       />
 
       {error ? (
-        <View style={styles.notice}>
-          <InlineNotice tone="error" message={error} />
-        </View>
+        <AppText accessibilityRole="alert" style={styles.passwordError}>
+          {error}
+        </AppText>
       ) : null}
 
-      <AuthPrimaryButton
-        title={isSubmitting ? "Resetting..." : "Reset Password"}
-        onPress={onSubmit}
-        disabled={isSubmitting}
-      />
+      <View style={styles.stepAction}>
+        <AuthPrimaryButton
+          title={isSubmitting ? "Resetting..." : "Reset Password"}
+          onPress={onSubmit}
+          disabled={isSubmitting}
+        />
+      </View>
     </View>
   );
 }
@@ -477,21 +484,21 @@ function DoneStep() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#FBFCFA",
+    backgroundColor: "#FAFAFA",
   },
   body: {
     flex: 1,
   },
   bodyContent: {
     paddingHorizontal: 24,
-    paddingTop: 8,
+    paddingTop: 26,
     paddingBottom: 40,
   },
   title: {
     fontFamily: theme.fontFamily.displayExtraBold,
     fontSize: 32,
     lineHeight: 35,
-    letterSpacing: -0.5,
+    letterSpacing: -0.64,
     color: theme.colors.navy,
     marginBottom: 8,
   },
@@ -511,29 +518,41 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     gap: 10,
-    marginBottom: 14,
+    marginBottom: 8,
   },
   otpBox: {
     width: 46,
+    minWidth: 36,
+    flexShrink: 1,
     height: 56,
     textAlign: "center",
-    backgroundColor: theme.colors.card,
-    borderWidth: 1.5,
-    borderColor: theme.colors.border,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 0.75,
+    borderColor: "#E1E1E1",
     borderRadius: 14,
     fontFamily: theme.fontFamily.bodyBold,
     fontSize: 22,
-    color: theme.colors.text,
-    shadowColor: theme.colors.navy,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
+    color: theme.colors.navy,
   },
   otpBoxError: {
     borderColor: theme.colors.red,
   },
-  notice: {
-    marginBottom: theme.spacing.md,
+  codeError: {
+    marginTop: 0,
+    marginBottom: 14,
+    color: theme.colors.red,
+    fontFamily: theme.fontFamily.body,
+    fontSize: 12.5,
+    textAlign: "center",
+  },
+  passwordError: {
+    marginTop: 8,
+    color: theme.colors.red,
+    fontFamily: theme.fontFamily.body,
+    fontSize: 12.5,
+  },
+  stepAction: {
+    marginTop: 22,
   },
   switchRow: {
     flexDirection: "row",

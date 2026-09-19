@@ -71,14 +71,23 @@ export function apiShoppingItemToLocalItem(
     id: item.id,
     name: item.name,
     emoji: item.emoji ?? "🛒",
-    quantity: formatQuantityText(item.quantity ?? item.unit ?? ""),
+    quantity: formatQuantityText(item.displayQuantity ?? item.quantity ?? item.unit ?? ""),
+    amount:
+      item.amount === null || item.amount === undefined
+        ? undefined
+        : Number(item.amount),
+    displayQuantity: item.displayQuantity ?? undefined,
     unit: item.unit ?? undefined,
     category: item.category ?? "Pantry",
-    estimatedPrice: item.estimatedPrice ?? 0,
+    estimatedPrice: item.estimatedPrice,
+    priceStatus: item.priceStatus,
     checked: item.checked,
     sourceRecipeId: item.recipeId ?? undefined,
+    ingredientId: item.ingredientId ?? undefined,
     createdAt: item.createdAt,
     updatedAt: item.updatedAt,
+    listId: item.shoppingListId,
+    clientMutationId: item.clientMutationId ?? undefined,
   };
 }
 

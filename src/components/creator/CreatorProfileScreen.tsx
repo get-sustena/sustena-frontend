@@ -11,6 +11,7 @@ import { createLocalId } from "../../lib/id";
 import { useAuthStore } from "../../store/authStore";
 import { closeSheet, openSheet, showToast } from "../../store/uiStore";
 import { theme } from "../../theme/theme";
+import { appImages } from "../../assets/appImages";
 import type { RecipeDraft } from "../../types/api";
 import { AppText } from "../ui/AppText";
 import { Icon } from "../ui/Icon";
@@ -164,7 +165,17 @@ export function CreatorProfileScreen() {
             </View>
           ) : (
             <View style={styles.empty}>
-              <View style={styles.emptyIcon}><Icon name="chefHat" size={26} color="#1f7048" /></View>
+              {!list.length ? (
+                <Image
+                  source={
+                    tab === "published"
+                      ? appImages.emptyStates.publishedRecipe
+                      : appImages.emptyStates.recipeDrafts
+                  }
+                  contentFit="contain"
+                  style={styles.emptyImage}
+                />
+              ) : null}
               <AppText style={styles.emptyTitle}>{list.length ? "No recipes found" : tab === "published" ? "Share your first recipe" : "No drafts yet"}</AppText>
               <AppText style={styles.emptyCopy}>{list.length ? "Try another search or clear your filters." : tab === "published" ? "Create a recipe to start building your public recipe page." : "Recipes you save before publishing will appear here."}</AppText>
               {list.length ? <View style={styles.emptyActions}><Pressable onPress={() => setFiltersByTab((current) => ({ ...current, [tab]: EMPTY_CREATOR_RECIPE_FILTERS }))} style={styles.emptySecondary}><AppText style={styles.emptySecondaryText}>Clear filters</AppText></Pressable><Pressable onPress={() => setSearches((current) => ({ ...current, [tab]: "" }))} style={styles.emptySecondary}><AppText style={styles.emptySecondaryText}>Clear search</AppText></Pressable></View> : <Pressable onPress={createRecipe} style={styles.emptyPrimary}><AppText style={styles.emptyPrimaryText}>Create recipe</AppText></Pressable>}
@@ -226,37 +237,37 @@ const styles = StyleSheet.create({
   identityCopy: { flex: 1, minWidth: 0 },
   name: { marginBottom: 2, fontFamily: theme.fontFamily.display, fontSize: 19, color: "#17291E" },
   handle: { fontSize: 13.5, color: "#5C6459" },
-  editButton: { minHeight: 44, paddingHorizontal: 18, borderRadius: 999, borderWidth: 1.5, borderColor: "#D8E3CA", backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
+  editButton: { minHeight: 44, paddingHorizontal: 18, borderRadius: 999, borderWidth: 1.5, borderColor: "#E1E1E1", backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
   editText: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 13, color: "#1B211C" },
   stats: { flexDirection: "row", alignItems: "stretch", marginBottom: 20 },
   stat: { flex: 1, alignItems: "center", paddingHorizontal: 4 },
   statValue: { fontFamily: theme.fontFamily.monoBold, fontSize: 19, color: "#17291E" },
   statLabel: { marginTop: 3, fontSize: 11, color: "#8a9187" },
-  divider: { width: 1, backgroundColor: "#D8E3CA" },
+  divider: { width: 1, backgroundColor: "#E1E1E1" },
   activityHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 7 },
   activityTitle: { fontFamily: theme.fontFamily.monoBold, fontSize: 11, letterSpacing: 1.1, textTransform: "uppercase", color: "#8a9187" },
   activityRange: { fontFamily: theme.fontFamily.mono, fontSize: 10.5, color: "#8a9187" },
   createButton: { marginBottom: 18, paddingVertical: 13, borderRadius: 999, backgroundColor: "#17291E", alignItems: "center" },
   createText: { fontFamily: theme.fontFamily.bodyBold, fontSize: 14, color: "#FBFBF7" },
-  tabs: { flexDirection: "row", gap: 22, marginBottom: 14, borderBottomWidth: 1, borderBottomColor: "#D8E3CA" },
+  tabs: { flexDirection: "row", gap: 22, marginBottom: 14, borderBottomWidth: 1, borderBottomColor: "#E1E1E1" },
   tab: { paddingVertical: 10, borderBottomWidth: 2, borderBottomColor: "transparent" },
   tabActive: { borderBottomColor: "#17291E" },
   tabText: { fontFamily: theme.fontFamily.bodyBold, fontSize: 14, color: "#17291E" },
   tabTextMuted: { color: "#8a9187" },
   searchRow: { flexDirection: "row", gap: 8, marginBottom: 14 },
-  search: { flex: 1, minHeight: 42, paddingHorizontal: 12, borderRadius: 12, borderWidth: 1, borderColor: "#D8E3CA", backgroundColor: "#FFFFFF", flexDirection: "row", alignItems: "center", gap: 8 },
+  search: { flex: 1, minHeight: 42, paddingHorizontal: 12, borderRadius: 12, borderWidth: 1, borderColor: "#E1E1E1", backgroundColor: "#FFFFFF", flexDirection: "row", alignItems: "center", gap: 8 },
   searchInput: { flex: 1, paddingVertical: 0, fontSize: 13.5, color: "#17291E" },
   searchClear: { width: 22, height: 22, borderRadius: 11, backgroundColor: "#EEF2E7", alignItems: "center", justifyContent: "center" },
   filterButton: { width: 42, height: 42, alignItems: "center", justifyContent: "center" },
   grid: { flexDirection: "row", flexWrap: "wrap", columnGap: 10, rowGap: 14 },
   gridCard: { width: "30%" },
   empty: { alignItems: "center", paddingHorizontal: 10, paddingVertical: 30 },
-  emptyIcon: { width: 64, height: 64, marginBottom: 16, borderRadius: 20, backgroundColor: "#EEF2E7", alignItems: "center", justifyContent: "center" },
+  emptyImage: { width: "100%", maxWidth: 260, height: 210, marginBottom: 12 },
   emptyTitle: { marginBottom: 6, fontFamily: theme.fontFamily.display, fontSize: 18, textAlign: "center", color: "#17291E" },
   emptyCopy: { maxWidth: 230, marginBottom: 18, fontSize: 13.5, lineHeight: 20.25, textAlign: "center", color: "#5C6459" },
   emptyPrimary: { paddingHorizontal: 22, paddingVertical: 11, borderRadius: 999, backgroundColor: "#17291E" },
   emptyPrimaryText: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 14, color: "#FBFBF7" },
   emptyActions: { flexDirection: "row", gap: 8 },
-  emptySecondary: { paddingHorizontal: 16, paddingVertical: 9, borderRadius: 999, borderWidth: 1, borderColor: "#D8E3CA", backgroundColor: "#FFFFFF" },
+  emptySecondary: { paddingHorizontal: 16, paddingVertical: 9, borderRadius: 999, borderWidth: 1, borderColor: "#E1E1E1", backgroundColor: "#FFFFFF" },
   emptySecondaryText: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 13, color: "#17291E" },
 });

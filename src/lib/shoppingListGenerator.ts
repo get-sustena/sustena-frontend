@@ -47,18 +47,14 @@ export function generateShoppingListItemsFromRecipe({
         selectedServings,
       });
 
-    const estimatedPrice =
-      recipe.cost === null
-        ? 0
-        : Math.round(recipe.cost / Math.max(purchasableIngredients.length, 1));
-
     return {
       id: createLocalId("shopping_item"),
       name: ingredient.name,
       emoji: ingredient.emoji,
       quantity: scaledAmount,
       category: ingredient.category,
-      estimatedPrice,
+      estimatedPrice: null,
+      priceStatus: "unknown",
       checked: false,
       sourceRecipeId: recipe.id,
       createdAt: now,

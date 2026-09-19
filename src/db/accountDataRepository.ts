@@ -6,15 +6,24 @@ import { runWriteTransaction } from "./writeTransaction";
 const ACCOUNT_DATA_OWNER_KEY = "account_data_owner_user_id";
 const ACCOUNT_DATA_TABLES = [
   {
+    name: "pantry_items",
+    columns: ["ingredient_id", "created_at", "updated_at"],
+  },
+  {
     name: "shopping_list_items",
     columns: [
       "id",
+      "ingredient_id",
       "name",
       "emoji",
       "quantity",
+      "amount",
+      "display_quantity",
       "unit",
       "category",
       "estimated_price",
+      "price_status",
+      "client_mutation_id",
       "checked",
       "source_recipe_id",
       "created_at",
@@ -103,6 +112,10 @@ const ACCOUNT_DATA_TABLES = [
       "created_at",
       "attempts",
     ],
+  },
+  {
+    name: "sync_id_mappings",
+    columns: ["temporary_id", "server_id", "entity_kind", "created_at"],
   },
 ] as const;
 
@@ -232,12 +245,29 @@ async function restoreAccountData(db: SQLiteDatabase, userId: string) {
       const placeholders = table.columns.map(() => "?").join(", ");
       await db.runAsync(
         `INSERT INTO ${table.name} (${table.columns.join(", ")}) VALUES (${placeholders})`,
-        table.columns.map((column) => row[column])
+        table.columns.map((column) => snapshotValue(table.name, column, row))
       );
     }
   }
 
   return true;
+}
+
+function snapshotValue(
+  tableName: (typeof ACCOUNT_DATA_TABLES)[number]["name"],
+  column: string,
+  row: AccountDataRow
+): AccountDataValue {
+  const value = row[column];
+  if (value !== undefined) {
+    return value;
+  }
+
+  if (tableName === "shopping_list_items" && column === "price_status") {
+    return row.estimated_price == null ? "unknown" : "estimated";
+  }
+
+  return null;
 }
 
 async function clearActiveAccountTables(db: SQLiteDatabase) {

@@ -21,7 +21,7 @@ export function RecipesTriedSheet() {
 const styles = StyleSheet.create({
   content: { paddingBottom: 18 },
   title: { marginBottom: 14, fontFamily: theme.fontFamily.display, fontSize: 18, color: "#17291E" },
-  row: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: "#D8E3CA" },
+  row: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: "#E1E1E1" },
   check: { width: 34, height: 34, borderRadius: 9, backgroundColor: "#EEF2E7", alignItems: "center", justifyContent: "center" },
   recipeName: { fontSize: 14, color: "#17291E" },
 });

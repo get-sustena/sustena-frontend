@@ -20,7 +20,7 @@ const styles = StyleSheet.create({
   title: { marginBottom: 8, fontFamily: theme.fontFamily.display, fontSize: 18, color: "#17291E" },
   copy: { marginBottom: 20, fontSize: 14, lineHeight: 21, color: "#5C6459" },
   actions: { flexDirection: "row", gap: 10 },
-  cancel: { flex: 1, paddingVertical: 13, borderRadius: 999, borderWidth: 1, borderColor: "#D8E3CA", backgroundColor: "#FFFFFF", alignItems: "center" },
+  cancel: { flex: 1, paddingVertical: 13, borderRadius: 999, borderWidth: 1, borderColor: "#E1E1E1", backgroundColor: "#FFFFFF", alignItems: "center" },
   cancelText: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 14, color: "#17291E" },
   delete: { flex: 1, paddingVertical: 13, borderRadius: 999, backgroundColor: "#C0392E", alignItems: "center" },
   deleteText: { fontFamily: theme.fontFamily.bodyBold, fontSize: 14, color: "#FBFBF7" },

@@ -9,6 +9,7 @@ import {
   ShoppingListItem,
   ShoppingListItemCreateRequest,
   ShoppingListItemUpdateRequest,
+  ShoppingListRecipeBatchRequest,
   ShoppingListUpdateRequest,
 } from "../../types/api";
 import { apiRequest } from "./client";
@@ -82,6 +83,46 @@ export function deleteShoppingListItemFromList(
 ) {
   return apiRequest<void>({
     url: `/shopping-lists/${shoppingListId}/items/${itemId}`,
+    method: "DELETE",
+  });
+}
+
+export function restoreShoppingListItemInList(
+  shoppingListId: string,
+  itemId: string
+) {
+  return apiRequest<ShoppingListItem>({
+    url: `/shopping-lists/${shoppingListId}/items/${itemId}/restore`,
+    method: "POST",
+  });
+}
+
+export function addRecipesToShoppingList(
+  shoppingListId: string,
+  payload: ShoppingListRecipeBatchRequest
+) {
+  return apiRequest<ShoppingList>({
+    url: `/shopping-lists/${shoppingListId}/items/actions/add-recipes`,
+    method: "POST",
+    data: payload,
+  });
+}
+
+export function setShoppingListItemsChecked(
+  shoppingListId: string,
+  itemIds: string[],
+  checked: boolean
+) {
+  return apiRequest<ShoppingList>({
+    url: `/shopping-lists/${shoppingListId}/items/actions/set-checked`,
+    method: "PATCH",
+    data: { itemIds, checked },
+  });
+}
+
+export function clearCheckedShoppingListItems(shoppingListId: string) {
+  return apiRequest<{ deleted: number }>({
+    url: `/shopping-lists/${shoppingListId}/items/actions/clear-checked`,
     method: "DELETE",
   });
 }

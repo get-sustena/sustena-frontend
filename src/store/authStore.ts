@@ -7,10 +7,12 @@ type AuthState = {
   user: User | null;
   isHydratingAuth: boolean;
   isAuthenticated: boolean;
+  isSigningOut: boolean;
 
   setUser: (user: User | null) => void;
   setIsHydratingAuth: (value: boolean) => void;
   setAuthenticatedOffline: () => void;
+  beginSignOut: () => void;
   clearAuth: () => void;
 };
 
@@ -18,6 +20,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isHydratingAuth: true,
   isAuthenticated: false,
+  isSigningOut: false,
 
   setUser: (user) => {
     set({
@@ -42,10 +45,15 @@ export const useAuthStore = create<AuthState>((set) => ({
     });
   },
 
+  beginSignOut: () => {
+    set({ isSigningOut: true });
+  },
+
   clearAuth: () => {
     set({
       user: null,
       isAuthenticated: false,
+      isSigningOut: false,
     });
   },
 }));

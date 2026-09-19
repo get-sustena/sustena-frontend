@@ -39,7 +39,6 @@ export default function Index() {
       return;
     }
 
-    setHasSeenWelcome(true);
     void markWelcomeSeen(db).catch(() => undefined);
   }, [db, isAuthenticated]);
 

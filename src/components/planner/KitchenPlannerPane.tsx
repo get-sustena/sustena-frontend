@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useIngredientCatalogQuery } from "../../hooks/api/useIngredients";
 import { useKitchenPlannerMutation } from "../../hooks/api/usePlanner";
@@ -55,9 +55,23 @@ type Props = {
   initialCategory?: string;
 };
 
+function resolveInitialCategory(initialCategory?: string) {
+  if (!initialCategory) {
+    return ALL_CATEGORY;
+  }
+
+  return (
+    KITCHEN_CATEGORIES.find(
+      (category) => category.toLowerCase() === initialCategory.toLowerCase()
+    ) ?? ALL_CATEGORY
+  );
+}
+
 export function KitchenPlannerPane({ initialCategory }: Props) {
   const [search, setSearch] = useState("");
-  const [activeCategory, setActiveCategory] = useState<string>(ALL_CATEGORY);
+  const [activeCategory, setActiveCategory] = useState<string>(() =>
+    resolveInitialCategory(initialCategory)
+  );
   const [selectedIngredientIds, setSelectedIngredientIds] = useState<string[]>(
     []
   );
@@ -79,20 +93,6 @@ export function KitchenPlannerPane({ initialCategory }: Props) {
 
   const catalogQuery = useIngredientCatalogQuery();
   const catalog = catalogQuery.data ?? EMPTY_CATALOG;
-
-  useEffect(() => {
-    if (!initialCategory) {
-      return;
-    }
-
-    const matchedCategory = KITCHEN_CATEGORIES.find(
-      (category) => category.toLowerCase() === initialCategory.toLowerCase()
-    );
-
-    if (matchedCategory) {
-      setActiveCategory(matchedCategory);
-    }
-  }, [initialCategory]);
 
   const ingredientsById = useMemo(
     () => new Map(catalog.map((ingredient) => [ingredient.id, ingredient])),

@@ -8,6 +8,7 @@ import {
   getPendingCreatorRecipeDrafts,
 } from "../db/creatorRecipeDraftRepository";
 import { creatorRecipesApi } from "../lib/api";
+import { trackAccountBackgroundTask } from "../lib/accountBackgroundTasks";
 import { getApiErrorMessage, isApiClientError } from "../lib/api/errors";
 import {
   editorStateFromRecipe,
@@ -18,6 +19,7 @@ import {
 import { queryClient } from "../lib/query/queryClient";
 import { queryKeys } from "../lib/query/queryKeys";
 import { isConnectedState } from "../lib/query/networkStatus";
+import { useAuthStore } from "../store/authStore";
 
 export function useCreatorDraftSyncProcessor(enabled = true) {
   const db = useSQLiteContext();
@@ -31,10 +33,10 @@ export function useCreatorDraftSyncProcessor(enabled = true) {
     }
 
     function runProcessor() {
-      if (editorIsOpen || isRunningRef.current) return;
+      if (editorIsOpen || isRunningRef.current || useAuthStore.getState().isSigningOut) return;
       isRunningRef.current = true;
 
-      syncPendingCreatorDrafts(db)
+      trackAccountBackgroundTask(syncPendingCreatorDrafts(db))
         .catch((error) => {
           console.error("Failed to sync creator drafts", error);
         })
@@ -63,6 +65,8 @@ async function syncPendingCreatorDrafts(db: ReturnType<typeof useSQLiteContext>)
   let syncedAny = false;
 
   for (const draft of drafts) {
+    if (useAuthStore.getState().isSigningOut) return;
+
     try {
       const editorState = editorStateFromWriteRequest(draft.payload);
       const saved = await creatorRecipesApi.updateRecipeDraft(
@@ -87,6 +91,8 @@ async function syncPendingCreatorDrafts(db: ReturnType<typeof useSQLiteContext>)
       queryClient.setQueryData(queryKeys.creatorRecipes.detail(saved.id), saved);
       syncedAny = true;
     } catch (error) {
+      if (useAuthStore.getState().isSigningOut) return;
+
       const status = isApiClientError(error) ? error.status : null;
       const needsAttention =
         status !== null &&

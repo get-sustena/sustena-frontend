@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Modal,
   Pressable,
@@ -52,14 +52,12 @@ export function QuickPlanSetupModal({
   const [draft, setDraft] = useState(initialValue);
   const canContinue = Boolean(draft.habitWho && draft.habitTime);
 
-  useEffect(() => {
-    if (visible) {
-      setDraft({
-        habitWho: initialValue.habitWho,
-        habitTime: initialValue.habitTime,
-      });
-    }
-  }, [initialValue.habitTime, initialValue.habitWho, visible]);
+  function resetDraft() {
+    setDraft({
+      habitWho: initialValue.habitWho,
+      habitTime: initialValue.habitTime,
+    });
+  }
 
   return (
     <Modal
@@ -68,6 +66,7 @@ export function QuickPlanSetupModal({
       animationType="slide"
       statusBarTranslucent
       onRequestClose={onClose}
+      onShow={resetDraft}
     >
       <View style={styles.overlay}>
         <Pressable

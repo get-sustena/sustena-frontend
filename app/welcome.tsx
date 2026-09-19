@@ -147,7 +147,7 @@ export default function WelcomeScreen() {
 
   return (
     <View style={styles.screen}>
-      <StatusBar style="dark" backgroundColor={theme.colors.card} />
+      <StatusBar style="dark" />
 
       <Animated.View pointerEvents="none" style={[styles.logo, logoStyle]}>
         <Svg
