@@ -2,6 +2,7 @@ import { Href, router } from "expo-router";
 import { Dispatch, SetStateAction, useMemo, useState } from "react";
 import {
   Pressable,
+  ScrollView,
   StyleSheet,
   TextInput,
   View,
@@ -258,7 +259,7 @@ export function StageIngredients({
                     }))
                   }
                   maxLength={100}
-                  placeholder="Section name"
+                  placeholder="Section name, e.g. For the sauce"
                   placeholderTextColor={theme.colors.textMuted}
                   style={styles.sectionName}
                 />
@@ -386,6 +387,7 @@ function IngredientCard({
   const [showDetails, setShowDetails] = useState(
     Boolean(ingredient.sizeNote || ingredient.preparationNote || ingredient.isOptional)
   );
+  const [nameFocused, setNameFocused] = useState(false);
   const unit = units.find((item) => item.id === ingredient.unit);
   const preferredContext = ingredient.isCustom
     ? customBasisToContext(ingredient.customMeasurementBasis)
@@ -420,6 +422,18 @@ function IngredientCard({
   }
 
   if (!open) {
+    const summary = ingredientSummary(ingredient, unit?.name);
+    const supportingDetails = [
+      ingredient.sizeNote,
+      ingredient.preparationNote,
+      ingredient.isOptional ? "Optional" : null,
+    ].filter(Boolean).join(" · ");
+    const needsUnit =
+      (ingredient.quantityMode ?? "exact") === "exact" &&
+      Boolean(ingredient.quantity) &&
+      !unit &&
+      getCompatibleAuthoringUnits(units, preferredContext).length > 0;
+
     return (
       <View style={styles.collapsedIngredient}>
         <Pressable
@@ -427,9 +441,19 @@ function IngredientCard({
           onPress={() => onOpenChange(true)}
           style={styles.collapsedIngredientMain}
         >
-          <AppText style={styles.collapsedIngredientText}>
-            {ingredientSummary(ingredient, unit?.name, displayName)}
-          </AppText>
+          <View style={styles.collapsedIngredientCopy}>
+            <AppText style={styles.collapsedIngredientText}>
+              <AppText style={[styles.collapsedIngredientAmount, !summary && styles.collapsedIngredientAmountMissing]}>
+                {summary || "No amount"}
+              </AppText>{" "}
+              <AppText style={styles.collapsedIngredientName}>{displayName}</AppText>
+            </AppText>
+            {supportingDetails ? (
+              <AppText style={styles.collapsedIngredientMeta}>{supportingDetails}</AppText>
+            ) : needsUnit ? (
+              <AppText style={styles.collapsedIngredientWarning}>Tap to choose a unit</AppText>
+            ) : null}
+          </View>
           <Icon name="chevronRight" size={14} color={theme.colors.textMuted} />
         </Pressable>
         <Pressable
@@ -466,12 +490,22 @@ function IngredientCard({
           }
           placeholder="Search ingredients"
           placeholderTextColor={theme.colors.textMuted}
-          style={styles.ingredientNameInput}
+          onFocus={() => setNameFocused(true)}
+          onBlur={() => setNameFocused(false)}
+          style={[
+            styles.ingredientNameInput,
+            nameFocused && styles.ingredientNameInputFocused,
+          ]}
         />
       </View>
 
       <AppText style={styles.controlLabel}>Amount type</AppText>
-      <View style={styles.amountModes}>
+      <ScrollView
+        horizontal
+        style={styles.amountModesScroll}
+        contentContainerStyle={styles.amountModes}
+        showsHorizontalScrollIndicator={false}
+      >
         {QUANTITY_MODES.map((mode) => {
           const selected = mode.value === (ingredient.quantityMode ?? "exact");
           return <Pressable key={mode.value} onPress={() => onUpdate({ quantityMode: mode.value })}
@@ -479,7 +513,7 @@ function IngredientCard({
             <AppText style={[styles.amountModeText, selected && styles.amountModeTextSelected]}>{mode.label}</AppText>
           </Pressable>;
         })}
-      </View>
+      </ScrollView>
 
       {ingredient.quantityMode === "to_taste" || ingredient.quantityMode === "as_needed" ? (
         <View style={styles.noMeasure}>
@@ -492,7 +526,7 @@ function IngredientCard({
             <AppText style={styles.measureLabel}>Amount</AppText>
             {ingredient.quantityMode === "range" ? <View style={styles.rangeInputs}>
               <TextInput value={ingredient.quantity ?? ""} onChangeText={(quantity) => onUpdate({ quantity: sanitizeDecimal(quantity) })}
-                keyboardType="decimal-pad" placeholder="2" placeholderTextColor={theme.colors.textMuted} style={styles.measureInput} />
+                keyboardType="decimal-pad" placeholder="2" placeholderTextColor={theme.colors.textMuted} style={[styles.measureInput, styles.rangeMeasureInput]} />
               <AppText style={styles.rangeSeparator}>to</AppText>
             <TextInput
               value={ingredient.quantityMax ?? ""}
@@ -502,7 +536,7 @@ function IngredientCard({
               keyboardType="decimal-pad"
               placeholder="3"
               placeholderTextColor={theme.colors.textMuted}
-              style={styles.measureInput}
+              style={[styles.measureInput, styles.rangeMeasureInput]}
             />
             </View> : <TextInput value={ingredient.quantity ?? ""} onChangeText={(quantity) => onUpdate({ quantity: sanitizeDecimal(quantity) })}
               keyboardType="decimal-pad" placeholder="2" placeholderTextColor={theme.colors.textMuted} style={styles.measureInput} />}
@@ -522,25 +556,33 @@ function IngredientCard({
 
       <Pressable onPress={() => setShowDetails((current) => !current)} style={styles.detailsToggle}>
         <View><AppText style={styles.detailsTitle}>Preparation details</AppText><AppText style={styles.detailsCopy}>Size, prep notes and optional status</AppText></View>
-        <Icon name="chevronDown" size={16} color={theme.colors.textMuted} />
+        <View style={showDetails && styles.detailsChevronOpen}>
+          <Icon name="chevronDown" size={16} color={theme.colors.textMuted} />
+        </View>
       </Pressable>
       {showDetails ? (
         <>
           <View style={styles.quantityRow}>
-            <EditorTextInput
-              value={ingredient.sizeNote ?? ""}
-              onChangeText={(sizeNote) => onUpdate({ sizeNote })}
-              maxLength={100}
-              placeholder="e.g. medium"
-              style={styles.detailInput}
-            />
-            <EditorTextInput
-              value={ingredient.preparationNote ?? ""}
-              onChangeText={(preparationNote) => onUpdate({ preparationNote })}
-              maxLength={1000}
-              placeholder="e.g. diced and drained"
-              style={styles.detailInput}
-            />
+            <View style={styles.sizeField}>
+              <AppText style={styles.detailLabel}>Size</AppText>
+              <EditorTextInput
+                value={ingredient.sizeNote ?? ""}
+                onChangeText={(sizeNote) => onUpdate({ sizeNote })}
+                maxLength={100}
+                placeholder="e.g. medium"
+                style={styles.detailInput}
+              />
+            </View>
+            <View style={styles.preparationField}>
+              <AppText style={styles.detailLabel}>Preparation</AppText>
+              <EditorTextInput
+                value={ingredient.preparationNote ?? ""}
+                onChangeText={(preparationNote) => onUpdate({ preparationNote })}
+                maxLength={1000}
+                placeholder="e.g. diced and drained"
+                style={styles.detailInput}
+              />
+            </View>
           </View>
 
           <Pressable
@@ -570,8 +612,7 @@ function IngredientCard({
 
 function ingredientSummary(
   ingredient: RecipeIngredientInput,
-  unitName: string | undefined,
-  displayName: string
+  unitName: string | undefined
 ) {
   const quantity = ingredient.quantityMode === "range"
     ? [ingredient.quantity, ingredient.quantityMax]
@@ -585,7 +626,7 @@ function ingredientSummary(
         : ingredient.quantity
           ? formatQuantityText(ingredient.quantity)
           : ingredient.quantity;
-  return [quantity, unitName, ingredient.sizeNote, displayName]
+  return [quantity, unitName]
     .filter(Boolean)
     .join(" ");
 }
@@ -721,32 +762,41 @@ function normalizeAuthoringContext(value?: string | null) {
 const styles = StyleSheet.create({
   sectionWrap: { marginBottom: 30 },
   sectionHeader: { marginBottom: 9, flexDirection: "row", alignItems: "center", gap: 8 },
-  sectionName: { flex: 1, minHeight: 38, paddingHorizontal: 1, borderBottomWidth: 1, borderBottomColor: theme.colors.border, fontFamily: theme.fontFamily.display, fontSize: 15, color: theme.colors.navy },
+  sectionName: { flex: 1, minHeight: 42, paddingHorizontal: 2, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: "#D9D9D9", fontFamily: theme.fontFamily.display, fontSize: 16, color: theme.colors.navy },
   moreButton: { width: 40, height: 40, alignItems: "center", justifyContent: "center", borderRadius: 10, backgroundColor: "transparent" },
-  emptyText: { marginBottom: 10, fontSize: 13.5, color: theme.colors.textMuted },
+  emptyText: { paddingHorizontal: 2, paddingTop: 10, paddingBottom: 16, fontSize: 13, color: theme.colors.textMuted },
   addSection: { minHeight: 44, marginBottom: 8, flexDirection: "row", gap: 7, alignItems: "center", justifyContent: "center" },
   addSectionText: { fontFamily: theme.fontFamily.bodyBold, fontSize: 13, color: theme.colors.navy3 },
   collapsedIngredient: { minHeight: 56, paddingLeft: 2, paddingRight: 0, flexDirection: "row", alignItems: "center", gap: 8, borderBottomWidth: 1, borderBottomColor: theme.colors.border, backgroundColor: theme.colors.white },
   collapsedIngredientMain: { minHeight: 54, flex: 1, flexDirection: "row", alignItems: "center", gap: 7 },
-  collapsedIngredientText: { flex: 1, fontFamily: theme.fontFamily.bodySemiBold, fontSize: 13, lineHeight: 18, color: theme.colors.text },
-  ingredientEditor: { marginTop: 8, marginBottom: 16, padding: 14, gap: 12, borderWidth: 0, borderRadius: 20, backgroundColor: "#F1F1F1" },
-  ingredientHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  collapsedIngredientCopy: { flex: 1, minWidth: 0, paddingVertical: 13 },
+  collapsedIngredientText: { fontSize: 14.5, lineHeight: 20, color: theme.colors.text },
+  collapsedIngredientAmount: { fontFamily: theme.fontFamily.bodyBold, color: theme.colors.text },
+  collapsedIngredientAmountMissing: { color: theme.colors.textMuted },
+  collapsedIngredientName: { fontFamily: theme.fontFamily.bodyMedium, color: theme.colors.text },
+  collapsedIngredientMeta: { marginTop: 2, fontSize: 12, color: theme.colors.textMuted },
+  collapsedIngredientWarning: { marginTop: 2, fontFamily: theme.fontFamily.bodySemiBold, fontSize: 12, color: theme.colors.gold },
+  ingredientEditor: { marginTop: 8, marginBottom: 16, padding: 14, gap: 0, borderWidth: 0, borderRadius: 20, backgroundColor: "#F1F1F1" },
+  ingredientHeader: { marginBottom: 10, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   editIngredientLabel: { fontFamily: theme.fontFamily.bodyBold, fontSize: 11, letterSpacing: 0.4, color: "#727272" },
   editorMoreButton: { width: 40, height: 40, alignItems: "center", justifyContent: "center", borderRadius: 12, backgroundColor: theme.colors.white },
-  ingredientNameBlock: { marginBottom: 2 },
+  ingredientNameBlock: { marginBottom: 14 },
   controlLabel: { marginBottom: 6, fontFamily: theme.fontFamily.bodySemiBold, fontSize: 11, color: "#686868" },
   ingredientNameInput: { minHeight: 42, paddingHorizontal: 2, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: "#D7D7D7", fontFamily: theme.fontFamily.displaySemiBold, fontSize: 17, color: theme.colors.text },
-  amountModes: { marginBottom: 0, flexDirection: "row", gap: 6 },
-  amountMode: { minHeight: 34, paddingHorizontal: 9, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#D7D7D7", borderRadius: 999, backgroundColor: theme.colors.white },
+  ingredientNameInputFocused: { borderBottomColor: "#686868" },
+  amountModesScroll: { flexGrow: 0, marginBottom: 12 },
+  amountModes: { paddingBottom: 2, flexDirection: "row", gap: 6 },
+  amountMode: { minHeight: 34, paddingHorizontal: 12, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#D7D7D7", borderRadius: 999, backgroundColor: theme.colors.white },
   amountModeSelected: { borderColor: "#17291E", backgroundColor: "#17291E" },
   amountModeText: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 11.5, color: "#555555" },
   amountModeTextSelected: { color: theme.colors.onDark },
-  measureRow: { flexDirection: "row", gap: 8 },
+  measureRow: { marginBottom: 12, flexDirection: "row", gap: 8 },
   measureControl: { minHeight: 58, flex: 0.72, paddingHorizontal: 12, paddingVertical: 8, justifyContent: "center", borderWidth: 1, borderColor: theme.colors.border, borderRadius: 14, backgroundColor: theme.colors.white },
   measureLabel: { marginBottom: 2, fontFamily: theme.fontFamily.bodySemiBold, fontSize: 9.5, color: theme.colors.textMuted },
-  measureInput: { flex: 1, minWidth: 0, padding: 0, textAlign: "center", fontFamily: theme.fontFamily.bodySemiBold, fontSize: 15, color: theme.colors.text },
+  measureInput: { flex: 1, minWidth: 0, padding: 0, fontFamily: theme.fontFamily.bodySemiBold, fontSize: 15, color: theme.colors.text },
+  rangeMeasureInput: { textAlign: "center", fontSize: 14 },
   rangeInputs: { flexDirection: "row", alignItems: "center", gap: 5 },
-  noMeasure: { minHeight: 46, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", gap: 8, borderRadius: 14, backgroundColor: theme.colors.white },
+  noMeasure: { minHeight: 46, marginBottom: 12, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", gap: 8, borderRadius: 14, backgroundColor: theme.colors.white },
   noMeasureText: { flex: 1, fontSize: 11.5, color: "#666666" },
   unitCopy: { flex: 1, minWidth: 0 },
   compactControls: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 },
@@ -756,23 +806,27 @@ const styles = StyleSheet.create({
   unitSelect: { minWidth: 88, minHeight: 58, flex: 1.28, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 5, borderWidth: 1, borderRadius: 14 },
   unitSelectMissing: { borderColor: theme.colors.border, backgroundColor: theme.colors.white },
   unitSelectChosen: { borderColor: theme.colors.border, backgroundColor: theme.colors.white },
-  selectValue: { flex: 1, fontSize: 13, color: theme.colors.text },
+  selectValue: { flex: 1, fontFamily: theme.fontFamily.bodySemiBold, fontSize: 13, color: theme.colors.text },
   unitPlaceholder: { flex: 1, fontFamily: theme.fontFamily.body, fontSize: 13, color: theme.colors.textMuted },
   modeSelect: { minHeight: 42, paddingHorizontal: 3, flexDirection: "row", alignItems: "center", gap: 2 },
   modeText: { fontSize: 11.5, color: theme.colors.navy3 },
   detailsToggle: { minHeight: 50, paddingHorizontal: 2, paddingVertical: 6, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, borderTopWidth: 1, borderTopColor: "#DDDDDD" },
   detailsTitle: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 12.5, color: theme.colors.text },
   detailsCopy: { marginTop: 2, fontSize: 10.5, color: theme.colors.textMuted },
-  quantityRow: { flexDirection: "row", gap: 7 },
-  detailInput: { minHeight: 42, flex: 1, paddingHorizontal: 10, fontSize: 12 },
-  optionalRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  detailsChevronOpen: { transform: [{ rotate: "180deg" }] },
+  quantityRow: { marginTop: 8, flexDirection: "row", gap: 8 },
+  sizeField: { flex: 0.75 },
+  preparationField: { flex: 1.25 },
+  detailLabel: { marginLeft: 2, marginBottom: 5, fontFamily: theme.fontFamily.bodySemiBold, fontSize: 10, color: theme.colors.textMuted },
+  detailInput: { minHeight: 44, paddingHorizontal: 11, borderColor: theme.colors.border, borderRadius: 12, fontSize: 12.5 },
+  optionalRow: { minHeight: 50, marginTop: 8, flexDirection: "row", alignItems: "center", gap: 9 },
   checkbox: { width: 22, height: 22, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: theme.colors.borderStrong, borderRadius: 7, backgroundColor: theme.colors.white },
-  checkboxActive: { borderColor: theme.colors.navy, backgroundColor: theme.colors.navy },
+  checkboxActive: { borderColor: theme.colors.navy3, backgroundColor: theme.colors.navy3 },
   optionalTitle: { fontFamily: theme.fontFamily.bodyMedium, fontSize: 12, color: theme.colors.text },
   optionalCopyWrap: { flex: 1 },
   optionalCopy: { marginTop: 2, fontSize: 10.5, color: theme.colors.textMuted },
-  doneIngredient: { minWidth: 104, minHeight: 44, marginTop: 2, paddingHorizontal: 17, alignSelf: "flex-end", flexDirection: "row", gap: 7, alignItems: "center", justifyContent: "center", borderRadius: 999, backgroundColor: theme.colors.navy },
-  doneIngredientText: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 12, color: theme.colors.onDark },
+  doneIngredient: { minWidth: 104, minHeight: 44, marginTop: 10, paddingHorizontal: 17, alignSelf: "flex-end", flexDirection: "row", gap: 7, alignItems: "center", justifyContent: "center", borderRadius: 999, backgroundColor: theme.colors.navy },
+  doneIngredientText: { fontFamily: theme.fontFamily.bodyBold, fontSize: 13, color: theme.colors.onDark },
   sheet: { paddingBottom: 24, gap: 13 },
   sheetTitle: { fontFamily: theme.fontFamily.display, fontSize: 22, color: theme.colors.navy },
   sheetCopy: { marginTop: -7, fontSize: 12, lineHeight: 18, color: theme.colors.textMuted },

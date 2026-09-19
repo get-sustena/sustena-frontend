@@ -34,6 +34,7 @@ export function StageDetails({ state, setState, vocabulary }: Props) {
 
     <EditorSection title="When it fits" description="Choose every occasion that makes sense.">
       <View style={styles.pickerList}><SelectionField
+        last
         label="Occasions" required values={formatVocabularyValues(occasions, vocabulary.occasions)}
         placeholder="Choose occasions" helper="Breakfast, weeknight dinner, a party or something else."
         onPress={() => openVocabularyPicker({ title: "Choose occasions", options: vocabulary.occasions, selected: occasions,
@@ -75,6 +76,7 @@ export function StageDetails({ state, setState, vocabulary }: Props) {
 
     <EditorSection title="How it is cooked" description="Select every method used in the recipe.">
       <View style={styles.pickerList}><SelectionField
+        last
         label="Cooking methods" required values={formatVocabularyValues(methods, vocabulary.cookingMethods)}
         placeholder="Choose cooking methods" helper="Fried, boiled, grilled, baked and more."
         onPress={() => openVocabularyPicker({ title: "Choose cooking methods", options: vocabulary.cookingMethods, selected: methods,

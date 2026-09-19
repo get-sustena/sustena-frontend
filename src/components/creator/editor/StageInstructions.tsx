@@ -12,7 +12,6 @@ import { RecipeInstructionInput, RecipeTimerInput } from "../../../types/api";
 import { AppText } from "../../ui/AppText";
 import { Icon } from "../../ui/Icon";
 import {
-  EditorField,
   EditorStageIntro,
   EditorTextInput,
   moveArrayItem,
@@ -113,6 +112,7 @@ export function StageInstructions({ state, setState }: Props) {
             canMoveUp={index > 0}
             canMoveDown={index < state.instructions.length - 1}
             isLast={index === state.instructions.length - 1}
+            isOnlyStep={state.instructions.length === 1}
             onUpdate={(next) =>
               updateStep(instruction.clientId ?? "", next)
             }
@@ -137,6 +137,7 @@ function InstructionCard({
   canMoveUp,
   canMoveDown,
   isLast,
+  isOnlyStep,
   onUpdate,
   onMove,
   onDuplicate,
@@ -147,6 +148,7 @@ function InstructionCard({
   canMoveUp: boolean;
   canMoveDown: boolean;
   isLast: boolean;
+  isOnlyStep: boolean;
   onUpdate: (instruction: RecipeInstructionInput) => void;
   onMove: (direction: -1 | 1) => void;
   onDuplicate: () => void;
@@ -188,7 +190,7 @@ function InstructionCard({
   }
 
   return (
-    <View style={styles.stepItem}>
+    <View style={[styles.stepItem, isLast && styles.stepItemLast]}>
       <View style={styles.rail}>
         <View style={styles.numberCircle}><AppText style={styles.numberText}>{index + 1}</AppText></View>
         {!isLast ? <View style={styles.railLine} /> : null}
@@ -205,18 +207,18 @@ function InstructionCard({
         </Pressable>
       </View>
 
-      <EditorField label="What happens">
+      <View style={styles.stepField}>
+        <AppText style={styles.fieldLabel}>What happens</AppText>
         <EditorTextInput
           value={instruction.stepName ?? ""}
           onChangeText={(stepName) => onUpdate({ ...instruction, stepName })}
           maxLength={200}
           placeholder="Parboil the rice"
         />
-      </EditorField>
+      </View>
 
-      <EditorField
-        label="Instructions"
-      >
+      <View style={styles.stepField}>
+        <AppText style={styles.fieldLabel}>Instructions</AppText>
         <EditorTextInput
           value={instruction.text}
           onChangeText={(text) =>
@@ -227,7 +229,7 @@ function InstructionCard({
           placeholder="Describe this action clearly enough for a first-time cook."
           style={styles.instructionInput}
         />
-      </EditorField>
+      </View>
 
       {timers.length ? (
         <View style={styles.timerList}>
@@ -305,7 +307,7 @@ function InstructionCard({
           />
         </View>
       ) : (
-        <View style={styles.guidanceFields}>
+        <View style={styles.guidanceExpanded}>
           {showMistake ? (
             <RecipeStepGuidanceField
               kind="mistake"
@@ -316,11 +318,13 @@ function InstructionCard({
               onClose={() => setShowMistake(false)}
             />
           ) : (
-            <RecipeStepGuidanceButton
-              kind="mistake"
-              onPress={() => setShowMistake(true)}
-              full
-            />
+            <View style={styles.halfGuidanceRow}>
+              <RecipeStepGuidanceButton
+                kind="mistake"
+                onPress={() => setShowMistake(true)}
+              />
+              <View style={styles.guidanceSpacer} />
+            </View>
           )}
           {showTip ? (
             <RecipeStepGuidanceField
@@ -332,16 +336,18 @@ function InstructionCard({
               onClose={() => setShowTip(false)}
             />
           ) : (
-            <RecipeStepGuidanceButton
-              kind="tip"
-              onPress={() => setShowTip(true)}
-              full
-            />
+            <View style={styles.halfGuidanceRow}>
+              <RecipeStepGuidanceButton
+                kind="tip"
+                onPress={() => setShowTip(true)}
+              />
+              <View style={styles.guidanceSpacer} />
+            </View>
           )}
         </View>
       )}
 
-      {!instruction.text.trim() ? (
+      {isOnlyStep ? (
         <AppText style={styles.stepError}>
           A recipe needs at least one cooking step.
         </AppText>
@@ -369,19 +375,22 @@ function newInstruction(stepNumber: number): RecipeInstructionInput {
 
 const styles = StyleSheet.create({
   stepItem: { position: "relative", paddingBottom: 28, flexDirection: "row", gap: 11 },
+  stepItemLast: { paddingBottom: 0 },
   rail: { width: 34, alignItems: "center" },
   numberCircle: { width: 32, height: 32, alignItems: "center", justifyContent: "center", borderRadius: 16, backgroundColor: "#17291E", zIndex: 1 },
   numberText: { fontFamily: theme.fontFamily.bodyBold, fontSize: 12, color: theme.colors.onDark },
-  railLine: { position: "absolute", top: 36, bottom: -28, width: 1, backgroundColor: "#D7D7D7" },
+  railLine: { position: "absolute", top: 36, bottom: 0, width: 1, backgroundColor: "#D7D7D7" },
   stepContent: { flex: 1, minWidth: 0, paddingBottom: 4 },
   header: { height: 34, marginBottom: 10, flexDirection: "row", alignItems: "center" },
   stepLabel: { flex: 1, fontFamily: theme.fontFamily.display, fontSize: 16, color: theme.colors.text },
   moreButton: { width: 42, height: 42, alignItems: "center", justifyContent: "center", borderRadius: 12 },
-  instructionInput: { minHeight: 88 },
+  stepField: { marginBottom: 12 },
+  fieldLabel: { marginBottom: 6, fontFamily: theme.fontFamily.bodySemiBold, fontSize: 12, color: theme.colors.text },
+  instructionInput: { minHeight: 104 },
   timerList: { gap: 8 },
   timerHeading: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 12.5 },
-  timerCard: { padding: 10, flexDirection: "row", alignItems: "center", gap: 9, borderRadius: 11, backgroundColor: theme.colors.surface2 },
-  timerIcon: { width: 30, height: 30, alignItems: "center", justifyContent: "center", borderRadius: 15, backgroundColor: theme.colors.white },
+  timerCard: { paddingHorizontal: 12, paddingVertical: 10, flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderColor: theme.colors.border, borderRadius: 10, backgroundColor: theme.colors.surface2 },
+  timerIcon: { alignItems: "center", justifyContent: "center" },
   timerCopy: { flex: 1 },
   timerTitle: { fontFamily: theme.fontFamily.bodyMedium, fontSize: 12 },
   timerMeta: { marginTop: 2, fontSize: 9.5, color: theme.colors.textMuted },
@@ -391,11 +400,13 @@ const styles = StyleSheet.create({
   timerConfirmText: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 9.5, color: theme.colors.white },
   timerIgnoreText: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 9.5, color: theme.colors.textMedium },
   removeTimer: { width: 28, height: 28, alignItems: "center", justifyContent: "center" },
-  addTimerButton: { alignSelf: "flex-start", paddingVertical: 5, flexDirection: "row", alignItems: "center", gap: 6 },
-  addTimerText: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 12.5, color: theme.colors.navy3 },
+  addTimerButton: { minHeight: 40, alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 6 },
+  addTimerText: { fontFamily: theme.fontFamily.bodyBold, fontSize: 12.5, color: theme.colors.navy3 },
   guidanceButtons: { marginTop: 10, flexDirection: "row", gap: 8 },
-  guidanceFields: { marginTop: 2, gap: 10 },
-  stepError: { marginTop: -5, fontSize: 10.5, color: theme.colors.textMuted },
+  guidanceExpanded: { marginTop: 10, gap: 8 },
+  halfGuidanceRow: { flexDirection: "row", gap: 8 },
+  guidanceSpacer: { flex: 1 },
+  stepError: { marginTop: 7, fontSize: 11.5, lineHeight: 16, color: theme.colors.textMuted },
   addStepButton: { minHeight: 44, marginBottom: 8, flexDirection: "row", gap: 7, alignItems: "center", justifyContent: "center" },
   addStepText: { fontFamily: theme.fontFamily.bodyBold, fontSize: 13, color: theme.colors.navy3 },
 });

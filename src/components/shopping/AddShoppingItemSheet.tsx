@@ -91,7 +91,14 @@ export function AddShoppingItemSheet({ listName, existingItems, onAdd, onEdit }:
         onSubmitEditing={() => add(search)}
       />
       {confirmation ? <View style={styles.confirmation}><Icon name="check" size={13} color={theme.colors.navy3} /><AppText style={styles.confirmationText}>{confirmation}</AppText></View> : null}
-      <ScrollView style={styles.results} keyboardShouldPersistTaps="always" nestedScrollEnabled showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.results}
+        contentContainerStyle={styles.resultsContent}
+        keyboardDismissMode="interactive"
+        keyboardShouldPersistTaps="handled"
+        nestedScrollEnabled
+        showsVerticalScrollIndicator={false}
+      >
         <AppText style={styles.resultsLabel}>{query ? "Results" : "Suggested"}</AppText>
         {query && !exactMatch ? row(search.trim(), "Custom item") : null}
         {ingredientsQuery.isLoading ? <ActivityIndicator color={theme.colors.navy3} style={styles.loading} /> : displayed.map((ingredient) => row(ingredient.displayName, ingredient.categoryName ?? "Pantry", ingredient.id))}
@@ -103,14 +110,15 @@ export function AddShoppingItemSheet({ listName, existingItems, onAdd, onEdit }:
 }
 
 const styles = StyleSheet.create({
-  sheet: { paddingBottom: 18, minHeight: 0 },
+  sheet: { paddingBottom: 18, minHeight: 0, flexShrink: 1 },
   title: { fontFamily: theme.fontFamily.display, fontSize: 20, color: theme.colors.navy, marginBottom: 3 },
   subtitle: { fontFamily: theme.fontFamily.body, fontSize: 13, color: theme.colors.textMedium, marginBottom: 15 },
   searchLabel: { fontFamily: theme.fontFamily.bodyBold, fontSize: 12, color: theme.colors.navy, marginBottom: 7 },
   searchInput: { minHeight: 48, borderRadius: 12, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.card2, paddingHorizontal: 14, fontFamily: theme.fontFamily.body, fontSize: 14.5, color: theme.colors.navy, marginBottom: 9 },
   confirmation: { flexDirection: "row", alignItems: "center", gap: 7, backgroundColor: theme.colors.card2, borderRadius: 10, paddingVertical: 9, paddingHorizontal: 11, marginBottom: 9 },
   confirmationText: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 13, color: theme.colors.navy3 },
-  results: { maxHeight: 320, marginBottom: 14 },
+  results: { maxHeight: 320, minHeight: 0, flexShrink: 1, marginBottom: 14 },
+  resultsContent: { flexGrow: 0 },
   resultsLabel: { fontFamily: theme.fontFamily.bodyBold, fontSize: 12, color: theme.colors.textMedium, marginTop: 4, marginBottom: 7 },
   row: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 58, marginBottom: 7, paddingHorizontal: 10, borderRadius: 12, backgroundColor: theme.colors.white },
   rowCopy: { flex: 1, minWidth: 0, paddingVertical: 9 },

@@ -1,5 +1,5 @@
 import { Href, router } from "expo-router";
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import {
   Pressable,
   StyleProp,
@@ -105,11 +105,26 @@ export function EditorField({
 }
 
 export function EditorTextInput(props: TextInputProps) {
+  const [focused, setFocused] = useState(false);
+
   return (
     <TextInput
       placeholderTextColor={theme.colors.textMuted}
       {...props}
-      style={[styles.input, props.multiline && styles.multiline, props.style]}
+      onFocus={(event) => {
+        setFocused(true);
+        props.onFocus?.(event);
+      }}
+      onBlur={(event) => {
+        setFocused(false);
+        props.onBlur?.(event);
+      }}
+      style={[
+        styles.input,
+        props.multiline && styles.multiline,
+        props.style,
+        focused && styles.inputFocused,
+      ]}
     />
   );
 }
@@ -146,6 +161,7 @@ export function SelectionField({
   values,
   placeholder,
   required,
+  last,
   onPress,
 }: {
   label: string;
@@ -153,13 +169,18 @@ export function SelectionField({
   values: string[];
   placeholder: string;
   required?: boolean;
+  last?: boolean;
   onPress: () => void;
 }) {
   return (
     <Pressable
       accessibilityLabel={placeholder}
       onPress={onPress}
-      style={({ pressed }) => [styles.selection, pressed && styles.pressed]}
+      style={({ pressed }) => [
+        styles.selection,
+        last && styles.selectionLast,
+        pressed && styles.pressed,
+      ]}
     >
       <View style={styles.selectionCopy}>
         <AppText style={styles.selectionLabel}>{label}</AppText>
@@ -447,8 +468,9 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.white,
     color: theme.colors.text,
     fontFamily: theme.fontFamily.body,
-    fontSize: 14,
+    fontSize: 14.5,
   },
+  inputFocused: { borderColor: "#777777" },
   multiline: { minHeight: 104, paddingTop: 13, textAlignVertical: "top" },
   numberInputWrap: {
     minHeight: 50,
@@ -464,8 +486,8 @@ const styles = StyleSheet.create({
   suffix: { fontSize: 12, color: theme.colors.textMuted },
   selection: {
     minHeight: 68,
-    paddingHorizontal: 13,
-    paddingVertical: 11,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
@@ -473,11 +495,12 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.colors.border,
   },
   selectionCopy: { flex: 1 },
-  selectionLabel: { fontFamily: theme.fontFamily.body, fontSize: 14.5, color: theme.colors.text },
-  selectionValues: { marginTop: 7, flexDirection: "row", flexWrap: "wrap", gap: 6 },
-  selectionHelper: { marginTop: 5, fontSize: 11.5, lineHeight: 16, color: theme.colors.textMuted },
+  selectionLast: { borderBottomWidth: 0 },
+  selectionLabel: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 14.5, color: theme.colors.text },
+  selectionValues: { marginTop: 8, flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  selectionHelper: { marginTop: 6, fontSize: 12, lineHeight: 16, color: theme.colors.textMuted },
   valueChip: { paddingHorizontal: 12, paddingVertical: 6, flexDirection: "row", alignItems: "center", gap: 5, borderWidth: 1, borderColor: theme.colors.navy, borderRadius: 999, backgroundColor: theme.colors.navy },
-  valueChipText: { fontSize: 12.5, color: theme.colors.onDark },
+  valueChipText: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 12.5, color: theme.colors.onDark },
   choiceRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   choice: { flexGrow: 1, minWidth: 82, minHeight: 42, paddingHorizontal: 10, paddingVertical: 11, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: theme.colors.border, borderRadius: 999, backgroundColor: theme.colors.white },
   choiceSelected: { borderColor: theme.colors.navy, backgroundColor: theme.colors.navy },

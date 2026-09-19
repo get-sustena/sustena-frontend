@@ -18,7 +18,6 @@ import {
   EditorStageIntro,
   EditorTextInput,
   formatVocabularyValues,
-  InlineNotice,
   openVocabularyPicker,
   SelectionField,
 } from "./EditorCommon";
@@ -172,6 +171,7 @@ export function StageReview({
             })}
           />
           <SelectionField
+            last
             label="Cuisine or tribe"
             values={formatVocabularyValues(cuisines, vocabulary.cuisines)}
             placeholder="Choose cuisine or tribe"
@@ -323,17 +323,12 @@ export function StageReview({
           </Card>
         ))}
         <Pressable
-          disabled={!state.ingredients.length}
           onPress={addSubstitution}
-          style={[styles.addSubstitution, !state.ingredients.length && styles.disabled]}
+          style={styles.addSubstitution}
         >
-          <AppText style={styles.addSubstitutionText}>+ Add substitution</AppText>
+          <Icon name="plus" size={15} color={theme.colors.navy3} />
+          <AppText style={styles.addSubstitutionText}>Add substitution</AppText>
         </Pressable>
-        {!state.ingredients.length ? (
-          <InlineNotice tone="warning">
-            Add ingredients in stage three before creating substitutions.
-          </InlineNotice>
-        ) : null}
       </View>
 
       <EditorField
@@ -369,10 +364,13 @@ export function StageReview({
           </View>
         ) : (
           <View style={styles.readyCard}>
-            <AppText style={styles.readyTitle}>Ready to publish</AppText>
-            <AppText style={styles.readyCopy}>
-              All required information has been added.
-            </AppText>
+            <Icon name="check" size={18} color={theme.colors.navy3} strokeWidth={3} />
+            <View style={styles.readyCopyWrap}>
+              <AppText style={styles.readyTitle}>Ready to publish</AppText>
+              <AppText style={styles.readyCopy}>
+                All required information has been added.
+              </AppText>
+            </View>
           </View>
         )}
         {validationErrors.length ? (
@@ -442,23 +440,22 @@ function openSourceIngredientPicker({
 
 const styles = StyleSheet.create({
   pickerList: { overflow: "hidden", borderWidth: 1, borderColor: "#D9D9D9", borderRadius: 16, backgroundColor: "#FFFFFF" },
-  serveSection: { marginBottom: 26, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: "#D9D9D9" },
+  serveSection: { marginBottom: 26, paddingBottom: 26, borderBottomWidth: 1, borderBottomColor: "#E2E2E2" },
   sectionTitle: { fontFamily: theme.fontFamily.displaySemiBold, fontSize: 19, color: theme.colors.navy },
   sectionDescription: { marginTop: 5, marginBottom: 18, fontSize: 12.5, lineHeight: 18, color: theme.colors.textMuted },
   sectionBlock: { marginBottom: 18 },
   labelRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
   fieldMeta: { fontSize: 11, color: theme.colors.textMuted },
-  sectionLabel: { fontFamily: theme.fontFamily.body, fontSize: 13, color: theme.colors.text },
+  sectionLabel: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 13, color: theme.colors.text },
   sectionHelper: { marginTop: 4, marginBottom: 10, fontSize: 11.5, lineHeight: 16, color: theme.colors.textMuted },
   suggestionChips: { flexDirection: "row", flexWrap: "wrap", gap: 7 },
   suggestionChip: { paddingHorizontal: 10, paddingVertical: 7, flexDirection: "row", alignItems: "center", gap: 5, borderRadius: 999, backgroundColor: theme.colors.surface2 },
   suggestionText: { fontSize: 11, color: theme.colors.navy3 },
   addRow: { marginTop: 8 },
   addInput: { flex: 1 },
-  disabled: { opacity: 0.35 },
-  addSubstitution: { minHeight: 42, alignItems: "center", justifyContent: "center", borderWidth: 1, borderStyle: "dashed", borderColor: theme.colors.border, borderRadius: 12, backgroundColor: theme.colors.white },
-  addSubstitutionText: { fontFamily: theme.fontFamily.bodyMedium, fontSize: 12.5, color: theme.colors.navy3 },
-  substitutionCard: { padding: 14, gap: 8 },
+  addSubstitution: { minHeight: 44, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7, backgroundColor: "transparent" },
+  addSubstitutionText: { fontFamily: theme.fontFamily.bodyBold, fontSize: 13, color: theme.colors.navy3 },
+  substitutionCard: { marginBottom: 10, padding: 14, gap: 8, borderColor: "#D9D9D9" },
   substitutionHeader: { marginBottom: 0, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   substitutionTitle: { flex: 1, fontFamily: theme.fontFamily.body, fontSize: 12.5, color: theme.colors.textMuted },
   substitutionInput: { minHeight: 42, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8, borderWidth: 1, borderColor: theme.colors.border, borderRadius: 10, backgroundColor: theme.colors.surface2 },
@@ -466,22 +463,23 @@ const styles = StyleSheet.create({
   substitutionPreview: { fontSize: 12, lineHeight: 17, color: theme.colors.textMuted },
   selectValue: { flex: 1, fontSize: 13, color: theme.colors.text },
   selectPlaceholder: { flex: 1, fontSize: 13, color: theme.colors.textMuted },
-  storageInput: { minHeight: 96 },
-  reviewSection: { paddingTop: 15, marginBottom: 12, borderTopWidth: 1, borderTopColor: theme.colors.border },
+  storageInput: { minHeight: 104 },
+  reviewSection: { paddingBottom: 24, marginBottom: 12 },
   reviewTitle: { fontFamily: theme.fontFamily.display, fontSize: 18, color: theme.colors.navy },
   reviewCopy: { marginTop: 4, marginBottom: 12, fontSize: 12.5, lineHeight: 18, color: theme.colors.textMedium },
-  errorsCard: { padding: 14, borderWidth: 1, borderColor: "#E8C4BE", borderRadius: 14, backgroundColor: "#FBF0EE" },
-  errorsTitle: { marginBottom: 7, fontFamily: theme.fontFamily.bodyBold, fontSize: 13.5, color: theme.colors.red },
-  errorsCopy: { fontSize: 12, lineHeight: 17, color: theme.colors.red },
+  errorsCard: { marginBottom: 10, padding: 14, borderWidth: 1, borderColor: "#E2C4BC", borderRadius: 15, backgroundColor: "#F5EAE7" },
+  errorsTitle: { marginBottom: 3, fontFamily: theme.fontFamily.bodyBold, fontSize: 13.5, color: theme.colors.navy },
+  errorsCopy: { fontSize: 11.5, lineHeight: 16, color: theme.colors.textMedium },
   errorText: { paddingVertical: 6, fontSize: 13, lineHeight: 18, color: theme.colors.red, textDecorationLine: "underline" },
   fixLinks: { marginTop: 0 },
-  fixRow: { minHeight: 42, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomWidth: 1, borderBottomColor: theme.colors.border },
+  fixRow: { minHeight: 48, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomWidth: 1, borderBottomColor: theme.colors.border },
   fixStage: { fontSize: 13.5, color: theme.colors.text },
   fixText: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 13, color: theme.colors.navy3 },
   fixAction: { flexDirection: "row", alignItems: "center", gap: 6 },
-  readyCard: { padding: 14, borderWidth: 1, borderColor: "#B7D6C3", borderRadius: 14, backgroundColor: "#F0F8F2" },
-  readyTitle: { fontFamily: theme.fontFamily.bodyBold, fontSize: 13.5, color: theme.colors.navy3 },
-  readyCopy: { marginTop: 4, fontSize: 11.5, lineHeight: 17, color: theme.colors.textMedium },
+  readyCard: { marginBottom: 10, padding: 14, flexDirection: "row", alignItems: "flex-start", gap: 10, borderWidth: 1, borderColor: "#D7D7D7", borderRadius: 15, backgroundColor: "#F1F1F1" },
+  readyCopyWrap: { flex: 1 },
+  readyTitle: { fontFamily: theme.fontFamily.bodyBold, fontSize: 13.5, color: theme.colors.navy },
+  readyCopy: { marginTop: 3, fontSize: 11.5, lineHeight: 16, color: theme.colors.textMedium },
   sheet: { paddingBottom: 24, gap: 12 },
   sheetTitle: { fontFamily: theme.fontFamily.display, fontSize: 22, color: theme.colors.navy },
   sheetList: { maxHeight: 400 },

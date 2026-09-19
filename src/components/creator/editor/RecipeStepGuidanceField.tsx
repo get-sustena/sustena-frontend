@@ -48,8 +48,8 @@ export function RecipeStepGuidanceField({
         multiline
         placeholder={
           mistake
-            ? "e.g. Do not cook the rice until fully soft at this stage."
-            : "e.g. Cover the pot while the rice cooks."
+            ? "What should the cook avoid here?"
+            : "What would make this step easier?"
         }
         placeholderTextColor={theme.colors.textMuted}
         textAlignVertical="top"

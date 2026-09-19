@@ -4,6 +4,7 @@ import { createLocalId } from "../../../lib/id";
 import { theme } from "../../../theme/theme";
 import type { Ingredient, RecipeIngredientInput, Unit } from "../../../types/api";
 import { AppText } from "../../ui/AppText";
+import { Icon } from "../../ui/Icon";
 
 type NewIngredient = Omit<
   RecipeIngredientInput,
@@ -68,19 +69,22 @@ export function RecipeIngredientQuickAdd({
 
   return (
     <View style={styles.wrap}>
-      <TextInput
-        value={query}
-        onChangeText={setQuery}
-        onFocus={() => setFocused(true)}
-        onBlur={() => {
-          setTimeout(() => setFocused(false), 120);
-        }}
-        autoCapitalize="none"
-        autoCorrect={false}
-        placeholder="e.g. 2 cups flour"
-        placeholderTextColor="#9AA298"
-        style={styles.input}
-      />
+      <View style={styles.inputWrap}>
+        <Icon name="plus" size={17} color={theme.colors.textMuted} />
+        <TextInput
+          value={query}
+          onChangeText={setQuery}
+          onFocus={() => setFocused(true)}
+          onBlur={() => {
+            setTimeout(() => setFocused(false), 120);
+          }}
+          autoCapitalize="none"
+          autoCorrect={false}
+          placeholder="2 cups flour"
+          placeholderTextColor={theme.colors.textMuted}
+          style={styles.input}
+        />
+      </View>
       {focused && query.trim() ? (
         <View accessibilityRole="list" style={styles.suggestions}>
           {matches.map((ingredient) => (
@@ -119,7 +123,8 @@ function normalizeIngredientQuery(value: string, units: Unit[]) {
 
 const styles = StyleSheet.create({
   wrap: { position: "relative", zIndex: 2 },
-  input: { minHeight: 46, paddingHorizontal: 13, borderWidth: 1.5, borderStyle: "dashed", borderColor: theme.colors.border, borderRadius: 12, backgroundColor: theme.colors.surface2, fontFamily: theme.fontFamily.body, fontSize: 13.5, color: theme.colors.text },
+  inputWrap: { minHeight: 46, marginTop: 12, paddingLeft: 13, flexDirection: "row", alignItems: "center", borderWidth: 1, borderStyle: "dashed", borderColor: "#909090", borderRadius: 14, backgroundColor: theme.colors.white },
+  input: { minHeight: 46, flex: 1, minWidth: 0, paddingLeft: 10, paddingRight: 14, fontFamily: theme.fontFamily.body, fontSize: 14, color: theme.colors.text },
   suggestions: { marginTop: 4, overflow: "hidden", borderWidth: 1, borderColor: theme.colors.border, borderRadius: 12, backgroundColor: theme.colors.white },
   suggestion: { minHeight: 46, paddingHorizontal: 13, justifyContent: "center", borderBottomWidth: 1, borderBottomColor: theme.colors.border },
   suggestionText: { fontFamily: theme.fontFamily.bodyMedium, fontSize: 13, color: theme.colors.text },

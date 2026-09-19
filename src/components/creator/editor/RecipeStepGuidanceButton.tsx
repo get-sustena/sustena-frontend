@@ -30,7 +30,7 @@ export function RecipeStepGuidanceButton({
         color={color}
         strokeWidth={2}
       />
-      <AppText style={[styles.text, { color }]}>
+      <AppText style={styles.text}>
         {mistake ? "Common mistake" : "Helpful tip"}
       </AppText>
     </Pressable>
@@ -39,13 +39,13 @@ export function RecipeStepGuidanceButton({
 
 const styles = StyleSheet.create({
   button: {
-    minHeight: 46,
+    minHeight: 42,
     flex: 1,
     paddingHorizontal: 8,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 7,
+    gap: 6,
     borderWidth: 1,
     borderRadius: 12,
   },
@@ -62,7 +62,8 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     textAlign: "center",
     fontFamily: theme.fontFamily.bodySemiBold,
-    fontSize: 12.5,
-    lineHeight: 16,
+    fontSize: 11.5,
+    lineHeight: 15,
+    color: theme.colors.text,
   },
 });

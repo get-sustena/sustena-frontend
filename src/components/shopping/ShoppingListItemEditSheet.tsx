@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pressable, StyleSheet, TextInput, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
 import { SHOPPING_CATEGORY_LABELS } from "../../lib/groupShoppingListItems";
 import { theme } from "../../theme/theme";
 import type { ShoppingListItem } from "../../types/shoppingList";
@@ -38,7 +38,14 @@ export function ShoppingListItemEditSheet({
   }
 
   return (
-    <View style={styles.sheet}>
+    <ScrollView
+      style={styles.sheet}
+      contentContainerStyle={styles.sheetContent}
+      keyboardDismissMode="interactive"
+      keyboardShouldPersistTaps="handled"
+      nestedScrollEnabled
+      showsVerticalScrollIndicator={false}
+    >
       <AppText style={styles.title}>Edit item</AppText>
       <AppText style={styles.label}>Ingredient</AppText>
       <TextInput value={name} onChangeText={setName} style={styles.input} />
@@ -79,7 +86,7 @@ export function ShoppingListItemEditSheet({
           <AppText style={styles.saveText}>{saving ? "Saving..." : "Save changes"}</AppText>
         </Pressable>
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -98,7 +105,8 @@ function normalizeCategory(category: string) {
 }
 
 const styles = StyleSheet.create({
-  sheet: { paddingBottom: 24 },
+  sheet: { minHeight: 0, flexShrink: 1 },
+  sheetContent: { paddingBottom: 24 },
   title: { fontFamily: theme.fontFamily.display, fontSize: 19, color: theme.colors.navy, marginBottom: 16 },
   label: { fontFamily: theme.fontFamily.monoMedium, fontSize: 11, color: theme.colors.textMuted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 },
   input: { minHeight: 48, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.card2, borderRadius: 12, paddingHorizontal: 13, fontFamily: theme.fontFamily.body, fontSize: 14.5, color: theme.colors.navy, marginBottom: 14 },
