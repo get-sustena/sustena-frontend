@@ -1,4 +1,3 @@
-// src/store/uiStore.ts
 
 import { ReactNode } from "react";
 import { create } from "zustand";

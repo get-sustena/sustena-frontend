@@ -1,4 +1,3 @@
-// src/db/migrations.ts
 
 import { type SQLiteDatabase } from "expo-sqlite";
 import {
@@ -12,7 +11,7 @@ let migrationQueue = Promise.resolve();
 export async function migrateDbIfNeeded(db: SQLiteDatabase) {
   const migration = migrationQueue
     .catch(() => {
-      // Keep the queue alive after a failed migration attempt.
+      // Allow later callers to retry after a failed migration.
     })
     .then(() =>
       runWithSqliteRetry(async () => {
@@ -206,8 +205,6 @@ async function runMigrations(db: SQLiteDatabase) {
 
   const versionAfterSyncQueue = versionAfterRecipes < 4 ? 4 : versionAfterRecipes;
 
-  // Local-only Complete Profile answers. No backend fields exist for any of
-  // this yet, so it never touches sync_queue. See redesign plan Phase 0.8.
   if (versionAfterSyncQueue < 5) {
     await db.execAsync(`
       CREATE TABLE IF NOT EXISTS local_profile_answers (
@@ -236,9 +233,7 @@ async function runMigrations(db: SQLiteDatabase) {
   const versionAfterProfileAnswers =
     versionAfterSyncQueue < 5 ? 5 : versionAfterSyncQueue;
 
-  // Local-only multi-list shopping support. Exactly one list (is_default_synced_list = 1)
-  // stays wired to the real shopping-list API/sync queue; every other list is pure
-  // local CRUD. See redesign plan Phase 0.9.
+  // Only the default list participates in server sync.
   if (versionAfterProfileAnswers < 6) {
     await db.execAsync(`
       CREATE TABLE IF NOT EXISTS shopping_lists (

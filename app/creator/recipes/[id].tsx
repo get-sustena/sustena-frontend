@@ -175,8 +175,7 @@ export default function RecipeEditorScreen() {
     const signature = stateSignature(state);
     if (signature === savedSignatureRef.current) return;
 
-    // A published recipe remains untouched until the creator explicitly
-    // chooses Save and exit or Publish.
+    // Never mutate a published recipe before an explicit save or publish action.
     if (isPublishedEditMode) return;
 
     if (!conflictRef.current) setSaveStatus("saving");
@@ -191,8 +190,7 @@ export default function RecipeEditorScreen() {
       clearTimeout(localTimer);
       clearTimeout(serverTimer);
     };
-    // The save helpers intentionally use refs so typing does not restart a save
-    // that is already in flight.
+    // Refs prevent keystrokes from restarting an in-flight save.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPublishedEditMode, recipe, state]);
 

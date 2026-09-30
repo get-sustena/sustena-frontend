@@ -1,4 +1,3 @@
-// src/lib/sync/processSyncQueue.ts
 
 import { type SQLiteDatabase } from "expo-sqlite";
 import {
@@ -196,10 +195,7 @@ function isUnrecoverable(error: unknown) {
     return false;
   }
 
-  // A definitive 4xx (other than timeout/rate-limit) means the target
-  // resource is gone or was never created server-side. Retrying won't help,
-  // most commonly a toggle/delete queued for an item that was created while
-  // offline and never itself reached the server.
+  // Permanent client errors cannot be repaired by retrying the queued operation.
   return (
     error.status >= 400 &&
     error.status < 500 &&

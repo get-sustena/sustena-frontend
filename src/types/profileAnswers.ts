@@ -1,8 +1,3 @@
-// src/types/profileAnswers.ts
-// "Complete Profile" gated-question personalization answers. No backend
-// fields exist for any of this (see redesign plan) — stored locally only,
-// so option values are kept as free-form strings rather than tight unions
-// until the Complete Profile screen UI locks in the exact option set.
 
 export type ProfileAnswers = {
   nickname: string | null;

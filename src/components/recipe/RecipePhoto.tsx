@@ -1,9 +1,3 @@
-// src/components/recipe/RecipePhoto.tsx
-// Recipe "photo" surface used by every card that shows a recipe image.
-// When there's no real photo, the mockup falls back to a diagonal two-tone
-// stripe texture (never a giant emoji) with an optional dark gradient scrim
-// for text legibility — ported verbatim from the mockup's `stripe` /
-// `photoScrim` / `photoScrimCompact` constants.
 
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
@@ -133,9 +127,6 @@ function RecipeStripe() {
   );
 }
 
-// Small pill badge floating on a photo — tags, time/cost/difficulty chips.
-// Matches the mockup's heroChip() helper exactly (7px radius, not fully
-// rounded like the app's other Chip component).
 export function PhotoChip({
   label,
   color = theme.colors.text,

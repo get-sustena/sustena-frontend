@@ -1,4 +1,3 @@
-// src/db/preferencesRepository.ts
 
 import { type SQLiteDatabase } from "expo-sqlite";
 import { HealthCondition, UserPreferences } from "../types/preferences";

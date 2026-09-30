@@ -1,4 +1,3 @@
-// src/lib/api/auth.ts
 
 import {
   AuthResponse,
@@ -94,7 +93,7 @@ export async function logout() {
     };
 
     await apiRequest<LogoutResponse>(config).catch(() => {
-      // Logout should clear local state even if the server request fails.
+      // Local sign-out must not depend on server availability.
     });
   }
 
@@ -108,7 +107,6 @@ export async function logoutAll() {
       method: "POST",
     });
   } finally {
-    // Local sign-out proceeds even when the server cannot revoke every session.
     await clearAuthTokens();
   }
 }

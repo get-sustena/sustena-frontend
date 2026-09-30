@@ -1,4 +1,3 @@
-// src/components/auth/AuthField.tsx
 
 import { useState } from "react";
 import { Pressable, StyleSheet, TextInput, View } from "react-native";

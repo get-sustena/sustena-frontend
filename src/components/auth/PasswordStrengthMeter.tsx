@@ -1,4 +1,3 @@
-// src/components/auth/PasswordStrengthMeter.tsx
 
 import { StyleSheet, View } from "react-native";
 import {

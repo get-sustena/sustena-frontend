@@ -1,6 +1,3 @@
-// src/components/ui/Toast.tsx
-// Single global toast host, mounted once at the app root. Anywhere else,
-// call showToast(message) from src/store/uiStore to surface it.
 
 import { useEffect } from "react";
 import { Pressable, StyleSheet, View } from "react-native";

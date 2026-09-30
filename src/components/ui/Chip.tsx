@@ -1,7 +1,3 @@
-// src/components/ui/Chip.tsx
-// Small, non-interactive rounded-full label used for tags (time, difficulty,
-// dietary tags, recipe categories) — distinct from FilterChip/PreferenceChip,
-// which are selectable controls.
 
 import { StyleSheet, View } from "react-native";
 import { theme } from "../../theme/theme";

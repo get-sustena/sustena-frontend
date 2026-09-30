@@ -1,6 +1,3 @@
-// src/components/recipe/RecipeTile.tsx
-// The Recipes tab's 2-column grid tile — ported verbatim from the mockup's
-// renderRecGrid() card template.
 
 import { Pressable, StyleSheet, View } from "react-native";
 import { Recipe } from "../../data/recipes";

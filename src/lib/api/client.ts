@@ -1,4 +1,3 @@
-// src/lib/api/client.ts
 
 import {
   AxiosError,

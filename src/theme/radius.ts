@@ -1,4 +1,3 @@
-// src/theme/radius.ts
 
 export const radius = {
   sm: 10,

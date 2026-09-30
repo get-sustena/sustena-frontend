@@ -7,7 +7,6 @@ const require = createRequire(import.meta.url);
 const Module = require("node:module");
 const ts = require("typescript");
 
-// Load the project's TypeScript utility without adding a test-runner dependency.
 Module._extensions[".ts"] = (module, filename) => {
   const source = readFileSync(filename, "utf8");
   const compiled = ts.transpileModule(source, {

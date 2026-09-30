@@ -1,4 +1,3 @@
-// src/store/preferencesStore.ts
 
 import { create } from "zustand";
 import { UnitMode } from "../data/recipes";

@@ -1,4 +1,3 @@
-// src/hooks/usePersistPreferences.ts
 
 import { useSQLiteContext } from "expo-sqlite";
 import { useEffect } from "react";

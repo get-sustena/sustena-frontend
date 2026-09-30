@@ -1,6 +1,3 @@
-// src/components/ui/StatusPill.tsx
-// Colored status indicator (dot + label) — e.g. sync state, budget status,
-// stock/availability badges.
 
 import { StyleSheet, View } from "react-native";
 import { theme } from "../../theme/theme";

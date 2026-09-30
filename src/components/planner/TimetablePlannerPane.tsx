@@ -1,4 +1,3 @@
-// src/components/planner/TimetablePlannerPane.tsx
 
 import { router } from "expo-router";
 import { useMemo, useState } from "react";

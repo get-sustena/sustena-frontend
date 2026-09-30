@@ -1,4 +1,3 @@
-// src/data/recipeFilters.ts
 
 export type RecipeFilter = {
   label: string;

@@ -1,4 +1,3 @@
-// src/data/recipes.ts
 
 export type RecipeTag =
   | "Nigerian"
@@ -76,6 +75,5 @@ export type Recipe = {
   ratingCount?: number;
 };
 
-// Production screens should use backend recipes with seeded SQLite fallback.
-// Keep this export empty so old development fixtures cannot leak into the MVP UI.
+// Prevent legacy fixtures from appearing when the API and SQLite seed are unavailable.
 export const RECIPES: Recipe[] = [];

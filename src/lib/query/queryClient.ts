@@ -1,7 +1,5 @@
 import { QueryClient } from "@tanstack/react-query";
 
-// Retry transient network and server failures so one interrupted request does
-// not immediately surface as a hard error.
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

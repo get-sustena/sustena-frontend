@@ -1,4 +1,3 @@
-// src/lib/scaling.ts
 
 import {
   NUMERIC_TOKEN_PATTERN_GLOBAL,

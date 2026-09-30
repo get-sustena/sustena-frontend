@@ -1,6 +1,3 @@
-// src/components/recipe/RecipeCard.tsx
-// The Home screen's "Quick & Easy" horizontal carousel card — ported
-// verbatim from the mockup's quickCard() function.
 
 import { Pressable, StyleSheet, View } from "react-native";
 import { Recipe } from "../../data/recipes";

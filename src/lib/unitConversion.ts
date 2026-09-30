@@ -1,11 +1,4 @@
-// src/lib/unitConversion.ts
-//
-// Client-side unit conversion, mirroring the backend's unit_conversion_service.convert_quantity:
-// two units convert into one another only if they share a base unit (grams or millilitres) --
-// that's the real compatibility gate, not `context`. `context` instead says which units are
-// sensible to *offer* for a given ingredient (e.g. only rice-category ingredients should offer
-// a Derica cup), which is what lets a recipe stored as plain "300 g" still convert into a
-// Derica-cup reading for a rice ingredient.
+// Conversion requires a shared base unit; context only limits which units are offered.
 
 import { Ingredient, IngredientConversionContext, Unit } from "../types/api";
 import { formatQuantityValue } from "./scaling";
@@ -31,9 +24,7 @@ interface ContextUnitMap {
   imperialLarge: string | null;
 }
 
-// Ingredient-specific Nigerian market equivalents only exist for rice, plain flour, millet, and
-// sorghum in the unit catalog. Generic mass ingredients intentionally have no Nigerian default
-// rather than applying a guessed cup-to-gram rule that is not backed by ingredient density data.
+// Do not infer Nigerian measures without ingredient-specific density data.
 const CONTEXT_UNITS: Record<IngredientConversionContext, ContextUnitMap> = {
   mass: {
     metricSmall: "g",
@@ -143,13 +134,6 @@ export function convertQuantity({
   };
 }
 
-/**
- * Returns the concrete units that are sensible for one ingredient measurement.
- *
- * Generic mass/volume units are valid for their matching ingredient-specific contexts, while
- * context-specific units (for example a rice Derica) never leak into unrelated ingredients.
- * Units with identical factors are collapsed so users do not see duplicate "Grams" rows.
- */
 export function getCompatibleScaleUnits({
   units,
   fromUnit,
@@ -306,13 +290,6 @@ export function isSelectableIngredientUnit(unitId: string | null) {
   );
 }
 
-/**
- * Converts a recipe ingredient's stored quantity/unit into the unit appropriate for a display
- * mode (metric/Nigerian/imperial), auto-switching between the small/large metric or imperial unit
- * (e.g. g <-> kg, oz <-> lb) once the small-unit reading would cross the large unit's own size.
- * Returns null when this mode has no valid unit for the ingredient's conversionContext (e.g.
- * Nigerian mode for a generic mass ingredient, or any mode for a count-based ingredient).
- */
 export function convertIngredientQuantity({
   unitsById,
   quantity,
@@ -328,8 +305,7 @@ export function convertIngredientQuantity({
 }): ConvertedQuantity | null {
   const contextUnits = CONTEXT_UNITS[context];
 
-  // API data can introduce a new context before this client knows its unit mapping.
-  // Keep the stored quantity/unit instead of crashing the whole recipe screen.
+  // Unknown server contexts must fall back to the stored measurement.
   if (!contextUnits) {
     return null;
   }
@@ -414,8 +390,6 @@ export function getUnitDisplayLabel(unitsById: Map<string, Unit>, unitId: string
     return unitId;
   }
 
-  // Keep standard units compact; custom market measures retain the meaningful size/name while
-  // dropping the catalog's explanatory suffix after the comma.
   const shortLabels: Record<string, string> = {
     mg: "mg",
     g: "g",

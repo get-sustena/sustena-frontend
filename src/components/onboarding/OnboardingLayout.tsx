@@ -1,4 +1,3 @@
-// src/components/onboarding/OnboardingLayout.tsx
 
 import { ReactNode } from "react";
 import { StyleSheet, View } from "react-native";

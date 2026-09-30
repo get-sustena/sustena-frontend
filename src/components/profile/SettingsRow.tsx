@@ -1,4 +1,3 @@
-// src/components/profile/SettingsRow.tsx
 
 import { ReactNode } from "react";
 import { Pressable, StyleSheet, View } from "react-native";

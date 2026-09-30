@@ -1,69 +1,63 @@
-// New palette (CookEase v2 redesign) — source of truth: redesign/CookEase App v2.html
-// INK/ASH = text, BASIL = primary dark green (was navy), LEAF = success green,
-// MARI = mustard accent (was orange), COCO = bg/on-dark,
-// PIST = light surface, OCHRE = gold, CHILI = danger red.
 export const lightColors = {
-  cream: "#FBFBF7", // COCO
-  cream2: "#EDF3E4", // PIST
+  cream: "#FBFBF7",
+  cream2: "#EDF3E4",
   cream3: "#FFFFFF",
 
-  navy: "#17291E", // BASIL
-  navy2: "#20362A", // BASIL2
-  navy3: "#1f7048", // LEAFD
+  navy: "#17291E",
+  navy2: "#20362A",
+  navy3: "#1f7048",
   navyDim: "rgba(23,41,30,0.08)",
   navyDim2: "rgba(23,41,30,0.16)",
 
-  orange: "#E3A62E", // MARI
-  orange2: "#D2971F", // MARID
+  orange: "#E3A62E",
+  orange2: "#D2971F",
   orangeDim: "rgba(227,166,46,0.12)",
   orangeDim2: "rgba(227,166,46,0.2)",
 
-  text: "#1B211C", // INK
-  textMedium: "#5C6459", // ASH
-  textMuted: "#8A9187", // MUT
-  textDim: "#BCCBB6", // NAVMUT
+  text: "#1B211C",
+  textMedium: "#5C6459",
+  textMuted: "#8A9187",
+  textDim: "#BCCBB6",
 
-  onDark: "#FBFBF7", // COCO
+  onDark: "#FBFBF7",
   onDark2: "rgba(251,251,247,0.65)",
   onDark3: "rgba(251,251,247,0.35)",
 
   white: "#FFFFFF",
   surface: "#FFFFFF",
-  surface2: "#EDF3E4", // PIST
-  surfaceAlt: "#EDF3E4", // PIST
+  surface2: "#EDF3E4",
+  surfaceAlt: "#EDF3E4",
 
-  green: "#34B673", // LEAF
+  green: "#34B673",
   greenDim: "rgba(52,182,115,0.12)",
-  // Distinct from `navy3`/LEAFD — this is the brighter accent green used
-  // pervasively for tappable text links ("Shuffle", "See all", "Sign in").
   linkGreen: "#279A5F",
 
-  red: "#C0392E", // CHILI
-  redText: "#8A2C22", // CHILIT — deeper red for text-on-light-danger-bg
-  gold: "#C68A2E", // OCHRE
-  goldText: "#8A5F13", // OCHRET — deeper gold for text-on-light-warning-bg
-  textMutedAlt: "#93A184", // MUT2
+  red: "#C0392E",
+  redText: "#8A2C22",
+  gold: "#C68A2E",
+  goldText: "#8A5F13",
+  textMutedAlt: "#93A184",
 
-  border: "#E1E1E1", // v6.5 neutral line
+  border: "#E1E1E1",
   border2: "rgba(23,41,30,0.16)",
   borderStrong: "rgba(23,41,30,0.22)",
   borderOrange: "rgba(227,166,46,0.25)",
 
-  background: "#FBFBF7", // COCO
+  background: "#FBFBF7",
   card: "#FFFFFF",
-  card2: "#EDF3E4", // PIST
+  card2: "#EDF3E4",
 
-  primary: "#17291E", // BASIL
-  primaryLight: "#20362A", // BASIL2
+  primary: "#17291E",
+  primaryLight: "#20362A",
   primaryDim: "rgba(23,41,30,0.08)",
 
-  accent: "#E3A62E", // MARI
-  accentLight: "#D2971F", // MARID
+  accent: "#E3A62E",
+  accentLight: "#D2971F",
   accentDim: "rgba(227,166,46,0.12)",
 
-  success: "#34B673", // LEAF
-  danger: "#C0392E", // CHILI
-  warning: "#C68A2E", // OCHRE
+  success: "#34B673",
+  danger: "#C0392E",
+  warning: "#C68A2E",
 
   black: "#000000",
 } as const;

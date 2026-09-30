@@ -1,4 +1,3 @@
-// src/lib/api/errors.ts
 
 import { AxiosError } from "axios";
 import { ApiError, ApiValidationError } from "../../types/api";

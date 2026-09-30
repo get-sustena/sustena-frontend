@@ -1,4 +1,3 @@
-// src/lib/api/index.ts
 
 export * from "./auth";
 export * from "./client";

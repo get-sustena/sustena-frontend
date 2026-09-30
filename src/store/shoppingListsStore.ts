@@ -1,7 +1,3 @@
-// src/store/shoppingListsStore.ts
-// Metadata for the "Your Lists" multi-list feature: which lists exist and
-// which one is active. Item contents for the active list still live in
-// shoppingListStore.ts.
 
 import { create } from "zustand";
 import { DEFAULT_SHOPPING_LIST_ID, ShoppingListMeta } from "../types/shoppingList";
@@ -50,8 +46,7 @@ export const useShoppingListsStore = create<ShoppingListsState>(
       set((state) => {
         const list = state.lists.find((item) => item.id === listId);
 
-        // The default synced list can never be removed locally. It's the
-        // one list wired to the real backend.
+        // The default list is the only list backed by server sync.
         if (!list || list.isDefaultSyncedList) {
           return state;
         }

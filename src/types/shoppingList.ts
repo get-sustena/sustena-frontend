@@ -1,4 +1,3 @@
-// src/types/shoppingList.ts
 
 export type ShoppingListItem = {
   id: string;
@@ -17,9 +16,7 @@ export type ShoppingListItem = {
   ingredientId?: string;
   createdAt: string;
   updatedAt: string;
-  // Which local shopping_lists row this item belongs to. Only the default
-  // synced list (see ShoppingListMeta.isDefaultSyncedList) round-trips
-  // through the real API/sync queue. Every other list is local-only.
+  // Only items in the default list are synchronized with the server.
   listId?: string;
 };
 

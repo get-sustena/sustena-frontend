@@ -1,4 +1,3 @@
-// src/components/auth/AuthPrimaryButton.tsx
 
 import { Pressable, StyleSheet } from "react-native";
 import { theme } from "../../theme/theme";

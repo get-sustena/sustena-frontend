@@ -1,9 +1,7 @@
-// src/lib/profileCompletion.ts
 
 import { ProfileAnswers } from "../types/profileAnswers";
 
-// remoteFlex and heardOther are conditional follow-ups, not counted toward
-// the base completion total.
+// Conditional follow-ups do not count toward base profile completion.
 export const PROFILE_COMPLETION_FIELD_COUNT = 11;
 
 export function countAnsweredProfileFields(answers: ProfileAnswers) {

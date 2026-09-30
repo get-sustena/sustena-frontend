@@ -1,4 +1,3 @@
-// src/db/syncQueueRepository.ts
 
 import { type SQLiteDatabase } from "expo-sqlite";
 import { createLocalId } from "../lib/id";

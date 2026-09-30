@@ -1,4 +1,3 @@
-// app/onboarding/preferences.tsx
 
 import { router } from "expo-router";
 import { StyleSheet, View } from "react-native";
@@ -24,7 +23,6 @@ export default function DietaryPreferencesOnboardingScreen() {
   );
 
   function handleFinish() {
-    // Editing from Profile after onboarding is already done: just return there.
     if (hasCompletedOnboarding) {
       router.back();
       return;

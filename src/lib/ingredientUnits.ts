@@ -1,4 +1,3 @@
-// src/lib/ingredientUnits.ts
 
 import { Recipe, UnitMode } from "../data/recipes";
 

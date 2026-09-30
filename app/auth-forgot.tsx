@@ -296,7 +296,6 @@ function CodeStep({
     const digits = value.replace(/[^0-9]/g, "");
 
     if (digits.length > 1) {
-      // Pasted a full code — distribute across boxes starting here.
       const next = [...otp];
       let cursor = index;
 

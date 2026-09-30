@@ -1,4 +1,3 @@
-// src/data/ingredients.ts
 
 export type IngredientCategory =
   | "Proteins"
@@ -14,7 +13,6 @@ export type Ingredient = {
 };
 
 export const INGREDIENTS: Ingredient[] = [
-  // Proteins
   { id: "chicken", name: "Chicken", category: "Proteins" },
   { id: "beef", name: "Beef", category: "Proteins" },
   { id: "goat-meat", name: "Goat Meat", category: "Proteins" },
@@ -24,7 +22,6 @@ export const INGREDIENTS: Ingredient[] = [
   { id: "shrimp", name: "Shrimp", category: "Proteins" },
   { id: "gizzard", name: "Gizzard", category: "Proteins" },
 
-  // Grains
   { id: "rice", name: "Rice", category: "Grains" },
   { id: "yam", name: "Yam", category: "Grains" },
   { id: "plantain", name: "Plantain", category: "Grains" },
@@ -32,7 +29,6 @@ export const INGREDIENTS: Ingredient[] = [
   { id: "oats", name: "Oats", category: "Grains" },
   { id: "bread", name: "Bread", category: "Grains" },
 
-  // Produce
   { id: "tomatoes", name: "Tomatoes", category: "Produce" },
   { id: "onions", name: "Onions", category: "Produce" },
   { id: "bell-peppers", name: "Bell Peppers", category: "Produce" },
@@ -43,7 +39,6 @@ export const INGREDIENTS: Ingredient[] = [
   { id: "ginger", name: "Ginger", category: "Produce" },
   { id: "carrots", name: "Carrots", category: "Produce" },
 
-  // Spices
   { id: "curry", name: "Curry", category: "Spices" },
   { id: "thyme", name: "Thyme", category: "Spices" },
   { id: "maggi", name: "Maggi", category: "Spices" },
@@ -51,7 +46,6 @@ export const INGREDIENTS: Ingredient[] = [
   { id: "suya-spice", name: "Suya Spice", category: "Spices" },
   { id: "crayfish", name: "Crayfish", category: "Spices" },
 
-  // Dairy
   { id: "milk", name: "Milk", category: "Dairy" },
   { id: "butter", name: "Butter", category: "Dairy" },
   { id: "yogurt", name: "Yogurt", category: "Dairy" },

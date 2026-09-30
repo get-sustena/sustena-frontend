@@ -1,6 +1,3 @@
-// src/components/recipe/FeaturedRecipeCard.tsx
-// The Home screen's "Our Recommendation" hero pick — ported verbatim from
-// the mockup's renderHeroPick()/heroChip() functions.
 
 import { Pressable, StyleSheet, View } from "react-native";
 import { Recipe } from "../../data/recipes";

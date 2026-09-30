@@ -1,4 +1,3 @@
-// src/components/ui/IconButton.tsx
 
 import { Pressable, StyleSheet, ViewStyle } from "react-native";
 import { theme } from "../../theme/theme";

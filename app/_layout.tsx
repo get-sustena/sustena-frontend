@@ -1,4 +1,3 @@
-// app/_layout.tsx
 
 import {
   BricolageGrotesque_500Medium,

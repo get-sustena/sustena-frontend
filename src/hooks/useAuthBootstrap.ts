@@ -1,4 +1,3 @@
-// src/hooks/useAuthBootstrap.ts
 
 import { useEffect } from "react";
 import { useSQLiteContext } from "expo-sqlite";
@@ -53,10 +52,7 @@ export function useAuthBootstrap() {
             setUser(user);
           }
         } catch (error) {
-          // Only a genuine 401 means the tokens are actually invalid.
-          // Network, timeout, and 5xx errors must not sign the user out. Keep
-          // the tokens and let the app work offline until a real authenticated
-          // request confirms the session is gone.
+          // Only a confirmed 401 invalidates restored tokens.
           if (isApiClientError(error) && error.status === 401) {
             await clearAuthTokens();
             await clearLocalAccountData(db);

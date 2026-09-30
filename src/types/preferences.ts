@@ -1,4 +1,3 @@
-// src/types/preferences.ts
 
 import { UnitMode } from "../data/recipes";
 

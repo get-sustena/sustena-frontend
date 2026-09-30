@@ -1,4 +1,3 @@
-// src/components/recipe/ServingSizeControl.tsx
 
 import * as Haptics from "expo-haptics";
 import { Pressable, StyleSheet, View } from "react-native";

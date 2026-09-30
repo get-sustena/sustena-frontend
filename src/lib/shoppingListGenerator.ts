@@ -1,4 +1,3 @@
-// src/lib/shoppingListGenerator.ts
 
 import { Recipe, RecipeIngredient, UnitMode } from "../data/recipes";
 import { ShoppingListItem } from "../types/shoppingList";

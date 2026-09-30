@@ -1,4 +1,3 @@
-// app/(tabs)/_layout.tsx
 
 import type { BottomTabBarProps } from "expo-router/js-tabs";
 import { BlurView } from "expo-blur";

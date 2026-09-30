@@ -1,4 +1,3 @@
-// app/recipes/[id].tsx
 
 import * as Haptics from "expo-haptics";
 import { Image } from "expo-image";
@@ -334,8 +333,7 @@ export default function RecipeDetailScreen() {
       removeFavoriteLocal(recipe.id);
     }
 
-    // Local-first: the favorite state persists locally no matter what,
-    // then we best-effort sync it and queue a retry if that sync fails.
+    // Persist favorites locally before attempting server sync.
     const localWrite = nextIsFavorite
       ? insertFavoriteRecipe(db, recipe.id)
       : deleteFavoriteRecipe(db, recipe.id);

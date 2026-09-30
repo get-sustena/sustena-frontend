@@ -1,4 +1,3 @@
-// src/store/favoritesStore.ts
 
 import { create } from "zustand";
 import { FavoriteRecipe } from "../types/favorite";

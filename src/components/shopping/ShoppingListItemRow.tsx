@@ -1,4 +1,3 @@
-// src/components/shopping/ShoppingListItemRow.tsx
 
 import * as Haptics from "expo-haptics";
 import { Pressable, StyleSheet, View } from "react-native";

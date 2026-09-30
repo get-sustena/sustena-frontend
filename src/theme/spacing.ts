@@ -1,4 +1,3 @@
-// src/theme/spacing.ts
 
 export const spacing = {
   xs: 4,

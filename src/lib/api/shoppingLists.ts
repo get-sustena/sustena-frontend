@@ -1,7 +1,3 @@
-// src/lib/api/shoppingLists.ts
-// Multi-list collection resource (/shopping-lists). Distinct from
-// shoppingList.ts, which always operates on the caller's single active list
-// via the legacy /me/shopping-list/* convenience endpoints.
 
 import {
   ShoppingList,

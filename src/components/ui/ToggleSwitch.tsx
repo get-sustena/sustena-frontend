@@ -1,4 +1,3 @@
-// src/components/ui/ToggleSwitch.tsx
 
 import { Pressable, StyleSheet, View } from "react-native";
 import { theme } from "../../theme/theme";

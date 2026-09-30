@@ -16,9 +16,7 @@ export function getIngredientCategories() {
   });
 }
 
-// GET /ingredients caps `limit` at 500 server-side, but the full catalog (~500+ rows) is small,
-// static reference data that's cheap to fetch in full and cache client-side once, rather than
-// re-querying the backend on every keystroke of a kitchen-picker search.
+// Cache the static catalogue locally so picker searches do not hit the API per keystroke.
 const CATALOG_PAGE_SIZE = 500;
 
 export async function getAllIngredients(): Promise<Ingredient[]> {

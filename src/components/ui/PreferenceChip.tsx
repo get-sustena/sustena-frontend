@@ -1,4 +1,3 @@
-// src/components/ui/PreferenceChip.tsx
 
 import { Pressable, StyleSheet } from "react-native";
 import { theme } from "../../theme/theme";

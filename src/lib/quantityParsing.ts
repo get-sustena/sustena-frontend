@@ -1,4 +1,3 @@
-// src/lib/quantityParsing.ts
 
 const VULGAR_FRACTIONS: Record<string, number> = {
   "½": 1 / 2,

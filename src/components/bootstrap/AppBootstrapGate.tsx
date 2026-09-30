@@ -1,4 +1,3 @@
-// src/components/bootstrap/AppBootstrapGate.tsx
 
 import { useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";

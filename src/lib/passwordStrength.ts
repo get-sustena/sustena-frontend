@@ -1,4 +1,3 @@
-// src/lib/passwordStrength.ts
 
 export type PasswordCriteria = {
   length: boolean;

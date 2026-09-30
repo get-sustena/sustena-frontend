@@ -1,4 +1,3 @@
-// src/components/auth/PasswordMatchIndicator.tsx
 
 import { StyleSheet, View } from "react-native";
 import { theme } from "../../theme/theme";

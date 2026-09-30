@@ -20,10 +20,6 @@ export function useIngredientCategoriesQuery() {
   });
 }
 
-// The full ingredient catalog (~500 rows) is static reference data used both to power the
-// "what's in my kitchen?" picker (search/filter client-side, no network round trip per
-// keystroke) and to look up a recipe ingredient's conversionContext by ingredientId for unit
-// conversion.
 export function useIngredientCatalogQuery() {
   return useQuery({
     queryKey: queryKeys.ingredients.catalog,

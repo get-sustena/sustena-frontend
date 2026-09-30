@@ -1,4 +1,3 @@
-// app/onboarding/health.tsx
 
 import { router } from "expo-router";
 import { StyleSheet, View } from "react-native";
@@ -21,7 +20,6 @@ export default function HealthOnboardingScreen() {
   );
 
   function handleNext() {
-    // Editing from Profile after onboarding is done: just return there.
     if (hasCompletedOnboarding) {
       router.back();
       return;

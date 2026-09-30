@@ -1,4 +1,3 @@
-// src/lib/query/networkStatus.ts
 
 import NetInfo from "@react-native-community/netinfo";
 import { onlineManager } from "@tanstack/react-query";

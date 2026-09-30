@@ -1,4 +1,3 @@
-// src/store/shoppingListStore.ts
 
 import { create } from "zustand";
 import { formatQuantityValue } from "../lib/scaling";
@@ -112,8 +111,7 @@ function mergeShoppingListItems(
     );
 
     if (mergedQuantity === null) {
-      // Units don't match or aren't parseable. Keep both lines rather
-      // than dropping or silently combining incompatible quantities.
+      // Preserve separate rows when quantities cannot be combined safely.
       items.push(newItem);
       continue;
     }

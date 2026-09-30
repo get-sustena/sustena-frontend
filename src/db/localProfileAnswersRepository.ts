@@ -1,4 +1,3 @@
-// src/db/localProfileAnswersRepository.ts
 
 import { type SQLiteDatabase } from "expo-sqlite";
 import { ProfileAnswers } from "../types/profileAnswers";

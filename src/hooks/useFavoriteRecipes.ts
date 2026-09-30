@@ -1,7 +1,3 @@
-// src/hooks/useFavoriteRecipes.ts
-// Shared "favorited recipes" data + removal logic, used by both the
-// Profile screen's Saved Recipes section and the standalone Saved Recipes
-// screen (mirrors the mockup's separate saved-recipes screen).
 
 import { useQuery } from "@tanstack/react-query";
 import { useSQLiteContext } from "expo-sqlite";

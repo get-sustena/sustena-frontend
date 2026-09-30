@@ -1,4 +1,3 @@
-// src/store/authStore.ts
 
 import { create } from "zustand";
 import { User } from "../types/api";
@@ -35,10 +34,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     });
   },
 
-  // Tokens exist locally but we couldn't reach the server to verify them
-  // (cold start, timeout, offline). Treat the session as valid rather than
-  // forcing a sign-out — a stale/invalid token will still surface as a real
-  // 401 the next time an authenticated request is made.
+  // Only a confirmed 401 should invalidate a locally restored session.
   setAuthenticatedOffline: () => {
     set({
       isAuthenticated: true,

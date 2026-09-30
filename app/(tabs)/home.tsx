@@ -1,4 +1,3 @@
-// app/(tabs)/home.tsx
 
 import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "expo-image";

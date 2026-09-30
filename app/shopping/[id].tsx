@@ -375,7 +375,6 @@ function LocalListDetail({ listId, shareOnOpen }: { listId: string; shareOnOpen:
 
       setItems(serverItems);
     } catch (error) {
-      // Best-effort refresh. The local cache is still shown either way.
       console.error("Failed to refresh shopping list from server", error);
     }
   }, [db, isOnline, listId]);
@@ -402,9 +401,7 @@ function LocalListDetail({ listId, shareOnOpen }: { listId: string; shareOnOpen:
 
     const nextChecked = !item.checked;
 
-    // Local-first: the checkbox and its persisted state update immediately,
-    // regardless of network availability. The server sync below is
-    // best-effort and never blocks or reverts the local change.
+    // Persist locally before attempting server sync.
     setItems((current) =>
       current.map((entry) =>
         entry.id === itemId ? { ...entry, checked: nextChecked } : entry
@@ -511,8 +508,7 @@ function LocalListDetail({ listId, shareOnOpen }: { listId: string; shareOnOpen:
     };
     let savedItem = newItem;
 
-    // Local-first: show the item immediately under a client-generated id,
-    // then best-effort create it server-side and adopt the real id.
+    // Use a client ID until the server returns the canonical ID.
     await insertShoppingListItem(db, newItem);
     setItems((current) => [...current, newItem]);
     try {
@@ -631,7 +627,7 @@ function LocalListDetail({ listId, shareOnOpen }: { listId: string; shareOnOpen:
                 );
                 restored = { ...apiShoppingItemToLocalItem(response), listId };
               } catch {
-                // The original server row still exists when its delete never synced.
+                // A failed deletion may leave the original server row intact.
               }
               await insertShoppingListItem(db, restored);
               setItems((current) => [...current, restored]);

@@ -1,4 +1,3 @@
-// src/components/auth/AuthHeader.tsx
 
 import { StatusBar } from "expo-status-bar";
 import { Pressable, StyleSheet, View } from "react-native";

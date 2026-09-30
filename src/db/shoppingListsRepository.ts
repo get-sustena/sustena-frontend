@@ -1,7 +1,3 @@
-// src/db/shoppingListsRepository.ts
-// CRUD for the shopping_lists table itself (list metadata: name, whether it's
-// the one list wired to the real backend). Item rows live in
-// shoppingListRepository.ts and reference a list via list_id.
 
 import { type SQLiteDatabase } from "expo-sqlite";
 import { ShoppingListMeta } from "../types/shoppingList";

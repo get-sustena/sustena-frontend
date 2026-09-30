@@ -1,4 +1,3 @@
-// src/hooks/useSyncQueueProcessor.ts
 
 import NetInfo from "@react-native-community/netinfo";
 import { useSQLiteContext } from "expo-sqlite";

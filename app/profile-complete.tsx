@@ -44,9 +44,7 @@ export default function ProfileCompleteScreen() {
   async function saveAnswers(partial: Partial<ProfileAnswers>) {
     const next: ProfileAnswers = { ...answers, ...partial };
 
-    // Local-first: the store updates (and reactively persists to SQLite)
-    // immediately, regardless of network availability. The server sync
-    // below is best-effort and never blocks or reverts the local change.
+    // Persist locally before attempting server sync.
     setProfileAnswers(partial);
     closeSheet();
     showToast(getProfileSaveToast(partial, next), "success");
@@ -334,8 +332,6 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   sectionCard: {
-    // Rows carry their own bottom border, with no group-level card chrome,
-    // matching the mockup's flat row-list pattern.
   },
   row: {
     flexDirection: "row",

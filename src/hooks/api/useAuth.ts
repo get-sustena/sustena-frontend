@@ -112,12 +112,10 @@ async function finalizeLocalLogout(
   clearAuth: () => void
 ) {
   try {
-    // Keep persistence effects mounted until the account snapshot and cleanup
-    // finish. Unmounting them first can race Expo SQLite's web worker.
+    // Cleanup must finish before unmounting persistence effects to avoid a SQLite worker race.
     await clearLocalAccountData(db);
   } catch (error) {
-    // Server logout and token removal have already completed. A browser-local
-    // SQLite failure must not leave the user on an uncaught error screen.
+    // A local SQLite cleanup failure must not block an otherwise complete sign-out.
     console.warn("Failed to clear local account data during logout", error);
   } finally {
     clearAuth();

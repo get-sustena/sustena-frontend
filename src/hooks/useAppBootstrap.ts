@@ -1,4 +1,3 @@
-// src/hooks/useAppBootstrap.ts
 
 import { useSQLiteContext } from "expo-sqlite";
 import { useEffect, useState } from "react";
@@ -193,7 +192,6 @@ export function useAppBootstrap(enabled = true) {
             hydratePantry(pantryIngredientIds);
             await replaceStoredPantry(db, pantryIngredientIds);
           } catch {
-            // Cached pantry remains available while offline.
           }
 
           try {
@@ -228,7 +226,6 @@ export function useAppBootstrap(enabled = true) {
               );
             }
           } catch {
-            // Cached lists remain available while offline.
           }
         }
       } catch (error) {

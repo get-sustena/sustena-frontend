@@ -1,4 +1,3 @@
-// src/db/favoritesRepository.ts
 
 import { type SQLiteDatabase } from "expo-sqlite";
 import { FavoriteRecipe } from "../types/favorite";

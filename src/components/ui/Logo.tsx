@@ -1,8 +1,3 @@
-// src/components/ui/Logo.tsx
-// CookEase "Resolved Line" logo mark, ported from redesign/SVG/resolved-line-ink.svg
-// (viewBox 0 0 240 240, single continuous hand-drawn path). Color is a prop so this
-// one component covers all mockup variants (ink/bone/green/white) without needing
-// separate SVG files.
 
 import Svg, { Path } from "react-native-svg";
 import { theme } from "../../theme/theme";

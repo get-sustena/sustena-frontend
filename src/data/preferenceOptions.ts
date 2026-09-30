@@ -1,4 +1,3 @@
-// src/data/preferenceOptions.ts
 
 import { DietaryPreference, HealthCondition } from "../types/preferences";
 

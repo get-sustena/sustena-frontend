@@ -712,10 +712,7 @@ function getCompatibleAuthoringUnits(
 
   const contextUnits = units.filter((unit) => unit.context === context);
 
-  // A count-only ingredient such as a pepper should not leave the author with
-  // "Pieces" as the sole option. Generic mass and volume measurements remain
-  // useful authoring choices even when the catalogue has no specific conversion
-  // context for that ingredient.
+  // Count-only entries still need practical mass and volume choices for authoring.
   if (context === "count" && contextUnits.length <= 1) {
     return units.filter((unit) =>
       ["mass", "volume", "count"].includes(unit.context)
