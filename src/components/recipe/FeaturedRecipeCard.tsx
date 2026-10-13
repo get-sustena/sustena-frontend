@@ -1,7 +1,7 @@
 
 import { Pressable, StyleSheet, View } from "react-native";
 import { Recipe } from "../../data/recipes";
-import type { MealTime } from "../../lib/mealTime";
+import { getCardChipLabel, type MealTime } from "../../lib/mealTime";
 import { theme } from "../../theme/theme";
 import { AppText } from "../ui/AppText";
 import { Icon } from "../ui/Icon";
@@ -21,15 +21,15 @@ const COOK_LABELS: Record<MealTime, string> = {
 };
 
 export function FeaturedRecipeCard({ recipe, mealTime, onPress }: Props) {
-  const firstTag = recipe.tags[0];
+  const chipLabel = getCardChipLabel(recipe.tags, mealTime);
   const cookLabel = COOK_LABELS[mealTime];
 
   return (
     <View style={styles.card}>
       <RecipePhoto imageUrl={recipe.imageUrl} scrim="full" style={styles.photo}>
-        {firstTag ? (
+        {chipLabel ? (
           <View style={styles.tagWrap}>
-            <PhotoChip label={firstTag} />
+            <PhotoChip label={chipLabel} />
           </View>
         ) : null}
 

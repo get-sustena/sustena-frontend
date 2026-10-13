@@ -32,8 +32,10 @@ import { Icon } from "../../src/components/ui/Icon";
 import { useRecipesWithLocalFallback } from "../../src/hooks/api/useRecipes";
 import { useProfileAnswersQuery } from "../../src/hooks/api/useProfileAnswers";
 import { useHomeRecommendations } from "../../src/hooks/api/useRecommendations";
-import { useMealTime } from "../../src/hooks/useMealTime";
+import { useTimeOfDay } from "../../src/hooks/useTimeOfDay";
 import { apiRecipeToLocalRecipe } from "../../src/lib/api/adapters";
+import { getGreeting } from "../../src/lib/greeting";
+import { getMealTime, type MealTime } from "../../src/lib/mealTime";
 import { finiteTimeCap } from "../../src/lib/plannerQuickSetup";
 import { useAuthStore } from "../../src/store/authStore";
 import { useProfileAnswersStore } from "../../src/store/profileAnswersStore";
@@ -42,14 +44,6 @@ import { theme } from "../../src/theme/theme";
 import { appImages } from "../../src/assets/appImages";
 
 const KITCHEN_QUICK_CATEGORIES = ["Proteins", "Produce", "Grains"];
-
-function getGreeting() {
-  const hour = new Date().getHours();
-
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
-}
 
 function openRecipe(recipeId: string) {
   router.push({
@@ -77,7 +71,8 @@ export default function HomeScreen() {
     experience === "beginner" || experience === "intermediate"
       ? experience
       : undefined;
-  const mealTime = useMealTime();
+  const mealTime = useTimeOfDay(getMealTime);
+  const timeGreeting = useTimeOfDay(getGreeting);
   const recommendationsQuery = useHomeRecommendations(mealTime);
   const quickRecipesQuery = useRecipesWithLocalFallback({
     quickAndEasy: true,
@@ -106,8 +101,8 @@ export default function HomeScreen() {
 
   const displayName = nickname?.trim() || firstName?.trim();
   const greeting = displayName
-    ? `${getGreeting()}, ${displayName}`
-    : getGreeting();
+    ? `${timeGreeting}, ${displayName}`
+    : timeGreeting;
 
   return (
     <Animated.View entering={FadeInDown.duration(320)} style={styles.screen}>
@@ -301,7 +296,7 @@ export default function HomeScreen() {
           {quickRecipesQuery.isLoading ? (
             <QuickRecipeCardsSkeleton />
           ) : quickRecipes.length > 0 ? (
-            <QuickCarousel recipes={quickRecipes} />
+            <QuickCarousel recipes={quickRecipes} mealTime={mealTime} />
           ) : (
             <View style={styles.quickStateWrap}>
               <HomeSectionState
@@ -363,8 +358,10 @@ function HomeSectionState({
 
 function QuickCarousel({
   recipes,
+  mealTime,
 }: {
   recipes: ReturnType<typeof apiRecipeToLocalRecipe>[];
+  mealTime: MealTime;
 }) {
   const [containerWidth, setContainerWidth] = useState(0);
   const [contentWidth, setContentWidth] = useState(0);
@@ -410,6 +407,7 @@ function QuickCarousel({
           <RecipeCard
             key={recipe.id}
             recipe={recipe}
+            mealTime={mealTime}
             onPress={() => openRecipe(recipe.id)}
           />
         ))}

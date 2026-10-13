@@ -1,17 +1,19 @@
 
 import { Pressable, StyleSheet, View } from "react-native";
 import { Recipe } from "../../data/recipes";
+import { getCardChipLabel, type MealTime } from "../../lib/mealTime";
 import { theme } from "../../theme/theme";
 import { AppText } from "../ui/AppText";
 import { PhotoChip, RecipePhoto } from "./RecipePhoto";
 
 type Props = {
   recipe: Recipe;
+  mealTime: MealTime;
   onPress?: () => void;
 };
 
-export function RecipeCard({ recipe, onPress }: Props) {
-  const firstTag = recipe.tags[0];
+export function RecipeCard({ recipe, mealTime, onPress }: Props) {
+  const chipLabel = getCardChipLabel(recipe.tags, mealTime);
 
   return (
     <Pressable
@@ -21,9 +23,9 @@ export function RecipeCard({ recipe, onPress }: Props) {
       accessibilityLabel={`Open ${recipe.name}`}
     >
       <RecipePhoto imageUrl={recipe.imageUrl} scrim="compact" style={styles.photo}>
-        {firstTag ? (
+        {chipLabel ? (
           <View style={styles.tagWrap}>
-            <PhotoChip label={firstTag} background="rgba(251,251,247,0.85)" />
+            <PhotoChip label={chipLabel} background="rgba(251,251,247,0.85)" />
           </View>
         ) : null}
 

@@ -1,6 +1,6 @@
 import { Image } from "expo-image";
 import { Href, router } from "expo-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { LayoutChangeEvent, Pressable, ScrollView, Share, StyleSheet, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuthoringVocabularyQuery, useCreateRecipeDraftMutation, useMyRecipesQuery } from "../../hooks/api/useCreatorRecipes";
@@ -53,6 +53,17 @@ export function CreatorProfileScreen() {
   const categoryOptions = (vocabularyQuery.data?.categories ?? []).map((item) => item.label);
   const cuisineOptions = (vocabularyQuery.data?.cuisines ?? []).map((item) => item.label);
   const shown = useMemo(() => filterRecipes(list, search, filters, categoryLookup, cuisineLookup), [categoryLookup, cuisineLookup, filters, list, search]);
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollY = useRef(0);
+  const stickyBarY = useRef(0);
+
+  // The tabs and search stick once scrolled to the top. A new tab, search or
+  // filter then puts the first result back right under them.
+  useEffect(() => {
+    if (scrollY.current > stickyBarY.current) {
+      scrollRef.current?.scrollTo({ y: stickyBarY.current, animated: false });
+    }
+  }, [filters, search, tab]);
 
   async function createRecipe() {
     if (!savedProfile) {
@@ -106,7 +117,14 @@ export function CreatorProfileScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        stickyHeaderIndices={[2]}
+        onScroll={(event) => { scrollY.current = event.nativeEvent.contentOffset.y; }}
+        scrollEventThrottle={16}
+      >
         <View style={styles.coverWrap}>
           {savedProfile?.coverUrl ? <Image source={{ uri: savedProfile.coverUrl }} contentFit="cover" style={styles.cover} /> : <View style={[styles.cover, styles.coverFallback]}><AppText style={styles.coverFallbackText}>Add a cover photo</AppText></View>}
           <View style={styles.avatarRing}>
@@ -131,7 +149,12 @@ export function CreatorProfileScreen() {
           <PublishingActivity recipes={published} />
 
           <Pressable disabled={createMutation.isPending} onPress={createRecipe} style={styles.createButton}><AppText style={styles.createText}>Create recipe</AppText></Pressable>
+        </View>
 
+        <View
+          style={[styles.body, styles.stickyBar]}
+          onLayout={(event: LayoutChangeEvent) => { stickyBarY.current = event.nativeEvent.layout.y; }}
+        >
           <View style={styles.tabs}>
             <Pressable onPress={() => setTab("published")} style={[styles.tab, tab === "published" && styles.tabActive]}><AppText style={[styles.tabText, tab !== "published" && styles.tabTextMuted]}>Published</AppText></Pressable>
             <Pressable onPress={() => setTab("drafts")} style={[styles.tab, tab === "drafts" && styles.tabActive]}><AppText style={[styles.tabText, tab !== "drafts" && styles.tabTextMuted]}>Drafts</AppText></Pressable>
@@ -141,7 +164,9 @@ export function CreatorProfileScreen() {
             <View style={styles.search}><Icon name="discover" size={16} color="#5C6459" /><TextInput value={search} onChangeText={(value) => setSearches((current) => ({ ...current, [tab]: value }))} accessibilityLabel="Search my recipes" placeholder="Search my recipes" placeholderTextColor="#9aa298" style={styles.searchInput} />{search ? <Pressable accessibilityLabel="Clear search" onPress={() => setSearches((current) => ({ ...current, [tab]: "" }))} style={styles.searchClear}><Icon name="close" size={10} color="#5C6459" strokeWidth={2} /></Pressable> : null}</View>
             <Pressable accessibilityLabel="Filter my recipes" onPress={openFilters} style={styles.filterButton}><Icon name="settings" size={19} color="#1f7048" /></Pressable>
           </View>
+        </View>
 
+        <View style={styles.body}>
           {isRecipeListLoading ? (
             <ProgressLoader />
           ) : shown.length ? (
@@ -233,6 +258,7 @@ const styles = StyleSheet.create({
   avatarFallback: { backgroundColor: "#17291E", alignItems: "center", justifyContent: "center" },
   avatarInitials: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 24, color: "#FBFBF7" },
   body: { paddingHorizontal: 20 },
+  stickyBar: { backgroundColor: "#FBFCFA" },
   identityRow: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 10, marginBottom: 10 },
   identityCopy: { flex: 1, minWidth: 0 },
   name: { marginBottom: 2, fontFamily: theme.fontFamily.display, fontSize: 19, color: "#17291E" },
