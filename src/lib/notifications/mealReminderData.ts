@@ -4,9 +4,6 @@
 // 13 October 2026). Settings > Notifications on the phone shows its name.
 export const MEAL_REMINDER_CHANNEL_ID = "meal-reminders";
 
-// Sent as `source` on GET /recipes/{id} when a reminder opens a recipe.
-export const MEAL_REMINDER_SOURCE = "meal_reminder";
-
 const FALLBACK_TIME_ZONE = "Africa/Lagos";
 
 // The recipe a tapped meal reminder points at. Anything else, such as a

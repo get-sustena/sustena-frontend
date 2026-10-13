@@ -13,6 +13,7 @@ import { Icon } from "../ui/Icon";
 import { ProgressLoader } from "../ui/ProgressLoader";
 import { CreatorCollectionsStrip, type CreatorRecipeCollection } from "./CreatorCollectionsStrip";
 import { CreatorRecipeToolbar } from "./CreatorRecipeToolbar";
+import { openRecipe } from "../../lib/navigation/openRecipe";
 import { PublicCreatorRecipeTile } from "./PublicCreatorRecipeTile";
 import { ReportCreatorSheet } from "./ReportCreatorSheet";
 import { SortCreatorRecipesSheet, type CreatorRecipeSort } from "./SortCreatorRecipesSheet";
@@ -126,7 +127,7 @@ export function PublicCreatorProfileScreen() {
           <View style={styles.grid}>
             {shown.map((recipe) => (
               <View key={recipe.id} style={styles.gridItem}>
-                <PublicCreatorRecipeTile recipe={recipe} onPress={() => router.push({ pathname: "/recipes/[id]", params: { id: recipe.id } })} />
+                <PublicCreatorRecipeTile recipe={recipe} onPress={() => openRecipe(recipe.id, "creator_profile")} />
               </View>
             ))}
           </View>

@@ -1,7 +1,6 @@
-import { router } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
 import { useEffect } from "react";
-import { MEAL_REMINDER_SOURCE } from "../lib/notifications/mealReminderData";
+import { openRecipe } from "../lib/navigation/openRecipe";
 import {
   disableMealReminders,
   onMealReminderOpened,
@@ -41,12 +40,7 @@ export function useMealReminders() {
 
   useEffect(
     () =>
-      onMealReminderOpened((recipeId) => {
-        router.push({
-          pathname: "/recipes/[id]",
-          params: { id: recipeId, source: MEAL_REMINDER_SOURCE },
-        });
-      }),
+      onMealReminderOpened((recipeId) => openRecipe(recipeId, "meal_reminder")),
     []
   );
 }

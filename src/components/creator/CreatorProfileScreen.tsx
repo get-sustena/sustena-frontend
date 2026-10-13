@@ -22,6 +22,7 @@ import { CREATOR_GRID_GAP, useCreatorGridCardWidth } from "./creatorGrid";
 import { PublishingActivity } from "./PublishingActivity";
 import { RecipeActionsSheet } from "./RecipeActionsSheet";
 import { TAB_BAR_CLEARANCE } from "../layout/tabBarClearance";
+import { openRecipe } from "../../lib/navigation/openRecipe";
 
 type Tab = "published" | "drafts";
 
@@ -175,7 +176,7 @@ export function CreatorProfileScreen() {
             <View style={styles.grid}>
               {shown.map((recipe) => (
                 <View key={recipe.id} style={{ width: gridCardWidth }}>
-                  <CreatorProfileRecipeCard recipe={recipe} onPress={() => openRecipe(recipe, tab)} onMore={() => openSheet(<RecipeActionsSheet recipe={recipe} />)} />
+                  <CreatorProfileRecipeCard recipe={recipe} onPress={() => openCreatorRecipe(recipe, tab)} onMore={() => openSheet(<RecipeActionsSheet recipe={recipe} />)} />
                 </View>
               ))}
             </View>
@@ -221,9 +222,10 @@ function filterRecipes(recipes: RecipeDraft[], search: string, filters: CreatorR
   });
 }
 
-function openRecipe(recipe: RecipeDraft, tab: Tab) {
+// Published recipes open as customers see them; drafts open in the editor.
+function openCreatorRecipe(recipe: RecipeDraft, tab: Tab) {
   if (tab === "published") {
-    router.push({ pathname: "/recipes/[id]", params: { id: recipe.id } });
+    openRecipe(recipe.id, "creator_profile");
     return;
   }
 
