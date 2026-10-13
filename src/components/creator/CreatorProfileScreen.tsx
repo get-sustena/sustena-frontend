@@ -15,9 +15,10 @@ import { appImages } from "../../assets/appImages";
 import type { RecipeDraft } from "../../types/api";
 import { AppText } from "../ui/AppText";
 import { Icon } from "../ui/Icon";
-import { ProgressLoader } from "../ui/ProgressLoader";
 import { CreatorProfileFiltersSheet, EMPTY_CREATOR_RECIPE_FILTERS, type CreatorRecipeFilters } from "./CreatorProfileFiltersSheet";
 import { CreatorProfileRecipeCard } from "./CreatorProfileRecipeCard";
+import { CreatorRecipeGridSkeleton } from "./CreatorRecipeGridSkeleton";
+import { CREATOR_GRID_GAP, useCreatorGridCardWidth } from "./creatorGrid";
 import { PublishingActivity } from "./PublishingActivity";
 import { RecipeActionsSheet } from "./RecipeActionsSheet";
 
@@ -29,7 +30,7 @@ export function CreatorProfileScreen() {
   const [tab, setTab] = useState<Tab>("published");
   const [searches, setSearches] = useState<Record<Tab, string>>({ published: "", drafts: "" });
   const [filtersByTab, setFiltersByTab] = useState<Record<Tab, CreatorRecipeFilters>>({ published: EMPTY_CREATOR_RECIPE_FILTERS, drafts: EMPTY_CREATOR_RECIPE_FILTERS });
-  const [gridWidth, setGridWidth] = useState(0);
+  const gridCardWidth = useCreatorGridCardWidth();
   const profileQuery = useMyCreatorProfileQuery();
   const savedProfile = profileQuery.data;
   const hasCreatorProfile = Boolean(savedProfile);
@@ -168,22 +169,11 @@ export function CreatorProfileScreen() {
 
         <View style={styles.body}>
           {isRecipeListLoading ? (
-            <ProgressLoader />
+            <CreatorRecipeGridSkeleton />
           ) : shown.length ? (
-            <View
-              style={styles.grid}
-              onLayout={(event: LayoutChangeEvent) =>
-                setGridWidth(event.nativeEvent.layout.width)
-              }
-            >
+            <View style={styles.grid}>
               {shown.map((recipe) => (
-                <View
-                  key={recipe.id}
-                  style={[
-                    styles.gridCard,
-                    gridWidth > 0 ? { width: (gridWidth - 20) / 3 } : null,
-                  ]}
-                >
+                <View key={recipe.id} style={{ width: gridCardWidth }}>
                   <CreatorProfileRecipeCard recipe={recipe} onPress={() => openRecipe(recipe, tab)} onMore={() => openSheet(<RecipeActionsSheet recipe={recipe} />)} />
                 </View>
               ))}
@@ -285,8 +275,7 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1, paddingVertical: 0, fontSize: 13.5, color: "#17291E" },
   searchClear: { width: 22, height: 22, borderRadius: 11, backgroundColor: "#EEF2E7", alignItems: "center", justifyContent: "center" },
   filterButton: { width: 42, height: 42, alignItems: "center", justifyContent: "center" },
-  grid: { flexDirection: "row", flexWrap: "wrap", columnGap: 10, rowGap: 14 },
-  gridCard: { width: "30%" },
+  grid: { flexDirection: "row", flexWrap: "wrap", columnGap: CREATOR_GRID_GAP, rowGap: 14 },
   empty: { alignItems: "center", paddingHorizontal: 10, paddingVertical: 30 },
   emptyImage: { width: "100%", maxWidth: 260, height: 210, marginBottom: 12 },
   emptyTitle: { marginBottom: 6, fontFamily: theme.fontFamily.display, fontSize: 18, textAlign: "center", color: "#17291E" },
