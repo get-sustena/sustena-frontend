@@ -1,99 +1,77 @@
-import { useEffect } from "react";
 import { StyleSheet, View } from "react-native";
-import Animated, {
-  Easing,
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withTiming,
-} from "react-native-reanimated";
 import { theme } from "../../theme/theme";
+import { SkeletonBlock, SkeletonGroup } from "../ui/Skeleton";
 
 export function RecommendationCardSkeleton() {
   return (
-    <SkeletonPulse
-      accessibilityLabel="Loading recommendation"
+    <SkeletonGroup
+      label="Loading recommendation"
       style={styles.recommendationCard}
     >
-      <View style={[styles.block, styles.recommendationTag]} />
+      <SkeletonBlock
+        tone="deep"
+        width={74}
+        height={28}
+        radius={999}
+        style={styles.recommendationTag}
+      />
 
       <View style={styles.recommendationContent}>
-        <View style={[styles.block, styles.recommendationTitle]} />
+        <SkeletonBlock
+          tone="deep"
+          width="68%"
+          height={25}
+          style={styles.recommendationTitle}
+        />
 
         <View style={styles.metaRow}>
-          <View style={[styles.block, styles.metaChip]} />
-          <View style={[styles.block, styles.metaChip]} />
-          <View style={[styles.block, styles.metaChipShort]} />
+          <SkeletonBlock tone="deep" width={68} height={27} radius={999} />
+          <SkeletonBlock tone="deep" width={68} height={27} radius={999} />
+          <SkeletonBlock tone="deep" width={54} height={27} radius={999} />
         </View>
 
-        <View style={[styles.block, styles.recommendationButton]} />
+        <SkeletonBlock
+          tone="deep"
+          width={184}
+          height={40}
+          radius={999}
+          style={styles.recommendationButton}
+        />
       </View>
-    </SkeletonPulse>
+    </SkeletonGroup>
   );
 }
 
 export function QuickRecipeCardsSkeleton() {
   return (
-    <View
-      accessibilityRole="progressbar"
-      accessibilityLabel="Loading quick and easy recipes"
+    <SkeletonGroup
+      label="Loading quick and easy recipes"
       style={styles.quickViewport}
     >
       <View style={styles.quickRow}>
         {Array.from({ length: 3 }, (_, index) => (
-          <SkeletonPulse key={index} style={styles.quickCard}>
-            <View style={[styles.block, styles.quickTag]} />
+          <View key={index} style={styles.quickCard}>
+            <SkeletonBlock
+              tone="deep"
+              width={68}
+              height={27}
+              radius={999}
+              style={styles.quickTag}
+            />
 
             <View style={styles.quickContent}>
-              <View style={[styles.block, styles.quickTitle]} />
-              <View style={[styles.block, styles.quickTitleShort]} />
+              <SkeletonBlock tone="deep" width="90%" height={17} style={styles.quickTitle} />
+              <SkeletonBlock tone="deep" width="64%" height={17} style={styles.quickTitleShort} />
 
               <View style={styles.quickMetaRow}>
-                <View style={[styles.block, styles.quickMeta]} />
-                <View style={[styles.block, styles.quickMetaShort]} />
+                <SkeletonBlock tone="deep" width={58} height={13} />
+                <SkeletonBlock tone="deep" width={42} height={13} />
               </View>
             </View>
-          </SkeletonPulse>
+          </View>
         ))}
       </View>
-    </View>
-  );
-}
-
-function SkeletonPulse({
-  children,
-  style,
-  accessibilityLabel,
-}: {
-  children: React.ReactNode;
-  style: object;
-  accessibilityLabel?: string;
-}) {
-  const pulse = useSharedValue(0);
-
-  useEffect(() => {
-    pulse.value = withRepeat(
-      withTiming(1, {
-        duration: 900,
-        easing: Easing.inOut(Easing.ease),
-      }),
-      -1,
-      true
-    );
-  }, [pulse]);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    opacity: 0.58 + pulse.value * 0.42,
-  }));
-
-  return (
-    <Animated.View
-      accessibilityRole={accessibilityLabel ? "progressbar" : undefined}
-      accessibilityLabel={accessibilityLabel}
-      style={[style, animatedStyle]}
-    >
-      {children}
-    </Animated.View>
+    </SkeletonGroup>
   );
 }
 
@@ -102,15 +80,12 @@ const styles = StyleSheet.create({
     height: 300,
     borderRadius: 24,
     overflow: "hidden",
-    backgroundColor: theme.colors.card2,
+    backgroundColor: theme.colors.skeleton,
   },
   recommendationTag: {
     position: "absolute",
     top: 14,
     left: 14,
-    width: 74,
-    height: 28,
-    borderRadius: 999,
   },
   recommendationContent: {
     position: "absolute",
@@ -119,8 +94,6 @@ const styles = StyleSheet.create({
     bottom: 20,
   },
   recommendationTitle: {
-    width: "68%",
-    height: 25,
     marginBottom: 10,
   },
   metaRow: {
@@ -128,21 +101,8 @@ const styles = StyleSheet.create({
     gap: 7,
     marginBottom: 20,
   },
-  metaChip: {
-    width: 68,
-    height: 27,
-    borderRadius: 999,
-  },
-  metaChipShort: {
-    width: 54,
-    height: 27,
-    borderRadius: 999,
-  },
   recommendationButton: {
     alignSelf: "center",
-    width: 184,
-    height: 40,
-    borderRadius: 999,
   },
   quickViewport: {
     overflow: "hidden",
@@ -159,15 +119,12 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     borderRadius: 20,
     overflow: "hidden",
-    backgroundColor: theme.colors.card2,
+    backgroundColor: theme.colors.skeleton,
   },
   quickTag: {
     position: "absolute",
     top: 10,
     left: 10,
-    width: 68,
-    height: 27,
-    borderRadius: 999,
   },
   quickContent: {
     position: "absolute",
@@ -176,29 +133,13 @@ const styles = StyleSheet.create({
     bottom: 14,
   },
   quickTitle: {
-    width: "90%",
-    height: 17,
     marginBottom: 7,
   },
   quickTitleShort: {
-    width: "64%",
-    height: 17,
     marginBottom: 10,
   },
   quickMetaRow: {
     flexDirection: "row",
     gap: 8,
-  },
-  quickMeta: {
-    width: 58,
-    height: 13,
-  },
-  quickMetaShort: {
-    width: 42,
-    height: 13,
-  },
-  block: {
-    borderRadius: 6,
-    backgroundColor: "#C9D8BE",
   },
 });

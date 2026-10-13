@@ -45,6 +45,10 @@ export const lightColors = {
   // Outline of secondary pill buttons (--st-line-strong in the v6.8 prototype).
   lineStrong: "#909090",
 
+  // Loading placeholders: blocks on white, and blocks drawn on a tinted card.
+  skeleton: "#EDF3E4",
+  skeletonDeep: "#C9D8BE",
+
   background: "#FBFBF7",
   card: "#FFFFFF",
   card2: "#EDF3E4",

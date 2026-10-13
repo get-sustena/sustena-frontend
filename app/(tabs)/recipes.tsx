@@ -10,6 +10,7 @@ import { EmptyState } from "../../src/components/ui/EmptyState";
 import { FilterChip } from "../../src/components/ui/FilterChip";
 import { Icon } from "../../src/components/ui/Icon";
 import { SearchInput } from "../../src/components/ui/SearchInput";
+import { SkeletonBlock, SkeletonGroup } from "../../src/components/ui/Skeleton";
 import { RECIPE_FILTERS } from "../../src/data/recipeFilters";
 import type { Recipe } from "../../src/data/recipes";
 import { useInfiniteRecipesWithLocalFallback } from "../../src/hooks/api/useRecipes";
@@ -196,19 +197,21 @@ export default function RecipesScreen() {
 
 function RecipeGridSkeleton({ rows = 1 }: { rows?: number }) {
   return (
-    <View accessibilityLabel="Loading recipes">
+    <SkeletonGroup label="Loading recipes">
       {Array.from({ length: rows }, (_, row) => (
         <View key={row} style={styles.skeletonRow}>
           {[0, 1].map((column) => (
             <View key={column} style={styles.skeletonCard}>
-              <View style={styles.skeletonImage} />
-              <View style={styles.skeletonLineWide} />
-              <View style={styles.skeletonLineShort} />
+              <SkeletonBlock height={104} radius={0} />
+              <View style={styles.skeletonBody}>
+                <SkeletonBlock width="82%" height={15} radius={4} />
+                <SkeletonBlock width="55%" height={13} radius={4} />
+              </View>
             </View>
           ))}
         </View>
       ))}
-    </View>
+    </SkeletonGroup>
   );
 }
 
@@ -317,36 +320,29 @@ const styles = StyleSheet.create({
   errorState: {
     gap: theme.spacing.md,
   },
+  // Matches RecipeGridItem's cells: 20px page gutter, 12px between columns
+  // and rows. Each card matches RecipeTile: bordered, 104px photo, name and
+  // time line.
   skeletonRow: {
     flexDirection: "row",
     gap: 12,
     paddingHorizontal: 20,
-    paddingTop: 4,
-    paddingBottom: 24,
+    paddingBottom: 12,
   },
   skeletonCard: {
     flex: 1,
     minWidth: 0,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 16,
+    overflow: "hidden",
+    backgroundColor: theme.colors.card,
   },
-  skeletonImage: {
-    width: "100%",
-    aspectRatio: 1.08,
-    borderRadius: 8,
-    backgroundColor: theme.colors.card2,
-    marginBottom: 10,
-  },
-  skeletonLineWide: {
-    width: "82%",
-    height: 13,
-    borderRadius: 4,
-    backgroundColor: theme.colors.card2,
-    marginBottom: 7,
-  },
-  skeletonLineShort: {
-    width: "52%",
-    height: 10,
-    borderRadius: 4,
-    backgroundColor: theme.colors.card2,
+  skeletonBody: {
+    paddingHorizontal: 13,
+    paddingTop: 12,
+    paddingBottom: 14,
+    gap: 8,
   },
   endOfList: {
     paddingTop: 10,
