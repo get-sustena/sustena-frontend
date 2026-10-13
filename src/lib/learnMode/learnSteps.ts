@@ -34,7 +34,7 @@ export type LearnStep = {
   ingredients: LearnIngredient[];
 };
 
-type LearnInstruction = Pick<
+export type LearnInstruction = Pick<
   RecipeInstruction,
   "stepNumber" | "stepName" | "text" | "commonMistake" | "helpfulTip" | "segments" | "timers"
 > & {
@@ -100,7 +100,9 @@ function timeRange(sourceText: string, sourceStart: number): TextRange {
 function sourceRanges(sources: RecipeTimerSource[], text: string, displayText: string): TextRange[] {
   if (displayText === text) {
     return sources.flatMap(({ text: phrase, start, end }) =>
-      start !== null && end !== null && text.slice(start, end) === phrase ? [{ start, end }] : []
+      start !== null && end !== null && text.slice(start, end) === phrase
+        ? [timeRange(phrase, start)]
+        : []
     );
   }
 
@@ -109,7 +111,7 @@ function sourceRanges(sources: RecipeTimerSource[], text: string, displayText: s
   for (const { text: phrase } of sources) {
     const at = displayText.indexOf(phrase, searchFrom);
     if (at < 0) continue;
-    ranges.push({ start: at, end: at + phrase.length });
+    ranges.push(timeRange(phrase, at));
     searchFrom = at + phrase.length;
   }
   return ranges;

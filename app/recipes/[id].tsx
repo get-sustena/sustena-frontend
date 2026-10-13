@@ -79,6 +79,7 @@ import type {
 import { createLocalId } from "../../src/lib/id";
 import { readRecipeSource } from "../../src/lib/recipeSource";
 import { CookedButton } from "../../src/components/recipe/CookedButton";
+import { LearnMode } from "../../src/components/learn/LearnMode";
 
 // --rd-muted in the v6.8 recipe page.
 const INGREDIENT_CHEVRON_COLOR = "#686E66";
@@ -89,9 +90,11 @@ export default function RecipeDetailScreen() {
   const { width: windowWidth } = useWindowDimensions();
   // v6.8: font-size clamp(27px, 8vw, 34px), line-height 1.04, tracking -0.035em.
   const titleSize = Math.min(34, Math.max(27, windowWidth * 0.08));
-  const params = useLocalSearchParams<{ id: string; source?: string }>();
+  const params = useLocalSearchParams<{ id: string; source?: string; learnStep?: string }>();
   const { id } = params;
   const source = readRecipeSource(params.source);
+  // The step Learn mode is open at; a tapped timer notification opens it.
+  const [learnStep, setLearnStep] = useState(() => readLearnStep(params.learnStep));
 
   const recipeQuery = useRecipeDetailWithLocalFallback(id, source);
   const recipeDetail = recipeQuery.data;
@@ -1018,6 +1021,17 @@ export default function RecipeDetailScreen() {
 
           <SectionHeader title="Instructions" />
 
+          {instructions.length > 0 ? (
+            <Pressable
+              onPress={() => setLearnStep(0)}
+              style={({ pressed }) => [styles.learnStart, pressed && styles.pressed]}
+              accessibilityRole="button"
+            >
+              <Icon name="play" size={18} color={theme.colors.navy} />
+              <AppText style={styles.learnStartText}>Start learn mode</AppText>
+            </Pressable>
+          ) : null}
+
           <View style={styles.stepsCard}>
             <View style={styles.stepsLine} />
 
@@ -1106,8 +1120,32 @@ export default function RecipeDetailScreen() {
           <AppText style={styles.ctaButtonText}>Add to shopping list</AppText>
         </Pressable>
       </View>
+
+      {learnStep !== null && recipeDetail ? (
+        <LearnMode
+          initialStep={learnStep}
+          recipeId={recipe.id}
+          recipeName={recipe.name}
+          imageUrl={recipe.imageUrl}
+          source={source}
+          instructions={instructions}
+          ingredients={recipeDetail.ingredients}
+          isSaved={isFavorite}
+          onToggleSave={handleFavoritePress}
+          onClose={() => {
+            setLearnStep(null);
+            if (params.learnStep !== undefined) router.setParams({ learnStep: undefined });
+          }}
+        />
+      ) : null}
     </View>
   );
+}
+
+// A learnStep route param, when it's a step number.
+function readLearnStep(value: string | undefined) {
+  const step = Number(value);
+  return value !== undefined && Number.isInteger(step) && step >= 0 ? step : null;
 }
 
 type IngredientUnitOption = {
@@ -1639,6 +1677,24 @@ const styles = StyleSheet.create({
   costValueSecondary: {
     fontFamily: theme.fontFamily.body,
     fontSize: 16,
+    color: theme.colors.navy,
+  },
+  // v6.8 .co-secondary.rd-learn-start.
+  learnStart: {
+    minHeight: 52,
+    marginBottom: 22,
+    paddingHorizontal: 20,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: theme.colors.lineStrong,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  learnStartText: {
+    fontFamily: theme.fontFamily.bodySemiBold,
+    fontSize: 15,
     color: theme.colors.navy,
   },
   stepsCard: {

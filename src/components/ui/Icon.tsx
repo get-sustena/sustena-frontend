@@ -10,6 +10,8 @@ import {
   ChevronLeft,
   ChevronRight,
   CircleHelp,
+  CirclePause,
+  CirclePlay,
   CookingPot,
   CreditCard,
   Ellipsis,
@@ -24,6 +26,8 @@ import {
   Lock,
   Mail,
   MapPin,
+  Maximize2,
+  Minimize2,
   Minus,
   Pencil,
   Plus,
@@ -40,6 +44,7 @@ import {
   UserRound,
   UsersRound,
   Utensils,
+  Volume2,
   Wallet,
   WifiOff,
   X,
@@ -93,7 +98,12 @@ export type IconName =
   | "eyeOff"
   | "image"
   | "alertTriangle"
-  | "bulb";
+  | "bulb"
+  | "play"
+  | "pause"
+  | "volume"
+  | "maximize"
+  | "minimize";
 
 const ICONS: Record<IconName, LucideIcon> = {
   discover: Search,
@@ -142,6 +152,11 @@ const ICONS: Record<IconName, LucideIcon> = {
   image: ImageIcon,
   alertTriangle: TriangleAlert,
   bulb: Lightbulb,
+  play: CirclePlay,
+  pause: CirclePause,
+  volume: Volume2,
+  maximize: Maximize2,
+  minimize: Minimize2,
 };
 
 type IconProps = {

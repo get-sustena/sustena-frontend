@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { buildLearnSteps } from "../src/lib/learnMode/learnSteps.ts";
 import {
+  checkAfter,
   formatClock,
   formatTimerLength,
   nearestRunningTimer,
@@ -14,7 +15,10 @@ import {
   stepTimersDone,
   timerDoneMessage,
   timerKey,
+  upcomingTimerAlerts,
+  upTo,
 } from "../src/lib/learnMode/learnTimers.ts";
+import { getTimerAlertTarget, learnModeHref } from "../src/lib/learnMode/timerAlertData.ts";
 
 const ingredient = (position, name, ingredientId = null) => ({
   id: `ing-${position}`,
@@ -79,17 +83,14 @@ test("a confirmed timer highlights every place its sources point to", () => {
     durationMinSeconds: 300,
     durationMaxSeconds: null,
     sources: [
-      { text: "5 minutes", start: 9, end: 18 },
+      { text: "for 5 minutes", start: 5, end: 18 },
       { text: "5 minutes", start: 46, end: 55 },
     ],
   };
   const [step] = buildLearnSteps([instruction(1, text, { timers: [fiveMinutes] })], []);
 
   assert.equal(step.timers.length, 1);
-  assert.deepEqual(step.timers[0].ranges, [
-    { start: 9, end: 18 },
-    { start: 46, end: 55 },
-  ]);
+  assert.deepEqual(highlighted(text, step.timers[0]), ["5 minutes", "5 minutes"]);
 });
 
 test("when the shown text is scaled, sources are found by their words", () => {
@@ -171,6 +172,57 @@ test("times read as the prototype shows them", () => {
   assert.equal(formatTimerLength(900, 1200), "15–20 min");
   assert.equal(formatTimerLength(30, null), "30 sec");
   assert.equal(rangeNote(900, 1200), "Check after 15 min. It can take up to 20.");
+  assert.equal(checkAfter(900, 1200), "Check after 15 min");
+  assert.equal(upTo(1200), "It can take up to 20 min.");
+});
+
+test("each running timer's notification is worded for when it ends", () => {
+  const steps = buildLearnSteps(
+    [
+      instruction(1, "Boil 2 minutes, then rest 5 minutes.", { stepName: "Boil the water" }),
+      instruction(2, "Add pasta.", { stepName: "Add the pasta" }),
+    ],
+    []
+  );
+  const timers = {
+    [timerKey(0, 0)]: startTimer(0, 0, 120, 0),
+    [timerKey(0, 1)]: startTimer(0, 1, 300, 0),
+  };
+
+  assert.deepEqual(upcomingTimerAlerts(steps, timers), [
+    { key: "0-0", endsAt: 120_000, title: "Timer done", body: "Step 1 · 2 min", openStep: 0 },
+    {
+      key: "0-1",
+      endsAt: 300_000,
+      title: "Time for the next step",
+      body: "Step 2: Add the pasta",
+      openStep: 1,
+    },
+  ]);
+
+  const paused = { ...timers, [timerKey(0, 0)]: pauseTimer(timers[timerKey(0, 0)], 60_000) };
+  assert.deepEqual(
+    upcomingTimerAlerts(steps, paused).map((alert) => [alert.key, alert.title]),
+    [["0-1", "Timer done"]]
+  );
+});
+
+test("a tapped timer notification opens its recipe at the step", () => {
+  assert.deepEqual(
+    getTimerAlertTarget({ type: "learn-timer", recipeId: "sustena_eba", step: 2, source: "home" }),
+    { recipeId: "sustena_eba", step: 2, source: "home" }
+  );
+  assert.deepEqual(getTimerAlertTarget({ type: "learn-timer", recipeId: "sustena_eba", step: 0, source: "x" }), {
+    recipeId: "sustena_eba",
+    step: 0,
+    source: undefined,
+  });
+  assert.equal(getTimerAlertTarget({ type: "meal-reminder", recipeId: "sustena_eba", step: 2 }), null);
+  assert.equal(getTimerAlertTarget({ type: "learn-timer", recipeId: "sustena_eba", step: -1 }), null);
+  assert.equal(
+    learnModeHref({ recipeId: "sustena_eba", step: 2, source: "home" }),
+    "/recipes/sustena_eba?learnStep=2&source=home"
+  );
 });
 
 test("the last timer of a step says it's time for the next step", () => {

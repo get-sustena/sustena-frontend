@@ -3,6 +3,8 @@ import { Platform, StyleSheet, View } from "react-native";
 import { theme } from "../../theme/theme";
 
 export const WEB_APP_MAX_WIDTH = 480;
+// Either side of the app on a wide screen.
+export const WEB_FRAME_BACKGROUND = "#E7EBE1";
 
 export function WebAppFrame({ children }: PropsWithChildren) {
   if (Platform.OS !== "web") {
@@ -21,7 +23,7 @@ const styles = StyleSheet.create({
     flex: 1,
     width: "100%",
     alignItems: "center",
-    backgroundColor: "#E7EBE1",
+    backgroundColor: WEB_FRAME_BACKGROUND,
   },
   app: {
     flex: 1,

@@ -92,7 +92,19 @@ export function formatTimerLength(minSeconds: number, maxSeconds: number | null)
 // Under a running range: "Check after 15 min. It can take up to 20."
 export function rangeNote(minSeconds: number, maxSeconds: number) {
   const unit = lengthUnit(maxSeconds);
-  return `Check after ${inUnit(minSeconds, unit)} ${unit}. It can take up to ${inUnit(maxSeconds, unit)}.`;
+  return `${checkAfter(minSeconds, maxSeconds)}. It can take up to ${inUnit(maxSeconds, unit)}.`;
+}
+
+// The full-screen timer splits a range over two lines: "Check after 15 min",
+// then "It can take up to 20 min."
+export function checkAfter(minSeconds: number, maxSeconds: number) {
+  const unit = lengthUnit(maxSeconds);
+  return `Check after ${inUnit(minSeconds, unit)} ${unit}`;
+}
+
+export function upTo(maxSeconds: number) {
+  const unit = lengthUnit(maxSeconds);
+  return `It can take up to ${inUnit(maxSeconds, unit)} ${unit}.`;
 }
 
 // Whether every timer in the step has run to the end.
@@ -125,4 +137,29 @@ export function timerDoneMessage(steps: LearnStep[], timers: StartedTimers, done
     body: `Step ${done.step + 1} · ${formatTimerLength(timer.minSeconds, timer.maxSeconds)}`,
     openStep: done.step,
   };
+}
+
+type TimerAlert = {
+  key: string;
+  endsAt: number;
+  title: string;
+  body: string;
+  openStep: number;
+};
+
+// The phone notification for each running timer, worded for the moment it
+// ends: timers that end sooner will be done by then.
+export function upcomingTimerAlerts(steps: LearnStep[], timers: StartedTimers): TimerAlert[] {
+  return Object.entries(timers)
+    .filter(([, started]) => started.status === "running")
+    .map(([key, started]) => {
+      const atEnd: StartedTimers = {};
+      for (const [otherKey, other] of Object.entries(timers)) {
+        atEnd[otherKey] =
+          other.status === "running" && other.endsAt <= started.endsAt
+            ? { ...other, status: "done", leftSeconds: 0 }
+            : other;
+      }
+      return { key, endsAt: started.endsAt, ...timerDoneMessage(steps, atEnd, atEnd[key]) };
+    });
 }
