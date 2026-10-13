@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { FlatList, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { RecipeTile } from "../../src/components/recipe/RecipeTile";
@@ -16,6 +16,7 @@ import {
   useProfileAnswersQuery,
   useUpdateProfileAnswersMutation,
 } from "../../src/hooks/api/useProfileAnswers";
+import { useDebouncedValue } from "../../src/hooks/useDebouncedValue";
 import { apiRecipeToLocalRecipe } from "../../src/lib/api/adapters";
 import { getApiErrorMessage } from "../../src/lib/api/errors";
 import { finiteTimeCap } from "../../src/lib/plannerQuickSetup";
@@ -23,6 +24,7 @@ import { useProfileAnswersStore } from "../../src/store/profileAnswersStore";
 import { theme } from "../../src/theme/theme";
 
 const PAGE_SIZE = 30;
+const SEARCH_DEBOUNCE_MS = 300;
 const EXPERIENCE_OPTIONS = [
   { value: "beginner", label: "Beginner", level: 1 },
   { value: "intermediate", label: "Intermediate", level: 2 },
@@ -34,6 +36,7 @@ export default function RecipesScreen() {
   const insets = useSafeAreaInsets();
   const listRef = useRef<FlatList<Recipe>>(null);
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search.trim(), SEARCH_DEBOUNCE_MS);
   const [activeFilter, setActiveFilter] = useState("all");
   const [experienceCardDismissed, setExperienceCardDismissed] = useState(false);
   const experience = useProfileAnswersStore((state) => state.experience);
@@ -47,7 +50,7 @@ export default function RecipesScreen() {
       : undefined;
   const recipeParams = useMemo(
     () => ({
-      search: search.trim() || undefined,
+      search: debouncedSearch || undefined,
       tag:
         activeFilter === "all" ||
         activeFilter === "budget" ||
@@ -63,7 +66,7 @@ export default function RecipesScreen() {
       preferredDifficulty,
       pageSize: PAGE_SIZE,
     }),
-    [activeFilter, habitTime, preferredDifficulty, search]
+    [activeFilter, debouncedSearch, habitTime, preferredDifficulty]
   );
   const recipesQuery = useInfiniteRecipesWithLocalFallback(recipeParams);
   const recipes = useMemo<Recipe[]>(
@@ -76,9 +79,9 @@ export default function RecipesScreen() {
   const totalRecipes = recipesQuery.data?.pages[0]?.data.total ?? recipes.length;
 
   // Search and filters stay pinned, so a change can happen mid-list.
-  function scrollListToTop() {
+  useEffect(() => {
     listRef.current?.scrollToOffset({ offset: 0, animated: false });
-  }
+  }, [activeFilter, debouncedSearch]);
 
   return (
     <View style={styles.screen}>
@@ -108,10 +111,7 @@ export default function RecipesScreen() {
       <View>
         <SearchInput
           value={search}
-          onChangeText={(value) => {
-            setSearch(value);
-            scrollListToTop();
-          }}
+          onChangeText={setSearch}
           placeholder="Search jollof, egusi, pasta..."
         />
 
@@ -126,10 +126,7 @@ export default function RecipesScreen() {
                 key={filter.value}
                 label={filter.label}
                 active={filter.value === activeFilter}
-                onPress={() => {
-                  setActiveFilter(filter.value);
-                  scrollListToTop();
-                }}
+                onPress={() => setActiveFilter(filter.value)}
               />
             ))}
           </ScrollView>
