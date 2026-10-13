@@ -632,11 +632,7 @@ export default function RecipeDetailScreen() {
         automaticallyAdjustContentInsets={false}
         contentInsetAdjustmentBehavior="never"
       >
-        <RecipePhoto
-          imageUrl={recipe.imageUrl}
-          fallbackLabel="recipe photo"
-          style={styles.photo}
-        />
+        <RecipePhoto imageUrl={recipe.imageUrl} style={styles.photo} />
 
         <View style={styles.titleBlock}>
           <View style={styles.tagRow}>

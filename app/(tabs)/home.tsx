@@ -504,14 +504,14 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   shuffleText: {
-    fontFamily: theme.fontFamily.bodySemiBold,
+    fontFamily: theme.fontFamily.bodyMedium,
     fontSize: 12,
-    color: theme.colors.linkGreen,
+    color: theme.colors.navy3,
   },
   seeAllText: {
-    fontFamily: theme.fontFamily.bodySemiBold,
+    fontFamily: theme.fontFamily.bodyMedium,
     fontSize: 13,
-    color: theme.colors.linkGreen,
+    color: theme.colors.navy3,
   },
   // v6.8 has no shadow under this card, and 24px before the budget button.
   kitchenCardFrame: {
@@ -566,7 +566,7 @@ const styles = StyleSheet.create({
   },
   kitchenPill: {
     borderRadius: 999,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: "rgba(255,255,255,0.16)",
     backgroundColor: "rgba(255,255,255,0.1)",
     paddingHorizontal: 13,
@@ -577,7 +577,7 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.97 }],
   },
   kitchenPillText: {
-    fontFamily: theme.fontFamily.monoBold,
+    fontFamily: theme.fontFamily.bodyBold,
     fontSize: 14,
     color: theme.colors.onDark,
   },

@@ -50,6 +50,8 @@ export const lightColors = {
   skeletonDeep: "#C9D8BE",
 
   background: "#FBFBF7",
+  // --st-page in the v6.8 prototype: recipe tiles and filter pills.
+  page: "#FAFAFA",
   card: "#FFFFFF",
   card2: "#EDF3E4",
 

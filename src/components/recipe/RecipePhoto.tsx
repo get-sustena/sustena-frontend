@@ -31,8 +31,8 @@ type Props = {
   scrim?: "full" | "compact" | "none";
   style?: ViewStyle;
   children?: ReactNode;
+  // v6.8 tags only the small recipe tiles' placeholder ("recipe photo").
   fallbackLabel?: string;
-  fallbackLabelVariant?: "default" | "compact";
 };
 
 const STRIPE_COUNT = 48;
@@ -43,7 +43,6 @@ export function RecipePhoto({
   style,
   children,
   fallbackLabel,
-  fallbackLabelVariant = "default",
 }: Props) {
   const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null);
   const showImage = Boolean(imageUrl) && failedImageUrl !== imageUrl;
@@ -74,22 +73,8 @@ export function RecipePhoto({
       ) : null}
 
       {!showImage && fallbackLabel ? (
-        <View
-          style={[
-            styles.fallbackLabel,
-            fallbackLabelVariant === "compact" &&
-              styles.fallbackLabelCompact,
-          ]}
-        >
-          <AppText
-            style={[
-              styles.fallbackLabelText,
-              fallbackLabelVariant === "compact" &&
-                styles.fallbackLabelTextCompact,
-            ]}
-          >
-            {fallbackLabel}
-          </AppText>
+        <View style={styles.fallbackLabel}>
+          <AppText style={styles.fallbackLabelText}>{fallbackLabel}</AppText>
         </View>
       ) : null}
 
@@ -182,27 +167,17 @@ const styles = StyleSheet.create({
   fallbackLabel: {
     position: "absolute",
     zIndex: 3,
-    left: 20,
-    bottom: 12,
+    left: 8,
+    bottom: 8,
     borderRadius: 5,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
     backgroundColor: "rgba(251,251,247,0.8)",
   },
   fallbackLabelText: {
-    fontFamily: theme.fontFamily.mono,
-    fontSize: 12,
-    color: theme.colors.textMutedAlt,
-    textTransform: "lowercase",
-  },
-  fallbackLabelCompact: {
-    left: 8,
-    bottom: 8,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
-  fallbackLabelTextCompact: {
+    fontFamily: theme.fontFamily.body,
     fontSize: 11,
+    color: theme.colors.textMutedAlt,
   },
   chip: {
     borderRadius: 7,
@@ -211,7 +186,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
   },
   chipText: {
-    fontFamily: theme.fontFamily.monoBold,
+    fontFamily: theme.fontFamily.body,
     fontSize: 12,
   },
 });

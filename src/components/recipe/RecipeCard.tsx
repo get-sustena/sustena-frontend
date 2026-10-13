@@ -94,12 +94,12 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   meta: {
-    fontFamily: theme.fontFamily.mono,
+    fontFamily: theme.fontFamily.body,
     fontSize: 12.5,
     color: theme.colors.onDark,
   },
   metaDot: {
-    fontFamily: theme.fontFamily.mono,
+    fontFamily: theme.fontFamily.body,
     fontSize: 12.5,
     color: theme.colors.onDark,
     opacity: 0.6,
