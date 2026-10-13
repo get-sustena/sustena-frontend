@@ -167,7 +167,7 @@ Branches: `testing` is for local work. `main` is the deployment branch on GitHub
 | --- | --- |
 | Types | `npx tsc --noEmit` |
 | Lint | `npm run lint` |
-| Unused code | `npm run lint:unused` (knip; the founder's rule is no dead code, so this should report nothing but `expo-symbols` until that's decided) |
+| Unused code | `npm run lint:unused` (knip; the founder's rule is no dead code, so this should report nothing. `expo-symbols` is kept on purpose and listed in `knip.json`'s `ignoreDependencies`) |
 | Unit tests | `node --test tests/*.test.mjs` (28 tests; passing `tests/` as a folder fails on Windows) |
 | Web preview | `npm run web`, then open http://localhost:8081 |
 
@@ -206,7 +206,6 @@ Found while reading the code against the frontend skills. None of these is fixed
 | Long cook times wrap badly on recipe tiles | `src/components/recipe/RecipeTile.tsx` (seen on Afang Soup: "135 MIN · ₦10,000") | The time and price break across lines. |
 | `AGENTS.md` points to the Expo v54 docs | `AGENTS.md` | The project is on SDK 57. |
 | "cookease" names remain | App slug, URL scheme, token keys, database name | Renaming any of them needs a plan: the slug links EAS builds, and the token keys and database name would sign everyone out and empty local data. |
-| `expo-symbols` is unused | `package.json` | It has native code, so removing it changes the native fingerprint and installed builds stop taking over-the-air updates until a new store build. Waiting on the founder. |
 | Start-up shows the logo while it waits on five server calls | `useAppBootstrap` (preferences, profile answers, planner settings, pantry, shopping lists) behind `AppBootstrapGate` | On a slow connection the logo stays up for seconds before any tab, about 18s with 6s per request. Moving those calls to the background would let each tab show its own skeleton, but a late reply could overwrite something the user just added, so it needs guarding. Waiting on the founder. |
 
 ## Change log
