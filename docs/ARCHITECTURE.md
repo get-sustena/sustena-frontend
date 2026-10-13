@@ -144,7 +144,8 @@ Components read stores with selectors (`useAuthStore((s) => s.user)`), not by ta
 - Tokens are in `src/theme/`: colours (`colors.ts`), spacing 4–32, radius 10–22 plus full, and font families and sizes. Screens import `theme` and use `theme.colors.navy`, `theme.spacing.lg` and so on. Some screens still have hard-coded numbers for padding and sizes.
 - Styles use `StyleSheet.create` at the bottom of each file.
 - Text goes through `AppText`, icons through `Icon`, both in `components/ui`.
-- Long lists use FlashList: the Recipes grid, Saved recipes and the pantry ingredient picker. FlashList has no `columnWrapperStyle`, and its `contentContainerStyle` takes only padding and background, so each cell carries its own spacing. Both recipe grids use `src/components/recipe/RecipeGridItem.tsx`, which adds the 20px page gutter and half of the 12px column gap. Cards in a row match heights because FlashList gives every cell in a row the tallest cell's height.
+- Search stays reachable on long screens. Recipes and Pantry fix their search and filters above the list, and only the list scrolls. On Profile, the page header and stats scroll away, then the Published/Drafts tabs and "Search my recipes" stick under the header (`stickyHeaderIndices`, as on the public creator profile). A new search or filter scrolls back to the first result.
+- Long lists use FlashList: the Recipes grid, Saved recipes, the Pantry list and the pantry ingredient picker. FlashList has no `columnWrapperStyle`, and its `contentContainerStyle` takes only padding and background, so each cell carries its own spacing. Both recipe grids use `src/components/recipe/RecipeGridItem.tsx`, which adds the 20px page gutter and half of the 12px column gap. Cards in a row match heights because FlashList gives every cell in a row the tallest cell's height.
 - Typed search waits 300 ms after the last keystroke before querying (`src/hooks/useDebouncedValue.ts`).
 - Anything that depends on the time of day comes from `useTimeOfDay(read)` in `src/hooks/useTimeOfDay.ts`, such as `useTimeOfDay(getMealTime)` or `useTimeOfDay(getGreeting)`. It reads the clock again every minute and on return to the foreground. Don't call `new Date()` while rendering: the React Compiler caches a call that takes no inputs, so the value never changes.
 - Screens pad the top with `useSafeAreaInsets()` because the stack has no native header.
@@ -165,7 +166,7 @@ Branches: `testing` is for local work. `main` is the deployment branch on GitHub
 | --- | --- |
 | Types | `npx tsc --noEmit` |
 | Lint | `npm run lint` |
-| Unit tests | `node --test tests/*.test.mjs` (24 tests; passing `tests/` as a folder fails on Windows) |
+| Unit tests | `node --test tests/*.test.mjs` (28 tests; passing `tests/` as a folder fails on Windows) |
 | Web preview | `npm run web`, then open http://localhost:8081 |
 
 ## Rules for changes
@@ -188,7 +189,7 @@ Found while reading the code against the frontend skills. None of these is fixed
 | --- | --- | --- |
 | The offline cache needs `qualityScore`, `qualityWarnings` and `source*` | `src/db/recipeRepository.ts` (`quality_warnings_json` is NOT NULL) | The backend keeps the fields. If it ever empties them, `qualityWarnings` must stay `[]`, never null or missing. |
 | The bundled recipe seed is out of date | `src/data/mobile_seed_recipes_published.json` (June 2026, 112 recipes, no meal tags or categories) | Offline phones relying on the seed can't filter recommendations by meal and get the unfiltered list. |
-| The featured card's chip shows the recipe's first tag | `src/components/recipe/FeaturedRecipeCard.tsx` | At lunch it can read "Dinner" beside "Cook This for Lunch". Needs a wording decision. |
+| A second tab of the web app stays blank | `SQLiteProvider` in `app/_layout.tsx`; expo-sqlite's web storage lets one tab hold the database file | The second tab can't open the database, nothing catches the error, and the page renders nothing. The founder wants both tabs usable. Fix in progress. |
 | Rating a recipe leaves the Recipes grid showing the old rating | The infinite list key `["recipes", "infinite-list", ...]` isn't invalidated after rating | Tiles show the average rating. It updates only when the query goes stale. |
 | No error boundary anywhere | `app/` | One crashing screen takes down the whole app. |
 | The search field has no accessible label and no clear button | `src/components/ui/SearchInput.tsx` | Screen readers only get the placeholder, and clearing a search means deleting each character. |
@@ -219,3 +220,6 @@ All on 13 October 2026, on `testing`:
 - `312946a` Home's kitchen card no longer wraps the Proteins, Produce and Grains pills in its own button. The card's button sits behind the content, so the pills are separate buttons. This clears the two "button inside a button" errors in the web dev overlay and lets VoiceOver reach the pills on iOS. Tapping anywhere else on the card still opens the planner.
 - `8a8da74` `testing` merged into `main` and pushed, which deploys the web app.
 - `beed4eb` Home's greeting now updates while the app stays open. `useTimeOfDay` replaces `useMealTime` and drives both the greeting and the meal time. The wording and hours are unchanged: morning until 11:59, afternoon until 16:59, evening after that.
+- `1540c21` Pantry: the "Your ingredients" row, search and category pills stay pinned while the ingredient list scrolls (FlashList).
+- `bc7dc99` Profile: the Published/Drafts tabs and "Search my recipes" stick under the header once scrolled to the top.
+- `5a33e61` Meal labels (founder, 13 October 2026). Home's recommendation and Quick & Easy cards show the current meal when the recipe is tagged for it, otherwise its first tag. The recipe page shows every meal the recipe suits, in the order Breakfast, Lunch, Dinner. The rules are `getCardChipLabel` and `getRecipeMeals` in `src/lib/mealTime.ts`.
