@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { getMealTime, isRecipeForMealTime } from "../src/lib/mealTime.ts";
+import { getCardChipLabel, getMealTime, getRecipeMeals, isRecipeForMealTime } from "../src/lib/mealTime.ts";
 
 function at(hours, minutes = 0) {
   return new Date(2026, 9, 13, hours, minutes);
@@ -66,4 +66,25 @@ test("soups, sauces and sides count only when also a main meal", () => {
 test("labels match regardless of case, spaces or underscores", () => {
   assert.equal(isRecipeForMealTime(recipe(["Lunch", "Main Meal"]), "lunch"), true);
   assert.equal(isRecipeForMealTime(recipe(["Breakfast", "side_dish"]), "breakfast"), false);
+});
+
+test("a recipe's meals come in the order of the day, whatever order its tags are in", () => {
+  assert.deepEqual(getRecipeMeals(["dinner", "nigerian", "lunch"]), ["lunch", "dinner"]);
+  assert.deepEqual(getRecipeMeals(["Dinner", "Breakfast", "Lunch"]), ["breakfast", "lunch", "dinner"]);
+});
+
+test("a recipe with no meal tags has no meals", () => {
+  assert.deepEqual(getRecipeMeals(["snack", "nigerian"]), []);
+  assert.deepEqual(getRecipeMeals([]), []);
+});
+
+test("a card's chip names the current meal when the recipe is tagged for it", () => {
+  assert.equal(getCardChipLabel(["Dinner", "Lunch", "Nigerian"], "lunch"), "Lunch");
+  assert.equal(getCardChipLabel(["breakfast", "snack"], "breakfast"), "Breakfast");
+});
+
+test("a card keeps its first tag when the recipe isn't tagged for the current meal", () => {
+  assert.equal(getCardChipLabel(["Dinner", "Nigerian"], "lunch"), "Dinner");
+  assert.equal(getCardChipLabel(["Snack"], "dinner"), "Snack");
+  assert.equal(getCardChipLabel([], "dinner"), undefined);
 });

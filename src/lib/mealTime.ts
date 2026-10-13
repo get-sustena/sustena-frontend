@@ -11,6 +11,28 @@ export function getMealTime(date: Date): MealTime {
   return "dinner";
 }
 
+export const MEAL_LABELS: Record<MealTime, string> = {
+  breakfast: "Breakfast",
+  lunch: "Lunch",
+  dinner: "Dinner",
+};
+
+const MEALS_IN_DAY_ORDER: MealTime[] = ["breakfast", "lunch", "dinner"];
+
+// The meals a recipe is tagged for, in the order of the day rather than the
+// tags' alphabetical order, so "lunch" comes before "dinner".
+export function getRecipeMeals(tags: string[]): MealTime[] {
+  const labels = new Set(tags.map(normalizeLabel));
+  return MEALS_IN_DAY_ORDER.filter((meal) => labels.has(meal));
+}
+
+// The chip on Home's recipe cards (founder, 13 October 2026): the current meal,
+// so a lunch pick reads "Lunch" beside "Cook This for Lunch". A recipe that
+// isn't tagged for this meal keeps its first tag rather than claim the meal.
+export function getCardChipLabel(tags: string[], mealTime: MealTime): string | undefined {
+  return getRecipeMeals(tags).includes(mealTime) ? MEAL_LABELS[mealTime] : tags[0];
+}
+
 const DRINK_LABELS = ["drink", "fruit-juice", "smoothie", "local-drink"];
 const SUPPORTING_DISH_LABELS = ["side-dish", "complement", "sauce", "salad", "soup"];
 const SNACK_LABELS = ["snack", "snacks-small-chops", "dessert"];

@@ -35,7 +35,7 @@ import { useHomeRecommendations } from "../../src/hooks/api/useRecommendations";
 import { useTimeOfDay } from "../../src/hooks/useTimeOfDay";
 import { apiRecipeToLocalRecipe } from "../../src/lib/api/adapters";
 import { getGreeting } from "../../src/lib/greeting";
-import { getMealTime } from "../../src/lib/mealTime";
+import { getMealTime, type MealTime } from "../../src/lib/mealTime";
 import { finiteTimeCap } from "../../src/lib/plannerQuickSetup";
 import { useAuthStore } from "../../src/store/authStore";
 import { useProfileAnswersStore } from "../../src/store/profileAnswersStore";
@@ -296,7 +296,7 @@ export default function HomeScreen() {
           {quickRecipesQuery.isLoading ? (
             <QuickRecipeCardsSkeleton />
           ) : quickRecipes.length > 0 ? (
-            <QuickCarousel recipes={quickRecipes} />
+            <QuickCarousel recipes={quickRecipes} mealTime={mealTime} />
           ) : (
             <View style={styles.quickStateWrap}>
               <HomeSectionState
@@ -358,8 +358,10 @@ function HomeSectionState({
 
 function QuickCarousel({
   recipes,
+  mealTime,
 }: {
   recipes: ReturnType<typeof apiRecipeToLocalRecipe>[];
+  mealTime: MealTime;
 }) {
   const [containerWidth, setContainerWidth] = useState(0);
   const [contentWidth, setContentWidth] = useState(0);
@@ -405,6 +407,7 @@ function QuickCarousel({
           <RecipeCard
             key={recipe.id}
             recipe={recipe}
+            mealTime={mealTime}
             onPress={() => openRecipe(recipe.id)}
           />
         ))}

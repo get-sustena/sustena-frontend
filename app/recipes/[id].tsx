@@ -44,6 +44,7 @@ import {
   createInitialIngredientUnitSelections,
 } from "../../src/lib/ingredientUnits";
 import { formatScaledInstruction } from "../../src/lib/instructionScaling";
+import { getRecipeMeals, MEAL_LABELS } from "../../src/lib/mealTime";
 import { scaleAmountText, scaleCost } from "../../src/lib/scaling";
 import {
   generateShoppingListItemsFromRecipe,
@@ -1171,6 +1172,9 @@ function getRecipeDetailTags(
         (candidate) => normalizeTag(candidate) === normalizeTag(tag)
       ) === index
   );
+  // Every meal the recipe suits, so lunch-and-dinner recipes show both
+  // (founder, 13 October 2026).
+  const meals = getRecipeMeals(uniqueCandidates).map((meal) => MEAL_LABELS[meal]);
   const selected: string[] = [];
 
   const takeFirstMatching = (pattern: RegExp) => {
@@ -1184,7 +1188,9 @@ function getRecipeDetailTags(
     }
   };
 
-  takeFirstMatching(/\b(breakfast|brunch|lunch|dinner|snack)\b/);
+  if (!meals.length) {
+    takeFirstMatching(/\b(brunch|snack)\b/);
+  }
   takeFirstMatching(
     /\b(low budget|budget|main dish|side dish|soup|stew|salad|dessert|drink|beverage|porridge|rice dish|pasta|swallow)\b/
   );
@@ -1192,9 +1198,10 @@ function getRecipeDetailTags(
     /\b(nigerian|west african|african|south east|south west|north east|north west|north central|yoruba|igbo|hausa|calabar|akwa ibom|delta|edo)\b/
   );
 
-  return selected.slice(0, 3).map((tag) =>
-    capitalizeWords(tag.replace(/_/g, " "))
-  );
+  return [
+    ...meals,
+    ...selected.map((tag) => capitalizeWords(tag.replace(/_/g, " "))),
+  ];
 }
 
 function normalizeTag(value: string) {
