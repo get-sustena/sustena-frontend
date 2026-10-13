@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import type { RecipeVocabularyItem } from "../types/api";
 
-export type RecipeVocabularyPickerConfig = {
+type RecipeVocabularyPickerConfig = {
   title: string;
   description?: string;
   options: RecipeVocabularyItem[];

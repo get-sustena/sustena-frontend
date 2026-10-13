@@ -13,14 +13,6 @@ export function addPantryItems(ingredientIds: string[]) {
   });
 }
 
-export function replacePantry(ingredientIds: string[]) {
-  return apiRequest<PantryResponse>({
-    url: "/pantry",
-    method: "PUT",
-    data: { ingredientIds },
-  });
-}
-
 export function removePantryItem(ingredientId: string) {
   return apiRequest<PantryResponse>({
     url: `/pantry/items/${encodeURIComponent(ingredientId)}`,

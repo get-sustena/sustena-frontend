@@ -18,7 +18,8 @@
         "foregroundImage": "./assets/images/android-icon-foreground.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.getsustena.app"
+      "package": "com.getsustena.app",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "output": "single",
@@ -49,7 +50,15 @@
       "expo-image",
       "expo-sharing",
       "expo-status-bar",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/notification-icon.png",
+          "color": "#1F7048",
+          "defaultChannel": "meal-reminders"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

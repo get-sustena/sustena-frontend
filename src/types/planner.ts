@@ -1,7 +1,5 @@
 import type { BudgetMealSlot, PlannerSettings } from "./api";
 
-export type PlannerTab = "budget" | "kitchen" | "timetable" | "calories";
-
 export type PlanMealSlot = BudgetMealSlot;
 export type PlanSetupValue = PlannerSettings;
 

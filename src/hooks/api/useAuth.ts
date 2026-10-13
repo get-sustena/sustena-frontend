@@ -1,4 +1,4 @@
-import { QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { QueryClient, useMutation, useQueryClient } from "@tanstack/react-query";
 import { SQLiteDatabase, useSQLiteContext } from "expo-sqlite";
 import {
   clearLocalAccountData,
@@ -10,15 +10,9 @@ import {
 } from "../../lib/accountSession";
 import { authApi } from "../../lib/api";
 import { waitForAccountBackgroundTasks } from "../../lib/accountBackgroundTasks";
+import { disableMealReminders } from "../../lib/notifications/mealReminders";
 import { queryKeys } from "../../lib/query/queryKeys";
 import { useAuthStore } from "../../store/authStore";
-
-export function useMeQuery() {
-  return useQuery({
-    queryKey: queryKeys.auth.me,
-    queryFn: authApi.getMe,
-  });
-}
 
 export function useUpdateMeMutation() {
   const queryClient = useQueryClient();
@@ -83,24 +77,9 @@ export function useLogoutMutation() {
       beginSignOut();
       await queryClient.cancelQueries();
       await waitForAccountBackgroundTasks();
+      // While still signed in, so this phone stops getting the account's reminders.
+      await disableMealReminders(db);
       return authApi.logout();
-    },
-    onSettled: () => finalizeLocalLogout(db, queryClient, clearAuth),
-  });
-}
-
-export function useLogoutAllMutation() {
-  const db = useSQLiteContext();
-  const queryClient = useQueryClient();
-  const clearAuth = useAuthStore((state) => state.clearAuth);
-  const beginSignOut = useAuthStore((state) => state.beginSignOut);
-
-  return useMutation({
-    mutationFn: async () => {
-      beginSignOut();
-      await queryClient.cancelQueries();
-      await waitForAccountBackgroundTasks();
-      return authApi.logoutAll();
     },
     onSettled: () => finalizeLocalLogout(db, queryClient, clearAuth),
   });

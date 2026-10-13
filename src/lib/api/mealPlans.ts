@@ -1,49 +1,15 @@
 import type {
   SavedMealPlan,
   SavedMealPlanCreateRequest,
-  SavedMealPlanUpdateRequest,
   ShoppingList,
 } from "../../types/api";
 import { apiRequest } from "./client";
-
-export function getMealPlans(includeArchived = false) {
-  return apiRequest<SavedMealPlan[]>({
-    url: "/meal-plans",
-    method: "GET",
-    params: includeArchived ? { include_archived: true } : undefined,
-  });
-}
 
 export function createMealPlan(payload: SavedMealPlanCreateRequest) {
   return apiRequest<SavedMealPlan>({
     url: "/meal-plans",
     method: "POST",
     data: payload,
-  });
-}
-
-export function getMealPlan(mealPlanId: string) {
-  return apiRequest<SavedMealPlan>({
-    url: `/meal-plans/${mealPlanId}`,
-    method: "GET",
-  });
-}
-
-export function updateMealPlan(
-  mealPlanId: string,
-  payload: SavedMealPlanUpdateRequest
-) {
-  return apiRequest<SavedMealPlan>({
-    url: `/meal-plans/${mealPlanId}`,
-    method: "PATCH",
-    data: payload,
-  });
-}
-
-export function deleteMealPlan(mealPlanId: string) {
-  return apiRequest<void>({
-    url: `/meal-plans/${mealPlanId}`,
-    method: "DELETE",
   });
 }
 

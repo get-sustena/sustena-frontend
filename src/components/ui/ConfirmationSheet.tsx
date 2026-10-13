@@ -2,7 +2,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { theme } from "../../theme/theme";
 import { AppText } from "./AppText";
 
-export type ConfirmationSheetAction = {
+type ConfirmationSheetAction = {
   label: string;
   onPress: () => void | Promise<void>;
   primary?: boolean;

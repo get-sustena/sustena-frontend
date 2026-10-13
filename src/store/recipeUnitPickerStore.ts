@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import type { Unit } from "../types/api";
 
-export type RecipeUnitPickerConfig = {
+type RecipeUnitPickerConfig = {
   units: Unit[];
   selected: string | null;
   recommended: string | null;

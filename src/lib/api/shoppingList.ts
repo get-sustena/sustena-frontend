@@ -1,19 +1,11 @@
 import {
   ClearCheckedShoppingItemsResponse,
-  ShoppingList,
   ShoppingListItem,
   ShoppingListItemCreate,
   ShoppingListItemUpdate,
   SuccessResponse,
 } from "../../types/api";
 import { apiRequest } from "./client";
-
-export function getShoppingList() {
-  return apiRequest<ShoppingList>({
-    url: "/me/shopping-list",
-    method: "GET",
-  });
-}
 
 export function addShoppingListItem(payload: ShoppingListItemCreate) {
   return apiRequest<ShoppingListItem>({

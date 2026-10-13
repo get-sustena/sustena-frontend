@@ -1,12 +1,14 @@
 import { Href, router } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { useState } from "react";
+import { Linking, Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLogoutMutation } from "../../hooks/api/useAuth";
 import { usePreferencesQuery, useUpdatePreferencesMutation } from "../../hooks/api/usePreferences";
 import { useProfileAnswersQuery } from "../../hooks/api/useProfileAnswers";
 import { useFavoriteRecipes } from "../../hooks/useFavoriteRecipes";
 import { markWelcomeSeen } from "../../db/appMetadataRepository";
+import { disableMealReminders, enableMealReminders } from "../../lib/notifications/mealReminders";
 import { countAnsweredProfileFields, PROFILE_COMPLETION_FIELD_COUNT } from "../../lib/profileCompletion";
 import { usePreferencesStore } from "../../store/preferencesStore";
 import { useProfileAnswersStore } from "../../store/profileAnswersStore";
@@ -32,6 +34,7 @@ export function AccountSettingsScreen() {
   const answers = useProfileAnswersStore();
   const { favoriteRecipes } = useFavoriteRecipes();
   const answered = countAnsweredProfileFields(answers);
+  const [mealRemindersBusy, setMealRemindersBusy] = useState(false);
   usePreferencesQuery();
   useProfileAnswersQuery();
 
@@ -45,6 +48,34 @@ export function AccountSettingsScreen() {
     });
     closeSheet();
     showToast("Default units saved", "success");
+  }
+
+  async function changeMealReminders() {
+    if (mealRemindersBusy) return;
+    setMealRemindersBusy(true);
+    try {
+      if (preferences.mealRemindersEnabled) {
+        preferences.setMealRemindersEnabled(false);
+        await disableMealReminders(db);
+        return;
+      }
+
+      const result = await enableMealReminders(db);
+      if (result === "enabled") {
+        preferences.setMealRemindersEnabled(true);
+        showToast("Meal reminders on. Your picks arrive at 8am, 1pm and 5pm.", "success");
+      } else if (result === "denied") {
+        showToast(
+          "Notifications are off for Sustena. Turn them on in your phone settings.",
+          "default",
+          { label: "Open settings", onPress: () => void Linking.openSettings() }
+        );
+      } else {
+        showToast("Couldn't turn on meal reminders. Check your connection and try again.", "danger");
+      }
+    } finally {
+      setMealRemindersBusy(false);
+    }
   }
 
   function saveServings(value: number) {
@@ -97,7 +128,10 @@ export function AccountSettingsScreen() {
         </Section>
 
         <Section title="App Settings" compact>
-          <SettingsRow icon="notification" label="Meal Reminders" subtitle="Daily push notifications" rightElement={<ToggleSwitch value={preferences.mealRemindersEnabled} onChange={preferences.toggleMealReminders} />} />
+          {/* Push reminders reach phones only, so the web app leaves this out. */}
+          {Platform.OS !== "web" ? (
+            <SettingsRow icon="notification" label="Meal Reminders" subtitle="Breakfast, lunch and dinner ideas at 8am, 1pm and 5pm" rightElement={<ToggleSwitch value={preferences.mealRemindersEnabled} onChange={() => void changeMealReminders()} />} />
+          ) : null}
           <SettingsRow icon="settings" label="Haptic Feedback" subtitle="Vibrate on interactions" rightElement={<ToggleSwitch value={preferences.hapticsEnabled} onChange={preferences.toggleHaptics} />} />
           <SettingsRow icon="offline" label="Data Saver Mode" subtitle="Reduces image quality on 3G" rightElement={<ToggleSwitch value={preferences.dataSaverEnabled} onChange={preferences.toggleDataSaver} />} showDivider={false} />
         </Section>

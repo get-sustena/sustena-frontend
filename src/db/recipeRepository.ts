@@ -10,8 +10,6 @@ import { recipeSeedJson, RECIPE_SEED_VERSION } from "./recipeSeed";
 import { runWithSqliteRetry } from "./sqliteGuards";
 import { runWriteTransaction } from "./writeTransaction";
 
-export { RECIPE_SEED_VERSION } from "./recipeSeed";
-
 type SeedRecipe = Omit<
   RecipeDetail,
   "isFavorited" | "createdAt" | "updatedAt"
@@ -89,13 +87,6 @@ export async function getLocalRecipes(
     pageSize,
     total: filtered.length,
   };
-}
-
-export async function searchLocalRecipes(
-  db: SQLiteDatabase,
-  params: RecipeSearchParams = {}
-) {
-  return getLocalRecipes(db, params);
 }
 
 export async function getLocalRecipeById(db: SQLiteDatabase, recipeId: string) {

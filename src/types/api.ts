@@ -22,7 +22,7 @@ export type RecipeModerationStatus =
   | "approved"
   | "hidden"
   | "rejected";
-export type UnitOptionSource =
+type UnitOptionSource =
   | "explicit"
   | "converted"
   | "estimated"
@@ -98,10 +98,6 @@ export interface AuthResponse {
   user: User;
 }
 
-export interface RefreshTokenRequest {
-  refreshToken: string;
-}
-
 export interface RefreshTokenResponse {
   accessToken: string;
   refreshToken: string;
@@ -114,11 +110,6 @@ export interface LogoutRequest {
 
 export interface LogoutResponse {
   success: boolean;
-}
-
-export interface LogoutAllResponse {
-  success: boolean;
-  revoked: number;
 }
 
 export interface SuccessResponse {
@@ -340,7 +331,7 @@ export interface RecipeIngredient {
   parseWarnings: string[];
 }
 
-export interface RecipeInstructionTextSegment {
+interface RecipeInstructionTextSegment {
   type: "text";
   text: string;
 }
@@ -446,12 +437,6 @@ export interface RecipeDetail extends RecipeListItem {
   canRate: boolean;
   createdAt: ISODateTimeString;
   updatedAt: ISODateTimeString;
-}
-
-export interface RecipeRatingResponse {
-  rating: number | null;
-  averageRating: number | null;
-  ratingCount: number;
 }
 
 export interface CreatorProfile {
@@ -757,12 +742,6 @@ export interface KitchenPlannerResponse {
   totalEstimatedCost: number;
 }
 
-export interface MealPlanResponse {
-  meals: PlannerMeal[];
-  matches: [];
-  totalEstimatedCost: number;
-}
-
 export type SavedMealPlanType = "budget" | "timetable" | "pantry";
 export type SavedMealPlanStatus = "active" | "archived";
 
@@ -824,18 +803,6 @@ export interface SavedMealPlan {
   createdAt: ISODateTimeString;
   updatedAt: ISODateTimeString;
 }
-
-export interface SavedMealPlanUpdateRequest {
-  name?: string | null;
-  status?: SavedMealPlanStatus;
-}
-
-export type TimetablePlannerResponse = MealPlanResponse;
-
-export type PlannerResponse =
-  | BudgetPlannerResponse
-  | KitchenPlannerResponse
-  | MealPlanResponse;
 
 export interface SignupRequest {
   email: string;
@@ -943,6 +910,20 @@ export interface ShoppingListRecipeBatchRequest {
 
 export type ShoppingListItemUpdate = ShoppingListItemUpdateRequest;
 
+export type PushPlatform = "android" | "ios";
+
+// A phone registered for meal reminders: POST /me/push-tokens.
+export interface PushTokenRegisterRequest {
+  token: string;
+  platform: PushPlatform;
+  timeZone: string;
+}
+
+export interface PushTokenResponse extends PushTokenRegisterRequest {
+  createdAt: ISODateTimeString;
+  updatedAt: ISODateTimeString;
+}
+
 export interface ShoppingListCreateRequest {
   name: string;
   isActive?: boolean;
@@ -969,21 +950,4 @@ export interface BudgetPlannerRequest {
 export interface KitchenPlannerRequest {
   ingredientIds: string[];
   maxTotalTimeMinutes?: number;
-}
-
-export interface TimetablePlannerRequest {
-  days?: number;
-  mealsPerDay?: number;
-  dietaryPreference?: DietaryPreference;
-}
-
-export interface MealPlanRequest extends TimetablePlannerRequest {
-  healthConditions?: string[];
-  avoidRecipeIds?: string[];
-}
-
-export interface HealthResponse {
-  status: "ok";
-  service: string;
-  timestamp: ISODateTimeString;
 }

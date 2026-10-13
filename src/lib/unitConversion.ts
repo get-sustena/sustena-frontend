@@ -5,13 +5,13 @@ import { formatQuantityValue } from "./scaling";
 
 export type UnitMode = "metric" | "cups" | "imperial";
 
-export interface ConvertedQuantity {
+interface ConvertedQuantity {
   quantity: number;
   unit: string;
   isApproximate: boolean;
 }
 
-export interface ScaleUnitOption extends ConvertedQuantity {
+interface ScaleUnitOption extends ConvertedQuantity {
   label: string;
   preview: string;
 }
@@ -134,7 +134,7 @@ export function convertQuantity({
   };
 }
 
-export function getCompatibleScaleUnits({
+function getCompatibleScaleUnits({
   units,
   fromUnit,
   context,

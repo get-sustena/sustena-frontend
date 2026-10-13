@@ -10,7 +10,7 @@ import { mediaApi } from "../api";
 
 type MediaPurpose = "creator_avatar" | "creator_cover" | "recipe_cover";
 
-export type UploadedImage = {
+type UploadedImage = {
   assetId: string;
   publicUrl: string;
   localUri: string;

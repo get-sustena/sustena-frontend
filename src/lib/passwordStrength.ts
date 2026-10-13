@@ -1,5 +1,5 @@
 
-export type PasswordCriteria = {
+type PasswordCriteria = {
   length: boolean;
   upper: boolean;
   lower: boolean;
@@ -22,7 +22,7 @@ export function getPasswordScore(password: string): number {
   return Object.values(criteria).filter(Boolean).length;
 }
 
-export type PasswordLevel = {
+type PasswordLevel = {
   label: string;
   color: string;
   segmentsLit: number;

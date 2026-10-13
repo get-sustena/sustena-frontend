@@ -74,6 +74,3 @@ export type Recipe = {
   averageRating?: number | null;
   ratingCount?: number;
 };
-
-// Prevent legacy fixtures from appearing when the API and SQLite seed are unavailable.
-export const RECIPES: Recipe[] = [];

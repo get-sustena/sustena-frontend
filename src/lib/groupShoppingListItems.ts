@@ -66,17 +66,3 @@ export function groupShoppingListItems(
       }),
     }));
 }
-
-export function getCategoryEmoji(category: string) {
-  const categoryEmojiMap: Record<string, string> = {
-    Proteins: "🥩",
-    Grains: "🌾",
-    Produce: "🥬",
-    Spices: "🌶️",
-    Dairy: "🥛",
-    Pantry: "🫙",
-    Tools: "🛠️",
-  };
-
-  return categoryEmojiMap[category] ?? "🛒";
-}

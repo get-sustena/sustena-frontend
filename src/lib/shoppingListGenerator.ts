@@ -62,7 +62,7 @@ export function generateShoppingListItemsFromRecipe({
   });
 }
 
-export function isPurchasableRecipeIngredient(ingredient: {
+function isPurchasableRecipeIngredient(ingredient: {
   category?: string | null;
   name?: string | null;
   ingredientName?: string | null;

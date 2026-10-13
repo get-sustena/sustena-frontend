@@ -53,8 +53,8 @@ import { RecipePhoto } from "../recipe/RecipePhoto";
 import { AppText } from "../ui/AppText";
 import { EmptyState } from "../ui/EmptyState";
 import { Icon } from "../ui/Icon";
-import { ProgressLoader } from "../ui/ProgressLoader";
 import { PlanSetupModal } from "./PlanSetupModal";
+import { BudgetPlanSkeleton } from "./BudgetPlanSkeleton";
 import { BudgetShortfallSheet } from "./BudgetShortfallSheet";
 import { ShoppingListDestinationSheet } from "../shopping/ShoppingListDestinationSheet";
 import {
@@ -613,7 +613,7 @@ export function BudgetPlannerPane() {
 
       {isPlanResultPreparing ? (
         <View style={styles.loadingPanel}>
-          <ProgressLoader variant="screen" />
+          <BudgetPlanSkeleton />
         </View>
       ) : null}
 

@@ -42,6 +42,12 @@ export const lightColors = {
   border2: "rgba(23,41,30,0.16)",
   borderStrong: "rgba(23,41,30,0.22)",
   borderOrange: "rgba(227,166,46,0.25)",
+  // Outline of secondary pill buttons (--st-line-strong in the v6.8 prototype).
+  lineStrong: "#909090",
+
+  // Loading placeholders: blocks on white, and blocks drawn on a tinted card.
+  skeleton: "#EDF3E4",
+  skeletonDeep: "#C9D8BE",
 
   background: "#FBFBF7",
   card: "#FFFFFF",

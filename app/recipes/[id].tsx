@@ -75,9 +75,9 @@ import { createLocalId } from "../../src/lib/id";
 export default function RecipeDetailScreen() {
   const db = useSQLiteContext();
   const insets = useSafeAreaInsets();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, source } = useLocalSearchParams<{ id: string; source?: string }>();
 
-  const recipeQuery = useRecipeDetailWithLocalFallback(id);
+  const recipeQuery = useRecipeDetailWithLocalFallback(id, source);
   const recipeDetail = recipeQuery.data;
   const shouldSyncApi = recipeQuery.source === "api" && Boolean(recipeDetail);
   const recipe = recipeDetail

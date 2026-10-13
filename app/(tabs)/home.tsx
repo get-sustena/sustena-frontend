@@ -215,15 +215,15 @@ export default function HomeScreen() {
           <Pressable
             onPress={() => openPlanner("budget")}
             style={({ pressed }) => [
-              styles.budgetRow,
+              styles.budgetButton,
               pressed && styles.pressed,
             ]}
             accessibilityRole="button"
-            accessibilityLabel="Plan meals around a budget"
+            accessibilityLabel="Plan a day of meals on a budget"
           >
-            <Icon name="budget" size={15} color={theme.colors.textMedium} />
-            <AppText style={styles.budgetRowText}>
-              Or plan a full day of meals around your budget
+            <Icon name="budget" size={18} color={theme.colors.navy} />
+            <AppText style={styles.budgetButtonText}>
+              Plan a day of meals on a budget
             </AppText>
           </Pressable>
         </View>
@@ -463,17 +463,6 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 2,
   },
-  notifDot: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: theme.colors.orange,
-    borderWidth: 1.5,
-    borderColor: theme.colors.card,
-  },
   pressed: {
     opacity: 0.9,
     transform: [{ scale: 0.99 }],
@@ -527,7 +516,7 @@ const styles = StyleSheet.create({
   },
   kitchenCardShadow: {
     borderRadius: 20,
-    marginBottom: 10,
+    marginBottom: 14,
     shadowColor: theme.colors.navy,
     shadowOffset: { width: 0, height: 16 },
     shadowOpacity: 0.28,
@@ -598,17 +587,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: theme.colors.onDark,
   },
-  budgetRow: {
+  // The v6.8 prototype's secondary pill (.co-secondary), approved by the founder on 13 October 2026.
+  budgetButton: {
+    minHeight: 52,
+    paddingHorizontal: 20,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: theme.colors.lineStrong,
+    backgroundColor: "transparent",
     flexDirection: "row",
     alignItems: "center",
-    gap: 9,
-    paddingVertical: 11,
-    paddingHorizontal: 4,
+    justifyContent: "center",
+    gap: 8,
   },
-  budgetRowText: {
-    flex: 1,
+  budgetButtonText: {
     fontFamily: theme.fontFamily.bodySemiBold,
-    fontSize: 13.5,
+    fontSize: 15,
     color: theme.colors.navy,
   },
   recipeScrollContent: {

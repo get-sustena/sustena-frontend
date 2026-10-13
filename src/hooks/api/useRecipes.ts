@@ -1,9 +1,4 @@
-import {
-  useInfiniteQuery,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useSQLiteContext } from "expo-sqlite";
 import {
   cacheRecipeDetail,
@@ -12,9 +7,9 @@ import {
 } from "../../db/recipeRepository";
 import { recipesApi } from "../../lib/api";
 import { queryKeys } from "../../lib/query/queryKeys";
-import type { RecipeDetail, RecipeSearchParams } from "../../types/api";
+import type { RecipeSearchParams } from "../../types/api";
 
-export function useRecipesQuery(params?: RecipeSearchParams) {
+function useRecipesQuery(params?: RecipeSearchParams) {
   return useQuery({
     queryKey: queryKeys.recipes.list(params),
     queryFn: () => recipesApi.getRecipes(params),
@@ -81,13 +76,15 @@ export function useInfiniteRecipesWithLocalFallback(
   });
 }
 
-export function useRecipeDetailQuery(recipeId?: string) {
+// The source isn't part of the key: it only tells the backend where the
+// open came from, and the recipe is the same wherever it was opened.
+function useRecipeDetailQuery(recipeId?: string, source?: string) {
   const db = useSQLiteContext();
 
   return useQuery({
     queryKey: queryKeys.recipes.detail(recipeId ?? ""),
     queryFn: async () => {
-      const recipe = await recipesApi.getRecipeById(recipeId ?? "");
+      const recipe = await recipesApi.getRecipeById(recipeId ?? "", source);
 
       void cacheRecipeDetail(db, recipe).catch((error) => {
         console.error("Failed to cache recipe detail locally", error);
@@ -99,9 +96,9 @@ export function useRecipeDetailQuery(recipeId?: string) {
   });
 }
 
-export function useRecipeDetailWithLocalFallback(recipeId?: string) {
+export function useRecipeDetailWithLocalFallback(recipeId?: string, source?: string) {
   const db = useSQLiteContext();
-  const apiQuery = useRecipeDetailQuery(recipeId);
+  const apiQuery = useRecipeDetailQuery(recipeId, source);
   const localQuery = useQuery({
     queryKey: queryKeys.recipes.localFallbackDetail(recipeId ?? ""),
     queryFn: () => getLocalRecipeById(db, recipeId ?? ""),
@@ -129,71 +126,3 @@ export function useRecipeDetailWithLocalFallback(recipeId?: string) {
   };
 }
 
-export function useRecipeSlugQuery(slug?: string) {
-  return useQuery({
-    queryKey: queryKeys.recipes.slug(slug ?? ""),
-    queryFn: () => recipesApi.getRecipeBySlug(slug ?? ""),
-    enabled: Boolean(slug),
-  });
-}
-
-export function useRecipeTagsQuery() {
-  return useQuery({
-    queryKey: queryKeys.recipes.tags,
-    queryFn: recipesApi.getRecipeTags,
-  });
-}
-
-export function useRateRecipeMutation(recipeId: string) {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (rating: number) => recipesApi.rateRecipe(recipeId, rating),
-    onSuccess: (result) => {
-      queryClient.setQueryData<RecipeDetail>(
-        queryKeys.recipes.detail(recipeId),
-        (current) =>
-          current
-            ? {
-                ...current,
-                currentUserRating: result.rating,
-                averageRating: result.averageRating,
-                ratingCount: result.ratingCount,
-              }
-            : current
-      );
-      queryClient.invalidateQueries({
-        predicate: (query) =>
-          query.queryKey[0] === "recipes" && query.queryKey[1] === "list",
-      });
-      queryClient.invalidateQueries({ queryKey: queryKeys.creators.all });
-    },
-  });
-}
-
-export function useRemoveRecipeRatingMutation(recipeId: string) {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: () => recipesApi.removeRecipeRating(recipeId),
-    onSuccess: (result) => {
-      queryClient.setQueryData<RecipeDetail>(
-        queryKeys.recipes.detail(recipeId),
-        (current) =>
-          current
-            ? {
-                ...current,
-                currentUserRating: null,
-                averageRating: result.averageRating,
-                ratingCount: result.ratingCount,
-              }
-            : current
-      );
-      queryClient.invalidateQueries({
-        predicate: (query) =>
-          query.queryKey[0] === "recipes" && query.queryKey[1] === "list",
-      });
-      queryClient.invalidateQueries({ queryKey: queryKeys.creators.all });
-    },
-  });
-}

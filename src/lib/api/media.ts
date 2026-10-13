@@ -24,10 +24,3 @@ export function completeMediaUpload(
     data: payload,
   });
 }
-
-export function deleteMedia(assetId: UUIDString) {
-  return apiRequest<void>({
-    url: `/me/media/${assetId}`,
-    method: "DELETE",
-  });
-}

@@ -12,7 +12,7 @@ import {
 } from "../../types/api";
 import { createLocalId } from "../id";
 
-export type ClassificationKind = RecipeClassification["kind"];
+type ClassificationKind = RecipeClassification["kind"];
 
 export type RecipeEditorState = {
   name: string;
@@ -421,7 +421,7 @@ export function syncInstructionTimers(
   };
 }
 
-export function detectTimerPhrases(text: string): RecipeTimerInput[] {
+function detectTimerPhrases(text: string): RecipeTimerInput[] {
   const matches: RecipeTimerInput[] = [];
   TIMER_PHRASE_RE.lastIndex = 0;
   let match: RegExpExecArray | null;

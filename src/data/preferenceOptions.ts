@@ -1,7 +1,7 @@
 
 import { DietaryPreference, HealthCondition } from "../types/preferences";
 
-export type PreferenceOption<TValue extends string> = {
+type PreferenceOption<TValue extends string> = {
   label: string;
   value: TValue;
 };
@@ -64,17 +64,3 @@ export const DIETARY_PREFERENCE_OPTIONS: PreferenceOption<DietaryPreference>[] =
       value: "high_protein",
     },
   ];
-
-export function getHealthConditionLabel(value: HealthCondition) {
-  return (
-    HEALTH_CONDITION_OPTIONS.find((option) => option.value === value)?.label ??
-    value
-  );
-}
-
-export function getDietaryPreferenceLabel(value: DietaryPreference) {
-  return (
-    DIETARY_PREFERENCE_OPTIONS.find((option) => option.value === value)
-      ?.label ?? value
-  );
-}

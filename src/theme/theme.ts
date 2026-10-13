@@ -10,5 +10,3 @@ export const theme = {
   fontFamily,
   fontSize,
 } as const;
-
-export type AppTheme = typeof theme;

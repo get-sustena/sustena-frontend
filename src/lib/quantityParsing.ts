@@ -17,7 +17,7 @@ const NUMERIC_TOKEN_SOURCE =
   `\\d+\\s+(?:${VULGAR_FRACTION_SOURCE})|\\d+\\.\\d+|\\d+\\/\\d+|` +
   `\\d+|${VULGAR_FRACTION_SOURCE})`;
 
-export const NUMERIC_TOKEN_PATTERN = new RegExp(NUMERIC_TOKEN_SOURCE);
+const NUMERIC_TOKEN_PATTERN = new RegExp(NUMERIC_TOKEN_SOURCE);
 export const NUMERIC_TOKEN_PATTERN_GLOBAL = new RegExp(
   NUMERIC_TOKEN_SOURCE,
   "g"

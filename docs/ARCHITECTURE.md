@@ -147,8 +147,19 @@ Components read stores with selectors (`useAuthStore((s) => s.user)`), not by ta
 - Search stays reachable on long screens. Recipes and Pantry fix their search and filters above the list, and only the list scrolls. On Profile, the page header and stats scroll away, then the Published/Drafts tabs and "Search my recipes" stick under the header (`stickyHeaderIndices`, as on the public creator profile). A new search or filter scrolls back to the first result.
 - Long lists use FlashList: the Recipes grid, Saved recipes, the Pantry list and the pantry ingredient picker. FlashList has no `columnWrapperStyle`, and its `contentContainerStyle` takes only padding and background, so each cell carries its own spacing. Both recipe grids use `src/components/recipe/RecipeGridItem.tsx`, which adds the 20px page gutter and half of the 12px column gap. Cards in a row match heights because FlashList gives every cell in a row the tallest cell's height.
 - Typed search waits 300 ms after the last keystroke before querying (`src/hooks/useDebouncedValue.ts`).
+- Loading states inside a screen use skeletons, never the logo loader: `SkeletonGroup` and `SkeletonBlock` in `src/components/ui/Skeleton.tsx`, laid out in the shape of the content that replaces them so nothing jumps. The group pulses, stays still under reduced motion and reads as one labelled busy element. The logo loader (`ProgressLoader`) is only for app start.
 - Anything that depends on the time of day comes from `useTimeOfDay(read)` in `src/hooks/useTimeOfDay.ts`, such as `useTimeOfDay(getMealTime)` or `useTimeOfDay(getGreeting)`. It reads the clock again every minute and on return to the foreground. Don't call `new Date()` while rendering: the React Compiler caches a call that takes no inputs, so the value never changes.
 - Screens pad the top with `useSafeAreaInsets()` because the stack has no native header.
+
+## Push meal reminders
+
+The founder approved these on 13 October 2026. The backend sends "Our Recommendation" at 8am, 1pm and 5pm Lagos time, with titles "Your breakfast pick", "Your lunch pick" and "Your dinner pick", and text like "Akara and Pap, you can cook this in 25 minutes" (only the name if the recipe has no cooking time).
+
+- **Phones only.** `src/lib/notifications/mealReminders.ts` uses `expo-notifications`. `mealReminders.web.ts` does nothing, because Expo push doesn't reach the web app, and the Settings switch is hidden on web.
+- **Permission comes only from the Settings "Meal Reminders" switch** (founder's rule). Turning it on creates the Android channel `meal-reminders`, asks for permission, gets the Expo push token (EAS `projectId`) and registers it with `POST /me/push-tokens {token, platform, timeZone}`. Turning it off, or signing out, calls `DELETE /me/push-tokens/{encoded token}`. The registered token is kept in `local_metadata` (`meal_reminder_push_token`).
+- **Staying registered:** `useMealReminders` (mounted in `RootNavigator`) registers again on every app start while reminders are on, and when Android issues a new token. If notifications were turned off in the phone's settings, it switches reminders off.
+- **Tapping a reminder** opens `/recipes/[id]` with `source=meal_reminder`, which the recipe page passes on `GET /recipes/{id}` so the backend records it on `recipe_opened`. `getMealReminderRecipeId` ignores any other kind of notification.
+- **Native setup:** `app.json` has the `expo-notifications` plugin (white Sustena-mark icon `assets/images/notification-icon.png`, brand green, default channel `meal-reminders`) and `android.googleServicesFile` (`google-services.json`, Firebase project `sustena-app`). The FCM V1 key lives in EAS credentials, never in the repo. Notifications only work in a real build (APK), not Expo Go.
 
 ## Build, release and branches
 
@@ -166,6 +177,7 @@ Branches: `testing` is for local work. `main` is the deployment branch on GitHub
 | --- | --- |
 | Types | `npx tsc --noEmit` |
 | Lint | `npm run lint` |
+| Unused code | `npm run lint:unused` (knip; the founder's rule is no dead code, so this should report nothing. `expo-symbols` is kept on purpose and listed in `knip.json`'s `ignoreDependencies`) |
 | Unit tests | `node --test tests/*.test.mjs` (28 tests; passing `tests/` as a folder fails on Windows) |
 | Web preview | `npm run web`, then open http://localhost:8081 |
 
@@ -204,7 +216,7 @@ Found while reading the code against the frontend skills. None of these is fixed
 | Long cook times wrap badly on recipe tiles | `src/components/recipe/RecipeTile.tsx` (seen on Afang Soup: "135 MIN · ₦10,000") | The time and price break across lines. |
 | `AGENTS.md` points to the Expo v54 docs | `AGENTS.md` | The project is on SDK 57. |
 | "cookease" names remain | App slug, URL scheme, token keys, database name | Renaming any of them needs a plan: the slug links EAS builds, and the token keys and database name would sign everyone out and empty local data. |
-| Unused dependencies | `react-hook-form`, `zod`, Playfair Display and Plus Jakarta Sans fonts | Extra install weight. |
+| Start-up shows the logo while it waits on five server calls | `useAppBootstrap` (preferences, profile answers, planner settings, pantry, shopping lists) behind `AppBootstrapGate` | On a slow connection the logo stays up for seconds before any tab, about 18s with 6s per request. Moving those calls to the background would let each tab show its own skeleton, but a late reply could overwrite something the user just added, so it needs guarding. Waiting on the founder. |
 
 ## Change log
 
@@ -223,3 +235,8 @@ All on 13 October 2026, on `testing`:
 - `1540c21` Pantry: the "Your ingredients" row, search and category pills stay pinned while the ingredient list scrolls (FlashList).
 - `bc7dc99` Profile: the Published/Drafts tabs and "Search my recipes" stick under the header once scrolled to the top.
 - `5a33e61` Meal labels (founder, 13 October 2026). Home's recommendation and Quick & Easy cards show the current meal when the recipe is tagged for it, otherwise its first tag. The recipe page shows every meal the recipe suits, in the order Breakfast, Lunch, Dinner. The rules are `getCardChipLabel` and `getRecipeMeals` in `src/lib/mealTime.ts`.
+- `af60b71` PR #1 merged into `main` (via `gh`) and live: pinned Pantry and Profile search, meal labels and the live greeting.
+- `84085ea` Home's budget link is now an outlined pill button, "Plan a day of meals on a budget" (founder-approved v6.8 design).
+- `e7f12d4` Start-up retries `/auth/me` after a dropped connection (2, 5, 15, then every 30 seconds), so the user and their name still load.
+- `4832077`, `8f069d1`, `5e3a541` Dead code removed (founder rule): 18 unused files, unused hooks, API calls, helpers, types, query keys and 51 style keys, and five unused packages. `npm run lint:unused` (knip) keeps it that way.
+- `1a6f76b`, `f8f3836`, `c579680` Skeleton loaders replace the logo loader in the tabs (Home, Recipes, Pantry, Profile, Shopping list, budget planner), and the Profile recipe grid now fills its row.
