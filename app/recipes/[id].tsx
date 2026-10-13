@@ -77,6 +77,8 @@ import type {
   RecipeIngredient as ApiRecipeIngredient,
 } from "../../src/types/api";
 import { createLocalId } from "../../src/lib/id";
+import { readRecipeSource } from "../../src/lib/recipeSource";
+import { CookedButton } from "../../src/components/recipe/CookedButton";
 
 // --rd-muted in the v6.8 recipe page.
 const INGREDIENT_CHEVRON_COLOR = "#686E66";
@@ -87,7 +89,9 @@ export default function RecipeDetailScreen() {
   const { width: windowWidth } = useWindowDimensions();
   // v6.8: font-size clamp(27px, 8vw, 34px), line-height 1.04, tracking -0.035em.
   const titleSize = Math.min(34, Math.max(27, windowWidth * 0.08));
-  const { id, source } = useLocalSearchParams<{ id: string; source?: string }>();
+  const params = useLocalSearchParams<{ id: string; source?: string }>();
+  const { id } = params;
+  const source = readRecipeSource(params.source);
 
   const recipeQuery = useRecipeDetailWithLocalFallback(id, source);
   const recipeDetail = recipeQuery.data;
@@ -1032,6 +1036,10 @@ export default function RecipeDetailScreen() {
             ))}
           </View>
 
+          <View style={styles.cooked}>
+            <CookedButton recipeId={recipe.id} source={source} />
+          </View>
+
           {recipe.tools.length > 0 ? (
             <View style={styles.toolSection}>
               <AppText style={styles.toolSectionTitle}>
@@ -1673,6 +1681,10 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     color: "#20241F",
     paddingTop: 3,
+  },
+  // v6.8 .rd-cooked.
+  cooked: {
+    marginTop: 30,
   },
   toolSection: {
     marginTop: 30,

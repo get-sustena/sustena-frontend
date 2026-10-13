@@ -36,6 +36,9 @@ export const queryKeys = {
       ["recipes", "local-fallback-detail", id] as const,
     localFavorites: ["recipes", "local-profile-favorites"] as const,
     detail: (id: string) => ["recipes", "detail", id] as const,
+    // The Lagos day this person last marked the recipe cooked (local only).
+    cookedDay: (userId: string, recipeId: string) =>
+      ["recipes", "cooked-day", userId, recipeId] as const,
   },
   recommendations: {
     // Pantry, preference and profile changes invalidate this prefix, which

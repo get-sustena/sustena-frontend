@@ -29,6 +29,7 @@ import {
 } from "../../lib/api/errors";
 import { mealPlansApi, shoppingListsApi } from "../../lib/api";
 import { formatNaira } from "../../lib/formatters";
+import { openRecipe } from "../../lib/navigation/openRecipe";
 import {
   SERVINGS_BY_HABIT_WHO,
   TIME_CAP_BY_HABIT,
@@ -680,12 +681,7 @@ export function BudgetPlannerPane() {
                 style={styles.mealRow}
               >
                 <Pressable
-                  onPress={() =>
-                    router.push({
-                      pathname: "/recipes/[id]",
-                      params: { id: recipe.id },
-                    })
-                  }
+                  onPress={() => openRecipe(recipe.id, "meal_plan")}
                   style={({ pressed }) => [
                     styles.mealMain,
                     pressed && styles.pressed,

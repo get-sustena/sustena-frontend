@@ -43,15 +43,9 @@ import { openSheet, showToast } from "../../src/store/uiStore";
 import { theme } from "../../src/theme/theme";
 import { appImages } from "../../src/assets/appImages";
 import { TAB_BAR_CLEARANCE } from "../../src/components/layout/tabBarClearance";
+import { openRecipe } from "../../src/lib/navigation/openRecipe";
 
 const KITCHEN_QUICK_CATEGORIES = ["Proteins", "Produce", "Grains"];
-
-function openRecipe(recipeId: string) {
-  router.push({
-    pathname: "/recipes/[id]",
-    params: { id: recipeId },
-  });
-}
 
 function openPlanner(tab: "budget" | "kitchen", category?: string) {
   router.push({
@@ -254,7 +248,7 @@ export default function HomeScreen() {
             <FeaturedRecipeCard
               recipe={featuredRecipe}
               mealTime={mealTime}
-              onPress={() => openRecipe(featuredRecipe.id)}
+              onPress={() => openRecipe(featuredRecipe.id, "home")}
             />
           ) : (
             <HomeSectionState
@@ -406,7 +400,7 @@ function QuickCarousel({
             key={recipe.id}
             recipe={recipe}
             mealTime={mealTime}
-            onPress={() => openRecipe(recipe.id)}
+            onPress={() => openRecipe(recipe.id, "home")}
           />
         ))}
       </ScrollView>

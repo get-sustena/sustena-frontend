@@ -1,28 +1,22 @@
-import { router } from "expo-router";
 import { StyleSheet, View } from "react-native";
 import type { Recipe } from "../../data/recipes";
+import { openRecipe } from "../../lib/navigation/openRecipe";
+import type { RecipeSource } from "../../lib/recipeSource";
 import { RecipeTile } from "./RecipeTile";
 
 type Props = {
   recipe: Recipe;
   index: number;
+  source: RecipeSource;
 };
 
 // One cell of a two-column FlashList grid. FlashList has no
 // columnWrapperStyle, so the cell carries the 20px page gutter on its outer
 // side and half of the 12px column gap on its inner side.
-export function RecipeGridItem({ recipe, index }: Props) {
+export function RecipeGridItem({ recipe, index, source }: Props) {
   return (
     <View style={[styles.cell, index % 2 === 0 ? styles.startCell : styles.endCell]}>
-      <RecipeTile
-        recipe={recipe}
-        onPress={() =>
-          router.push({
-            pathname: "/recipes/[id]",
-            params: { id: recipe.id },
-          })
-        }
-      />
+      <RecipeTile recipe={recipe} onPress={() => openRecipe(recipe.id, source)} />
     </View>
   );
 }
