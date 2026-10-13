@@ -78,7 +78,7 @@ docs/                Notes and backend handoffs (.gitignore lists /docs, so add 
 - A signed-out visitor sent to a signed-in URL lands on `index`, which forwards them to welcome or sign-in. Signing out removes the signed-in screens from history and lands on sign-in.
 - `tests/routeAccess.test.mjs` fails when a file in `app/` is in neither list, so a new screen can't go public by accident. Add every new screen to one of the lists.
 - `RootNavigator` reads the session itself because it sits inside `AppBootstrapGate`. Don't pass the guard down from `RootLayout`: that value can be a render behind on start-up and sends signed-in users to a blank screen.
-- The guard only stops the app from showing screens. The API still has to refuse signed-out requests; today `GET /recipes` and the detail endpoints answer anyone (`docs/backend-notes/recipe-api-lockdown.md` in the codebase root).
+- The guard only stops the app from showing screens. `GET /recipes` and the detail endpoints still answer anyone. On 13 October 2026 the founder decided not to lock the API down (relayed by the backend chat), so anyone calling the API directly can still read recipes.
 
 ## Navigation
 
@@ -164,7 +164,7 @@ Branches: `testing` is for local work. `main` is the deployment branch on GitHub
 | --- | --- |
 | Types | `npx tsc --noEmit` |
 | Lint | `npm run lint` |
-| Unit tests | `node --test tests/*.test.mjs` (11 tests; passing `tests/` as a folder fails on Windows) |
+| Unit tests | `node --test tests/*.test.mjs` (21 tests; passing `tests/` as a folder fails on Windows) |
 | Web preview | `npm run web`, then open http://localhost:8081 |
 
 ## Rules for changes
@@ -185,8 +185,11 @@ Found while reading the code against the frontend skills. None of these is fixed
 
 | Gap | Where | Why it matters |
 | --- | --- | --- |
-| The API serves recipes to signed-out callers | Backend | The app guard can't stop someone calling the API directly. Coordinated with the backend chat. |
-| The offline cache needs `qualityScore`, `qualityWarnings` and `source*` | `src/db/recipeRepository.ts` (`quality_warnings_json` is NOT NULL) | If the backend removes those fields, recipe details stop being cached for offline use. The cache must default them first. |
+| The API serves recipes to signed-out callers | Backend | The founder decided on 13 October 2026 not to lock it down. Recorded here so it stays a known choice. |
+| The offline cache needs `qualityScore`, `qualityWarnings` and `source*` | `src/db/recipeRepository.ts` (`quality_warnings_json` is NOT NULL) | The backend keeps the fields. If it ever empties them, `qualityWarnings` must stay `[]`, never null or missing. |
+| The bundled recipe seed is out of date | `src/data/mobile_seed_recipes_published.json` (June 2026, 112 recipes, no meal tags or categories) | Offline phones relying on the seed can't filter recommendations by meal and get the unfiltered list. |
+| The featured card's chip shows the recipe's first tag | `src/components/recipe/FeaturedRecipeCard.tsx` | At lunch it can read "Dinner" beside "Cook This for Lunch". Needs a wording decision. |
+| The greeting never updates while the app stays open | `getGreeting()` in `app/(tabs)/home.tsx` | It takes no inputs, so the React Compiler caches the first result. "Good morning" stays until Home remounts. |
 | Rating a recipe leaves the Recipes grid showing the old rating | The infinite list key `["recipes", "infinite-list", ...]` isn't invalidated after rating | Tiles show the average rating. It updates only when the query goes stale. |
 | No error boundary anywhere | `app/` | One crashing screen takes down the whole app. |
 | The search field has no accessible label and no clear button | `src/components/ui/SearchInput.tsx` | Screen readers only get the placeholder, and clearing a search means deleting each character. |
@@ -209,3 +212,4 @@ All on 13 October 2026, on `testing`:
 - `1552f03` Recipe search waits 300 ms after the last keystroke: one request for "jollof" instead of six.
 - `b342855` FlashList for the Recipes grid, Saved recipes and the pantry picker, with the shared `RecipeGridItem`.
 - `903aad4` Every signed-in screen is guarded by `Stack.Protected`, with the route lists and their test.
+- `bb1265b` Home recommendations follow the time of day: breakfast from 6:00 to 10:59, lunch from 11:00 to 15:59, dinner from 16:00 and overnight. `src/lib/mealTime.ts` holds the clock rule and the meal rule (the meal's own tag, plus `main-meal` for lunch and dinner). `useMealTime` rechecks every minute and on return to the foreground. The request sends `mealTime`, the offline fallback filters by meal, and the button reads "Cook This Morning", "Cook This for Lunch" or "Cook This Tonight".
