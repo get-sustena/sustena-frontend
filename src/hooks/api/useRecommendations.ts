@@ -2,21 +2,37 @@ import { useQuery } from "@tanstack/react-query";
 import { useSQLiteContext } from "expo-sqlite";
 import { getLocalRecipes } from "../../db/recipeRepository";
 import { recommendationsApi } from "../../lib/api";
+import { isRecipeForMealTime, type MealTime } from "../../lib/mealTime";
 import { queryKeys } from "../../lib/query/queryKeys";
 import type { RecommendationListResponse } from "../../types/api";
 
-export function useHomeRecommendations() {
+const RECOMMENDATION_COUNT = 12;
+const LOCAL_CATALOGUE_SIZE = 500;
+
+export function useHomeRecommendations(mealTime: MealTime) {
   const db = useSQLiteContext();
   const apiQuery = useQuery({
-    queryKey: queryKeys.recommendations.home,
-    queryFn: () => recommendationsApi.getRecommendations(12),
+    queryKey: queryKeys.recommendations.homeForMeal(mealTime),
+    queryFn: () =>
+      recommendationsApi.getRecommendations(RECOMMENDATION_COUNT, mealTime),
   });
   const localQuery = useQuery({
-    queryKey: ["recommendations", "local-fallback"] as const,
+    queryKey: queryKeys.recommendations.localFallback(mealTime),
     queryFn: async (): Promise<RecommendationListResponse> => {
-      const recipes = await getLocalRecipes(db, { page: 1, pageSize: 12 });
+      const catalogue = await getLocalRecipes(db, {
+        page: 1,
+        pageSize: LOCAL_CATALOGUE_SIZE,
+      });
+      const forMeal = catalogue.items.filter((recipe) =>
+        isRecipeForMealTime(recipe, mealTime)
+      );
+      // Like the API, show the usual list when nothing fits the meal.
+      const recipes = (forMeal.length > 0 ? forMeal : catalogue.items).slice(
+        0,
+        RECOMMENDATION_COUNT
+      );
       return {
-        items: recipes.items.map((recipe) => ({
+        items: recipes.map((recipe) => ({
           recipe,
           score: 0,
           pantryMatchPercentage: 0,

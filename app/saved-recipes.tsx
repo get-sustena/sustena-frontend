@@ -1,7 +1,8 @@
+import { FlashList } from "@shopify/flash-list";
 import { router } from "expo-router";
 import { Image } from "expo-image";
-import { FlatList, Pressable, StyleSheet, View } from "react-native";
-import { RecipeTile } from "../src/components/recipe/RecipeTile";
+import { Pressable, StyleSheet, View } from "react-native";
+import { RecipeGridItem } from "../src/components/recipe/RecipeGridItem";
 import { appImages } from "../src/assets/appImages";
 import { AppText } from "../src/components/ui/AppText";
 import { Button } from "../src/components/ui/Button";
@@ -25,30 +26,8 @@ export default function SavedRecipesScreen() {
         <View style={styles.headerButton} />
       </View>
 
-      <FlatList
-        data={favoriteRecipes}
-        keyExtractor={(item) => item.id}
-        numColumns={2}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={[
-          styles.gridContent,
-          favoriteRecipes.length === 0 && styles.emptyGridContent,
-        ]}
-        columnWrapperStyle={
-          favoriteRecipes.length > 0 ? styles.columnWrapper : undefined
-        }
-        renderItem={({ item }) => (
-          <RecipeTile
-            recipe={item}
-            onPress={() =>
-              router.push({
-                pathname: "/recipes/[id]",
-                params: { id: item.id },
-              })
-            }
-          />
-        )}
-        ListEmptyComponent={
+      {favoriteRecipes.length === 0 ? (
+        <View style={styles.emptyContent}>
           <View style={styles.empty}>
             <Image
               source={appImages.emptyStates.savedRecipe}
@@ -66,8 +45,19 @@ export default function SavedRecipesScreen() {
               onPress={() => router.push("/(tabs)/recipes")}
             />
           </View>
-        }
-      />
+        </View>
+      ) : (
+        <FlashList
+          data={favoriteRecipes}
+          keyExtractor={(item) => item.id}
+          numColumns={2}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.gridContent}
+          renderItem={({ item, index }) => (
+            <RecipeGridItem recipe={item} index={index} />
+          )}
+        />
+      )}
     </Screen>
   );
 }
@@ -98,16 +88,13 @@ const styles = StyleSheet.create({
     color: theme.colors.navy,
   },
   gridContent: {
-    paddingHorizontal: 20,
     paddingBottom: 40,
   },
-  emptyGridContent: {
-    flexGrow: 1,
+  emptyContent: {
+    flex: 1,
     justifyContent: "center",
-  },
-  columnWrapper: {
-    gap: 12,
-    marginBottom: 12,
+    paddingHorizontal: 20,
+    paddingBottom: 40,
   },
   empty: {
     alignItems: "center",

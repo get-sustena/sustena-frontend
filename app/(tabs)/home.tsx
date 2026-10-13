@@ -32,6 +32,7 @@ import { Icon } from "../../src/components/ui/Icon";
 import { useRecipesWithLocalFallback } from "../../src/hooks/api/useRecipes";
 import { useProfileAnswersQuery } from "../../src/hooks/api/useProfileAnswers";
 import { useHomeRecommendations } from "../../src/hooks/api/useRecommendations";
+import { useMealTime } from "../../src/hooks/useMealTime";
 import { apiRecipeToLocalRecipe } from "../../src/lib/api/adapters";
 import { finiteTimeCap } from "../../src/lib/plannerQuickSetup";
 import { useAuthStore } from "../../src/store/authStore";
@@ -76,7 +77,8 @@ export default function HomeScreen() {
     experience === "beginner" || experience === "intermediate"
       ? experience
       : undefined;
-  const recommendationsQuery = useHomeRecommendations();
+  const mealTime = useMealTime();
+  const recommendationsQuery = useHomeRecommendations(mealTime);
   const quickRecipesQuery = useRecipesWithLocalFallback({
     quickAndEasy: true,
     maxTotalTimeMinutes: Math.min(preferredTimeCap ?? 45, 45),
@@ -90,7 +92,10 @@ export default function HomeScreen() {
     ) ?? [];
   const quickRecipeResults =
     quickRecipesQuery.data?.items.map(apiRecipeToLocalRecipe) ?? [];
-  const [featuredIndex, setFeaturedIndex] = useState(0);
+  // Shuffle position for the current meal; a new meal time starts at the first pick.
+  const [shuffle, setShuffle] = useState({ mealTime, index: 0 });
+  const [kitchenPressed, setKitchenPressed] = useState(false);
+  const featuredIndex = shuffle.mealTime === mealTime ? shuffle.index : 0;
   const featuredRecipe = recipes[featuredIndex % Math.max(recipes.length, 1)];
   const quickRecipes = quickRecipeResults.filter(
     (recipe) =>
@@ -137,14 +142,8 @@ export default function HomeScreen() {
             Smart Planner
           </AppText>
 
-          <Pressable
-            onPress={() => openPlanner("kitchen")}
-            style={({ pressed }) => [
-              styles.kitchenCardPressable,
-              pressed && styles.pressed,
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel="Open What's in My Kitchen"
+          <View
+            style={[styles.kitchenCardShadow, kitchenPressed && styles.pressed]}
           >
             <View style={styles.kitchenCard}>
               <LinearGradient
@@ -175,23 +174,32 @@ export default function HomeScreen() {
                 style={styles.kitchenPepper}
               />
 
-              <View style={styles.kitchenContent}>
-                <AppText style={styles.kitchenTitle}>
-                  What&apos;s in My Kitchen?
-                </AppText>
-                <AppText style={styles.kitchenSubtitle}>
-                  Tell us what you&apos;ve got, and we&apos;ll match it to
-                  recipes you can cook right now.
-                </AppText>
+              {/* Behind the content, not around it: a button inside a button is invalid on web and hidden from VoiceOver on iOS. */}
+              <Pressable
+                onPress={() => openPlanner("kitchen")}
+                onPressIn={() => setKitchenPressed(true)}
+                onPressOut={() => setKitchenPressed(false)}
+                style={StyleSheet.absoluteFill}
+                accessibilityRole="button"
+                accessibilityLabel="Open What's in My Kitchen"
+              />
 
-                <View style={styles.kitchenPillRow}>
+              <View style={[styles.kitchenContent, styles.passTouches]}>
+                <View style={styles.ignoreTouches}>
+                  <AppText style={styles.kitchenTitle}>
+                    What&apos;s in My Kitchen?
+                  </AppText>
+                  <AppText style={styles.kitchenSubtitle}>
+                    Tell us what you&apos;ve got, and we&apos;ll match it to
+                    recipes you can cook right now.
+                  </AppText>
+                </View>
+
+                <View style={[styles.kitchenPillRow, styles.passTouches]}>
                   {KITCHEN_QUICK_CATEGORIES.map((category) => (
                     <Pressable
                       key={category}
-                      onPress={(event) => {
-                        event.stopPropagation();
-                        openPlanner("kitchen", category);
-                      }}
+                      onPress={() => openPlanner("kitchen", category)}
                       style={({ pressed }) => [
                         styles.kitchenPill,
                         pressed && styles.kitchenPillPressed,
@@ -207,7 +215,7 @@ export default function HomeScreen() {
                 </View>
               </View>
             </View>
-          </Pressable>
+          </View>
 
           <Pressable
             onPress={() => openPlanner("budget")}
@@ -231,7 +239,7 @@ export default function HomeScreen() {
 
             <Pressable
               onPress={() => {
-                setFeaturedIndex((current) => current + 1);
+                setShuffle({ mealTime, index: featuredIndex + 1 });
                 showToast("New pick found!");
               }}
               style={({ pressed }) => [
@@ -252,6 +260,7 @@ export default function HomeScreen() {
           ) : featuredRecipe ? (
             <FeaturedRecipeCard
               recipe={featuredRecipe}
+              mealTime={mealTime}
               onPress={() => openRecipe(featuredRecipe.id)}
             />
           ) : (
@@ -518,7 +527,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: theme.colors.linkGreen,
   },
-  kitchenCardPressable: {
+  kitchenCardShadow: {
     borderRadius: 20,
     marginBottom: 10,
     shadowColor: theme.colors.navy,
@@ -548,6 +557,12 @@ const styles = StyleSheet.create({
   kitchenContent: {
     position: "relative",
     zIndex: 1,
+  },
+  passTouches: {
+    pointerEvents: "box-none",
+  },
+  ignoreTouches: {
+    pointerEvents: "none",
   },
   kitchenTitle: {
     fontFamily: theme.fontFamily.display,
