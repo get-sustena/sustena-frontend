@@ -68,7 +68,7 @@ The deployable output is written to `dist/`.
 
 Deploy the `dist/` directory to a static host. The repository includes:
 
-- `vercel.json` for Vercel rewrites and required SQLite/WASM response headers.
+- `vercel.json` for Vercel rewrites, the required SQLite/WASM response headers, and year-long browser caching of the content-hashed files under `/_expo/static/` and `/assets/`.
 - `public/_redirects` and `public/_headers` for hosts that support Netlify-style files.
 
 For a local production preview:
