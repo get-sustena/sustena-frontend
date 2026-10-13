@@ -1,7 +1,8 @@
+import { FlashList, type FlashListRef } from "@shopify/flash-list";
 import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from "react-native";
 import { replaceStoredPantry } from "../../db/pantryRepository";
 import { appImages } from "../../assets/appImages";
@@ -17,6 +18,7 @@ import { usePantryStore } from "../../store/pantryStore";
 import { useProfileAnswersStore } from "../../store/profileAnswersStore";
 import { closeSheet, openSheet, showToast } from "../../store/uiStore";
 import { theme } from "../../theme/theme";
+import type { Ingredient } from "../../types/api";
 import { IngredientImage } from "../ingredient/IngredientImage";
 import { RecipePhoto } from "../recipe/RecipePhoto";
 import { AppText } from "../ui/AppText";
@@ -25,11 +27,12 @@ import { Icon } from "../ui/Icon";
 import { ProgressLoader } from "../ui/ProgressLoader";
 import { PantryIngredientPickerSheet } from "./PantryIngredientPickerSheet";
 
-type Props = { initialCategory?: string };
+type Props = { initialCategory?: string; bottomPadding: number };
 
-export function PantryPane({ initialCategory }: Props) {
+export function PantryPane({ initialCategory, bottomPadding }: Props) {
   const db = useSQLiteContext();
   const { height } = useWindowDimensions();
+  const listRef = useRef<FlashListRef<Ingredient>>(null);
   const [search, setSearch] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
   const [activeCategory, setActiveCategory] = useState(initialCategory ?? "All");
@@ -57,6 +60,11 @@ export function PantryPane({ initialCategory }: Props) {
   const matches = matchMutation.isPending || matchMutation.isError
     ? []
     : matchMutation.data?.matches.map((match) => ({ ...match, recipe: apiRecipeToLocalRecipe(match.recipe) })) ?? [];
+
+  // Search and categories stay pinned, so a change can happen mid-list.
+  useEffect(() => {
+    listRef.current?.scrollToOffset({ offset: 0, animated: false });
+  }, [activeCategory, search]);
 
   useEffect(() => {
     const ids = pantryQuery.data?.items.map((item) => item.ingredientId);
@@ -146,12 +154,12 @@ export function PantryPane({ initialCategory }: Props) {
     }
   }
 
-  if (catalogQuery.isPending || (pantryQuery.isPending && !pantryIds.length)) return <ProgressLoader />;
-  if (catalogQuery.isError) return <EmptyState iconName="offline" title="Could not load ingredients" message={getApiErrorMessage(catalogQuery.error)} />;
+  if (catalogQuery.isPending || (pantryQuery.isPending && !pantryIds.length)) return <PaneScroll bottomPadding={bottomPadding}><ProgressLoader /></PaneScroll>;
+  if (catalogQuery.isError) return <PaneScroll bottomPadding={bottomPadding}><EmptyState iconName="offline" title="Could not load ingredients" message={getApiErrorMessage(catalogQuery.error)} /></PaneScroll>;
 
   if (showResults) {
     return (
-      <View>
+      <PaneScroll bottomPadding={bottomPadding}>
         <Pressable onPress={() => setShowResults(false)} style={styles.resultsBack}>
           <Icon name="chevronLeft" size={16} color="#1F7048" />
           <AppText style={styles.resultsBackText}>Edit pantry</AppText>
@@ -183,54 +191,63 @@ export function PantryPane({ initialCategory }: Props) {
             </Pressable>
           ))}
         </View>
-      </View>
+      </PaneScroll>
     );
   }
 
   if (!pantryIds.length) {
     return (
-      <View style={styles.empty}>
-        <AppText style={styles.emptyCopy}>Add what you already have at home. Sustena will use it to find meals you can actually make.</AppText>
-        <Image
-          source={appImages.emptyStates.pantry}
-          contentFit="contain"
-          style={[styles.emptyVisual, {
-            height: height <= 700 ? 190 : 224,
-            marginTop: Math.min(118, Math.max(96, height * 0.14)),
-          }]}
-        />
-        <Pressable onPress={openIngredientPicker} style={styles.emptyButton}>
-          <Icon name="plus" size={17} color={theme.colors.text} />
-          <AppText style={styles.emptyButtonText}>Add ingredients</AppText>
-        </Pressable>
-        <AppText style={styles.emptyTip}>The more ingredients you have in your pantry, the better our meal recommendations</AppText>
-      </View>
+      <PaneScroll bottomPadding={bottomPadding}>
+        <View style={styles.empty}>
+          <AppText style={styles.emptyCopy}>Add what you already have at home. Sustena will use it to find meals you can actually make.</AppText>
+          <Image
+            source={appImages.emptyStates.pantry}
+            contentFit="contain"
+            style={[styles.emptyVisual, {
+              height: height <= 700 ? 190 : 224,
+              marginTop: Math.min(118, Math.max(96, height * 0.14)),
+            }]}
+          />
+          <Pressable onPress={openIngredientPicker} style={styles.emptyButton}>
+            <Icon name="plus" size={17} color={theme.colors.text} />
+            <AppText style={styles.emptyButtonText}>Add ingredients</AppText>
+          </Pressable>
+          <AppText style={styles.emptyTip}>The more ingredients you have in your pantry, the better our meal recommendations</AppText>
+        </View>
+      </PaneScroll>
     );
   }
 
   return (
-    <View>
-      <View style={styles.sectionHeader}>
-        <AppText style={styles.sectionTitle}>Your ingredients</AppText>
-        <Pressable onPress={openIngredientPicker} style={styles.addSmall}>
-          <Icon name="plus" size={16} color={theme.colors.onDark} />
-          <AppText style={styles.addSmallText}>Add ingredients</AppText>
-        </Pressable>
-      </View>
-      <View style={[styles.search, searchFocused && styles.searchFocused]}>
-        <Icon name="discover" size={18} color={theme.colors.textMedium} />
-        <TextInput value={search} onChangeText={setSearch} onFocus={() => setSearchFocused(true)} onBlur={() => setSearchFocused(false)} placeholder="Search your pantry" placeholderTextColor={theme.colors.textMuted} style={styles.searchInput} />
-      </View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categories}>
-        {PANTRY_CATEGORIES.map((category) => (
-          <Pressable key={category} onPress={() => setActiveCategory(category)} style={[styles.category, activeCategory === category && styles.categoryActive]}>
-            <AppText style={[styles.categoryText, activeCategory === category && styles.categoryTextActive]}>{category}</AppText>
+    <View style={styles.pane}>
+      <View style={styles.pinned}>
+        <View style={styles.sectionHeader}>
+          <AppText style={styles.sectionTitle}>Your ingredients</AppText>
+          <Pressable onPress={openIngredientPicker} style={styles.addSmall}>
+            <Icon name="plus" size={16} color={theme.colors.onDark} />
+            <AppText style={styles.addSmallText}>Add ingredients</AppText>
           </Pressable>
-        ))}
-      </ScrollView>
-      <AppText style={styles.count}>{pantryIds.length} ingredients{activeCategory !== "All" ? ` · ${activeCategory}` : ""}</AppText>
-      <View style={styles.list}>
-        {visibleIngredients.length === 0 ? (
+        </View>
+        <View style={[styles.search, searchFocused && styles.searchFocused]}>
+          <Icon name="discover" size={18} color={theme.colors.textMedium} />
+          <TextInput value={search} onChangeText={setSearch} onFocus={() => setSearchFocused(true)} onBlur={() => setSearchFocused(false)} placeholder="Search your pantry" placeholderTextColor={theme.colors.textMuted} style={styles.searchInput} />
+        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categories}>
+          {PANTRY_CATEGORIES.map((category) => (
+            <Pressable key={category} onPress={() => setActiveCategory(category)} style={[styles.category, activeCategory === category && styles.categoryActive]}>
+              <AppText style={[styles.categoryText, activeCategory === category && styles.categoryTextActive]}>{category}</AppText>
+            </Pressable>
+          ))}
+        </ScrollView>
+      </View>
+      <FlashList
+        ref={listRef}
+        data={visibleIngredients}
+        keyExtractor={(ingredient) => ingredient.id}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: bottomPadding }}
+        ListHeaderComponent={<AppText style={styles.count}>{pantryIds.length} ingredients{activeCategory !== "All" ? ` · ${activeCategory}` : ""}</AppText>}
+        ListEmptyComponent={
           <View style={styles.searchEmpty}>
             <View style={styles.searchEmptyIcon}>
               <Icon name="discover" size={24} color={theme.colors.textMutedAlt} />
@@ -240,29 +257,46 @@ export function PantryPane({ initialCategory }: Props) {
               Try another search or choose a different category.
             </AppText>
           </View>
-        ) : visibleIngredients.map((ingredient) => (
-          <View key={ingredient.id} style={styles.ingredientRow}>
-            <IngredientImage
-              ingredientId={ingredient.id}
-              name={ingredient.displayName}
-              size={48}
-              style={styles.ingredientThumb}
-            />
-            <AppText style={styles.ingredientName} numberOfLines={1}>{ingredient.displayName}</AppText>
-            <Pressable onPress={() => void handleRemove(ingredient.id)} style={styles.remove} accessibilityLabel={`Remove ${ingredient.displayName} from pantry`}>
-              <Icon name="trash" size={17} color={theme.colors.textMedium} />
-            </Pressable>
+        }
+        renderItem={({ item: ingredient }) => (
+          <View style={styles.ingredientCell}>
+            <View style={styles.ingredientRow}>
+              <IngredientImage
+                ingredientId={ingredient.id}
+                name={ingredient.displayName}
+                size={48}
+                style={styles.ingredientThumb}
+              />
+              <AppText style={styles.ingredientName} numberOfLines={1}>{ingredient.displayName}</AppText>
+              <Pressable onPress={() => void handleRemove(ingredient.id)} style={styles.remove} accessibilityLabel={`Remove ${ingredient.displayName} from pantry`}>
+                <Icon name="trash" size={17} color={theme.colors.textMedium} />
+              </Pressable>
+            </View>
           </View>
-        ))}
-      </View>
-      <Pressable onPress={() => { setShowResults(true); matchMutation.mutate({ ingredientIds: pantryIds, maxTotalTimeMinutes: finiteTimeCap(habitTime) }); }} style={styles.findButton}>
-        <AppText style={styles.findButtonText}>Find matching recipes</AppText>
-      </Pressable>
+        )}
+        ListFooterComponent={
+          <Pressable onPress={() => { setShowResults(true); matchMutation.mutate({ ingredientIds: pantryIds, maxTotalTimeMinutes: finiteTimeCap(habitTime) }); }} style={styles.findButton}>
+            <AppText style={styles.findButtonText}>Find matching recipes</AppText>
+          </Pressable>
+        }
+      />
     </View>
   );
 }
 
+// Loading, empty and results states scroll as one page, as the Pantry tab did before it pinned the search.
+function PaneScroll({ bottomPadding, children }: { bottomPadding: number; children: ReactNode }) {
+  return (
+    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.pageContent, { paddingBottom: bottomPadding }]}>
+      {children}
+    </ScrollView>
+  );
+}
+
 const styles = StyleSheet.create({
+  pane: { flex: 1 },
+  pinned: { paddingHorizontal: 20 },
+  pageContent: { paddingHorizontal: 20 },
   empty: { paddingTop: 4 },
   emptyCopy: { maxWidth: 330, fontFamily: theme.fontFamily.body, fontSize: 14, lineHeight: 21, color: theme.colors.textMedium },
   emptyVisual: { width: "100%", maxWidth: 326, height: 224, alignSelf: "center", marginTop: 96, marginBottom: 28 },
@@ -282,7 +316,7 @@ const styles = StyleSheet.create({
   categoryText: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 11.75, color: theme.colors.textMedium },
   categoryTextActive: { color: theme.colors.onDark },
   count: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 12.5, color: theme.colors.textMedium, marginBottom: 9 },
-  list: { gap: 8 },
+  ingredientCell: { paddingBottom: 8 },
   searchEmpty: { minHeight: 260, padding: 32, borderWidth: 0.75, borderColor: theme.colors.border, borderRadius: 18, backgroundColor: theme.colors.white, alignItems: "center", justifyContent: "center" },
   searchEmptyIcon: { width: 56, height: 56, borderRadius: 17, backgroundColor: theme.colors.card2, alignItems: "center", justifyContent: "center", marginBottom: 14 },
   searchEmptyTitle: { fontFamily: theme.fontFamily.display, fontSize: 18, color: theme.colors.text },
@@ -291,7 +325,7 @@ const styles = StyleSheet.create({
   ingredientThumb: { width: 48, height: 48 },
   ingredientName: { flex: 1, fontFamily: theme.fontFamily.bodySemiBold, fontSize: 14.5, color: theme.colors.text },
   remove: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
-  findButton: { minHeight: 52, marginTop: 18, borderRadius: 999, backgroundColor: theme.colors.navy, alignItems: "center", justifyContent: "center" },
+  findButton: { minHeight: 52, marginTop: 10, borderRadius: 999, backgroundColor: theme.colors.navy, alignItems: "center", justifyContent: "center" },
   findButtonText: { fontFamily: theme.fontFamily.bodyBold, fontSize: 14.5, color: theme.colors.onDark },
   resultsBack: { minHeight: 44, flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 },
   resultsBackText: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 13.5, color: "#1F7048" },

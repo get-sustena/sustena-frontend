@@ -13,6 +13,7 @@ export default function PantryScreen() {
   const { tab, category } = useLocalSearchParams<{ tab?: string; category?: string }>();
   const isBudget = tab === "budget";
   const pantryCount = usePantryStore((state) => state.ingredientIds.length);
+  const bottomPadding = Math.max(insets.bottom, 16) + 100;
 
   return (
     <View style={styles.screen}>
@@ -25,9 +26,14 @@ export default function PantryScreen() {
         <AppText style={[styles.title, !isBudget && styles.kitchenTitle]}>{isBudget ? "Budget planner" : "Your Pantry"}</AppText>
         <AppText style={[styles.meta, !isBudget && styles.kitchenMeta]}>{isBudget ? "" : `${pantryCount} ingredient${pantryCount === 1 ? "" : "s"}`}</AppText>
       </View>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 16) + 100 }]}>
-        {isBudget ? <BudgetPlannerPane /> : <PantryPane key={category ?? "All"} initialCategory={category} />}
-      </ScrollView>
+      {isBudget ? (
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingBottom: bottomPadding }]}>
+          <BudgetPlannerPane />
+        </ScrollView>
+      ) : (
+        // The pantry scrolls itself so its search and categories can stay pinned.
+        <PantryPane key={category ?? "All"} initialCategory={category} bottomPadding={bottomPadding} />
+      )}
     </View>
   );
 }
