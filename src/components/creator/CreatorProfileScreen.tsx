@@ -21,6 +21,7 @@ import { CreatorRecipeGridSkeleton } from "./CreatorRecipeGridSkeleton";
 import { CREATOR_GRID_GAP, useCreatorGridCardWidth } from "./creatorGrid";
 import { PublishingActivity } from "./PublishingActivity";
 import { RecipeActionsSheet } from "./RecipeActionsSheet";
+import { TAB_BAR_CLEARANCE } from "../layout/tabBarClearance";
 
 type Tab = "published" | "drafts";
 
@@ -238,7 +239,7 @@ const styles = StyleSheet.create({
   headerTitle: { fontFamily: theme.fontFamily.display, fontSize: 20, color: "#17291E" },
   headerActions: { flexDirection: "row", gap: 8 },
   headerAction: { width: 42, height: 42, alignItems: "center", justifyContent: "center" },
-  content: { paddingBottom: 120 },
+  content: { paddingBottom: TAB_BAR_CLEARANCE },
   coverWrap: { position: "relative", marginBottom: 44 },
   cover: { width: "100%", height: 126, backgroundColor: "#EEF2E7" },
   coverFallback: { alignItems: "center", justifyContent: "center" },

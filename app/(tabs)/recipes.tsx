@@ -24,6 +24,7 @@ import { getApiErrorMessage } from "../../src/lib/api/errors";
 import { finiteTimeCap } from "../../src/lib/plannerQuickSetup";
 import { useProfileAnswersStore } from "../../src/store/profileAnswersStore";
 import { theme } from "../../src/theme/theme";
+import { TAB_BAR_CLEARANCE } from "../../src/components/layout/tabBarClearance";
 
 const PAGE_SIZE = 30;
 const SEARCH_DEBOUNCE_MS = 300;
@@ -315,7 +316,7 @@ const styles = StyleSheet.create({
     gap: theme.spacing.sm,
   },
   gridContent: {
-    paddingBottom: 110,
+    paddingBottom: TAB_BAR_CLEARANCE,
   },
   errorState: {
     gap: theme.spacing.md,

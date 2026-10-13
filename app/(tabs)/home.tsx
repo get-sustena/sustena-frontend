@@ -42,6 +42,7 @@ import { useProfileAnswersStore } from "../../src/store/profileAnswersStore";
 import { openSheet, showToast } from "../../src/store/uiStore";
 import { theme } from "../../src/theme/theme";
 import { appImages } from "../../src/assets/appImages";
+import { TAB_BAR_CLEARANCE } from "../../src/components/layout/tabBarClearance";
 
 const KITCHEN_QUICK_CATEGORIES = ["Proteins", "Produce", "Grains"];
 
@@ -127,10 +128,7 @@ export default function HomeScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: Math.max(insets.bottom, 16) + 92 },
-        ]}
+        contentContainerStyle={styles.scrollContent}
       >
         <View style={styles.plannerSection}>
           <AppText style={[styles.sectionTitle, styles.plannerTitle]}>
@@ -441,6 +439,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.white,
   },
   scrollContent: {
+    paddingBottom: TAB_BAR_CLEARANCE,
     backgroundColor: theme.colors.white,
   },
   greeting: {

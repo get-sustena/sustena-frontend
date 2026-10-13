@@ -20,6 +20,7 @@ import { closeSheet, openSheet, showToast } from "../../store/uiStore";
 import { theme } from "../../theme/theme";
 import type { Ingredient } from "../../types/api";
 import { IngredientImage } from "../ingredient/IngredientImage";
+import { TAB_BAR_CLEARANCE } from "../layout/tabBarClearance";
 import { RecipePhoto } from "../recipe/RecipePhoto";
 import { AppText } from "../ui/AppText";
 import { EmptyState } from "../ui/EmptyState";
@@ -27,9 +28,9 @@ import { Icon } from "../ui/Icon";
 import { PantryIngredientPickerSheet } from "./PantryIngredientPickerSheet";
 import { PantryListSkeleton, PantryMatchesSkeleton } from "./PantrySkeletons";
 
-type Props = { initialCategory?: string; bottomPadding: number };
+type Props = { initialCategory?: string };
 
-export function PantryPane({ initialCategory, bottomPadding }: Props) {
+export function PantryPane({ initialCategory }: Props) {
   const db = useSQLiteContext();
   const { height } = useWindowDimensions();
   const listRef = useRef<FlashListRef<Ingredient>>(null);
@@ -154,12 +155,12 @@ export function PantryPane({ initialCategory, bottomPadding }: Props) {
     }
   }
 
-  if (catalogQuery.isPending || (pantryQuery.isPending && !pantryIds.length)) return <PaneScroll bottomPadding={bottomPadding}><PantryListSkeleton /></PaneScroll>;
-  if (catalogQuery.isError) return <PaneScroll bottomPadding={bottomPadding}><EmptyState iconName="offline" title="Could not load ingredients" message={getApiErrorMessage(catalogQuery.error)} /></PaneScroll>;
+  if (catalogQuery.isPending || (pantryQuery.isPending && !pantryIds.length)) return <PaneScroll><PantryListSkeleton /></PaneScroll>;
+  if (catalogQuery.isError) return <PaneScroll><EmptyState iconName="offline" title="Could not load ingredients" message={getApiErrorMessage(catalogQuery.error)} /></PaneScroll>;
 
   if (showResults) {
     return (
-      <PaneScroll bottomPadding={bottomPadding}>
+      <PaneScroll>
         <Pressable onPress={() => setShowResults(false)} style={styles.resultsBack}>
           <Icon name="chevronLeft" size={16} color="#1F7048" />
           <AppText style={styles.resultsBackText}>Edit pantry</AppText>
@@ -197,7 +198,7 @@ export function PantryPane({ initialCategory, bottomPadding }: Props) {
 
   if (!pantryIds.length) {
     return (
-      <PaneScroll bottomPadding={bottomPadding}>
+      <PaneScroll>
         <View style={styles.empty}>
           <AppText style={styles.emptyCopy}>Add what you already have at home. Sustena will use it to find meals you can actually make.</AppText>
           <Image
@@ -245,7 +246,7 @@ export function PantryPane({ initialCategory, bottomPadding }: Props) {
         data={visibleIngredients}
         keyExtractor={(ingredient) => ingredient.id}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: bottomPadding }}
+        contentContainerStyle={styles.pageContent}
         ListHeaderComponent={<AppText style={styles.count}>{pantryIds.length} ingredients{activeCategory !== "All" ? ` · ${activeCategory}` : ""}</AppText>}
         ListEmptyComponent={
           <View style={styles.searchEmpty}>
@@ -285,9 +286,9 @@ export function PantryPane({ initialCategory, bottomPadding }: Props) {
 }
 
 // Loading, empty and results states scroll as one page, as the Pantry tab did before it pinned the search.
-function PaneScroll({ bottomPadding, children }: { bottomPadding: number; children: ReactNode }) {
+function PaneScroll({ children }: { children: ReactNode }) {
   return (
-    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.pageContent, { paddingBottom: bottomPadding }]}>
+    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.pageContent}>
       {children}
     </ScrollView>
   );
@@ -296,7 +297,7 @@ function PaneScroll({ bottomPadding, children }: { bottomPadding: number; childr
 const styles = StyleSheet.create({
   pane: { flex: 1 },
   pinned: { paddingHorizontal: 20 },
-  pageContent: { paddingHorizontal: 20 },
+  pageContent: { paddingHorizontal: 20, paddingBottom: TAB_BAR_CLEARANCE },
   empty: { paddingTop: 4 },
   emptyCopy: { maxWidth: 330, fontFamily: theme.fontFamily.body, fontSize: 14, lineHeight: 21, color: theme.colors.textMedium },
   emptyVisual: { width: "100%", maxWidth: 326, height: 224, alignSelf: "center", marginTop: 96, marginBottom: 28 },

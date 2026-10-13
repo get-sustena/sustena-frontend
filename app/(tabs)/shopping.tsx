@@ -37,6 +37,7 @@ import { useShoppingListsStore } from "../../src/store/shoppingListsStore";
 import { closeSheet, openSheet, showToast } from "../../src/store/uiStore";
 import { theme } from "../../src/theme/theme";
 import { ShoppingListMeta } from "../../src/types/shoppingList";
+import { TAB_BAR_CLEARANCE } from "../../src/components/layout/tabBarClearance";
 
 type ListSummary = {
   itemCount: number;
@@ -435,7 +436,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingTop: 4,
-    paddingBottom: 120,
+    paddingBottom: TAB_BAR_CLEARANCE,
   },
   header: {
     paddingHorizontal: 20,
