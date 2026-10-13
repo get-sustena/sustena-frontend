@@ -196,7 +196,11 @@ Found while reading the code against the frontend skills. None of these is fixed
 | Search placeholder contrast is about 1.7:1 | `theme.colors.textDim` (#BCCBB6) on white | Well below the 4.5:1 text minimum. Hard to read outdoors. |
 | Filter pills don't tell screen readers which one is selected | `src/components/ui/FilterChip.tsx` | The selected state is only shown by colour. |
 | The tab bar animation ignores the reduce-motion setting | `app/(tabs)/_layout.tsx` | The overshoot animation runs even when the phone asks for less motion. |
-| A button sits inside another button on Home | `app/(tabs)/home.tsx` | React warns about it on web, and it can swallow taps. |
+| The tab bar doesn't tell screen readers which tab is open | `app/(tabs)/_layout.tsx` | The five tabs are plain buttons with no selected state, so the current tab is only shown by colour. |
+| Connection errors show developer text to users | `src/lib/api/errors.ts` (the network-error message) | Offline, Pantry reads "Could not reach the API at https://... Check that the backend is running, the port is correct...", with no "Try again" button. |
+| Saved Recipes shows an empty box in the header | `app/saved-recipes.tsx` (`<View style={styles.headerButton} />`) | The spacer that balances the back button reuses the button style, so its border and fill show. |
+| Web console deprecation warnings | The `pointerEvents` prop (14 uses in 9 files) and `shadow*` styles (14 files) | react-native-web wants `style.pointerEvents` and `boxShadow`. Web only; nothing breaks yet. |
+| Web has no recipes offline until it has reached the API once | `src/db/recipeSeed.web.ts` leaves out the bundled seed on purpose | A first web visit with no connection shows "0 Recipes" and "No recipes ready". Phones have the seed. |
 | Long cook times wrap badly on recipe tiles | `src/components/recipe/RecipeTile.tsx` (seen on Afang Soup: "135 MIN · ₦10,000") | The time and price break across lines. |
 | `AGENTS.md` points to the Expo v54 docs | `AGENTS.md` | The project is on SDK 57. |
 | "cookease" names remain | App slug, URL scheme, token keys, database name | Renaming any of them needs a plan: the slug links EAS builds, and the token keys and database name would sign everyone out and empty local data. |
@@ -213,3 +217,4 @@ All on 13 October 2026, on `testing`:
 - `b342855` FlashList for the Recipes grid, Saved recipes and the pantry picker, with the shared `RecipeGridItem`.
 - `903aad4` Every signed-in screen is guarded by `Stack.Protected`, with the route lists and their test.
 - `bb1265b` Home recommendations follow the time of day: breakfast from 6:00 to 10:59, lunch from 11:00 to 15:59, dinner from 16:00 and overnight. `src/lib/mealTime.ts` holds the clock rule and the meal rule (the meal's own tag, plus `main-meal` for lunch and dinner). `useMealTime` rechecks every minute and on return to the foreground. The request sends `mealTime`, the offline fallback filters by meal, and the button reads "Cook This Morning", "Cook This for Lunch" or "Cook This Tonight".
+- `312946a` Home's kitchen card no longer wraps the Proteins, Produce and Grains pills in its own button. The card's button sits behind the content, so the pills are separate buttons. This clears the two "button inside a button" errors in the web dev overlay and lets VoiceOver reach the pills on iOS. Tapping anywhere else on the card still opens the planner.
