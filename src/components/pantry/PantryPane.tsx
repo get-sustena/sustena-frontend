@@ -24,8 +24,8 @@ import { RecipePhoto } from "../recipe/RecipePhoto";
 import { AppText } from "../ui/AppText";
 import { EmptyState } from "../ui/EmptyState";
 import { Icon } from "../ui/Icon";
-import { ProgressLoader } from "../ui/ProgressLoader";
 import { PantryIngredientPickerSheet } from "./PantryIngredientPickerSheet";
+import { PantryListSkeleton, PantryMatchesSkeleton } from "./PantrySkeletons";
 
 type Props = { initialCategory?: string; bottomPadding: number };
 
@@ -154,7 +154,7 @@ export function PantryPane({ initialCategory, bottomPadding }: Props) {
     }
   }
 
-  if (catalogQuery.isPending || (pantryQuery.isPending && !pantryIds.length)) return <PaneScroll bottomPadding={bottomPadding}><ProgressLoader /></PaneScroll>;
+  if (catalogQuery.isPending || (pantryQuery.isPending && !pantryIds.length)) return <PaneScroll bottomPadding={bottomPadding}><PantryListSkeleton /></PaneScroll>;
   if (catalogQuery.isError) return <PaneScroll bottomPadding={bottomPadding}><EmptyState iconName="offline" title="Could not load ingredients" message={getApiErrorMessage(catalogQuery.error)} /></PaneScroll>;
 
   if (showResults) {
@@ -164,7 +164,7 @@ export function PantryPane({ initialCategory, bottomPadding }: Props) {
           <Icon name="chevronLeft" size={16} color="#1F7048" />
           <AppText style={styles.resultsBackText}>Edit pantry</AppText>
         </Pressable>
-        {matchMutation.isPending ? <ProgressLoader /> : null}
+        {matchMutation.isPending ? <PantryMatchesSkeleton /> : null}
         {matchMutation.isError ? <EmptyState iconName="offline" title="Could not find matches" message={getApiErrorMessage(matchMutation.error)} /> : null}
         {!matchMutation.isPending && !matchMutation.isError && !matches.length ? (
           <View style={styles.noMatches}>

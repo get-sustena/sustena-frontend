@@ -17,10 +17,10 @@ import { ShoppingListItemRow } from "../../src/components/shopping/ShoppingListI
 import { InPantrySection } from "../../src/components/shopping/InPantrySection";
 import { AddShoppingItemSheet } from "../../src/components/shopping/AddShoppingItemSheet";
 import { ShoppingListItemEditSheet } from "../../src/components/shopping/ShoppingListItemEditSheet";
+import { ShoppingItemsSkeleton } from "../../src/components/shopping/ShoppingItemsSkeleton";
 import { AppText } from "../../src/components/ui/AppText";
 import { Icon } from "../../src/components/ui/Icon";
 import { Logo } from "../../src/components/ui/Logo";
-import { ProgressLoader } from "../../src/components/ui/ProgressLoader";
 import {
   deleteCheckedShoppingListItems,
   deleteShoppingListItem,
@@ -67,8 +67,8 @@ export default function ShoppingListDetailScreen() {
 
   if (!resolvedId || resolvedId === DEFAULT_SHOPPING_LIST_ID) {
     return (
-      <View style={styles.screen}>
-        <ProgressLoader />
+      <View style={[styles.screen, styles.body]}>
+        <ShoppingItemsSkeleton />
       </View>
     );
   }
@@ -760,7 +760,7 @@ function LocalListDetail({ listId, shareOnOpen }: { listId: string; shareOnOpen:
 
         <View style={styles.body}>
           {isLoading ? (
-            <ProgressLoader />
+            <ShoppingItemsSkeleton />
           ) : items.length === 0 ? (
             <ShoppingEmptyState onAddPress={openAddItemSheet} />
           ) : (
