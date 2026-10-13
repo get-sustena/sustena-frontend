@@ -138,7 +138,7 @@ export default function HomeScreen() {
           </AppText>
 
           <View
-            style={[styles.kitchenCardShadow, kitchenPressed && styles.pressed]}
+            style={[styles.kitchenCardFrame, kitchenPressed && styles.pressed]}
           >
             <View style={styles.kitchenCard}>
               <LinearGradient
@@ -514,14 +514,9 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: theme.colors.linkGreen,
   },
-  kitchenCardShadow: {
-    borderRadius: 20,
-    marginBottom: 14,
-    shadowColor: theme.colors.navy,
-    shadowOffset: { width: 0, height: 16 },
-    shadowOpacity: 0.28,
-    shadowRadius: 15,
-    elevation: 6,
+  // v6.8 has no shadow under this card, and 24px before the budget button.
+  kitchenCardFrame: {
+    marginBottom: 24,
   },
   kitchenCard: {
     borderRadius: 20,
