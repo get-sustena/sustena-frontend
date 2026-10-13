@@ -4,6 +4,7 @@ import {
   MyRecipeListParams,
   RecipeSearchParams,
 } from "../../types/api";
+import type { MealTime } from "../mealTime";
 
 export const queryKeys = {
   auth: {
@@ -43,8 +44,13 @@ export const queryKeys = {
     tags: ["recipes", "tags"] as const,
   },
   recommendations: {
+    // Pantry, preference and profile changes invalidate this prefix, which
+    // also covers every meal's key below.
     home: ["recommendations", "home"] as const,
-    localFallback: ["recommendations", "local-fallback"] as const,
+    homeForMeal: (mealTime: MealTime) =>
+      ["recommendations", "home", mealTime] as const,
+    localFallback: (mealTime: MealTime) =>
+      ["recommendations", "local-fallback", mealTime] as const,
   },
   creators: {
     all: ["creators"] as const,

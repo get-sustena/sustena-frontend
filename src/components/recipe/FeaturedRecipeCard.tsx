@@ -1,6 +1,7 @@
 
 import { Pressable, StyleSheet, View } from "react-native";
 import { Recipe } from "../../data/recipes";
+import type { MealTime } from "../../lib/mealTime";
 import { theme } from "../../theme/theme";
 import { AppText } from "../ui/AppText";
 import { Icon } from "../ui/Icon";
@@ -8,11 +9,20 @@ import { PhotoChip, RecipePhoto } from "./RecipePhoto";
 
 type Props = {
   recipe: Recipe;
+  mealTime: MealTime;
   onPress?: () => void;
 };
 
-export function FeaturedRecipeCard({ recipe, onPress }: Props) {
+// Wording approved by the founder on 13 October 2026.
+const COOK_LABELS: Record<MealTime, string> = {
+  breakfast: "Cook This Morning",
+  lunch: "Cook This for Lunch",
+  dinner: "Cook This Tonight",
+};
+
+export function FeaturedRecipeCard({ recipe, mealTime, onPress }: Props) {
   const firstTag = recipe.tags[0];
+  const cookLabel = COOK_LABELS[mealTime];
 
   return (
     <View style={styles.card}>
@@ -51,9 +61,9 @@ export function FeaturedRecipeCard({ recipe, onPress }: Props) {
               onPress={onPress}
               style={({ pressed }) => [styles.cta, pressed && styles.pressed]}
               accessibilityRole="button"
-              accessibilityLabel={`Cook ${recipe.name} tonight`}
+              accessibilityLabel={`${cookLabel}: ${recipe.name}`}
             >
-              <AppText style={styles.ctaText}>Cook This Tonight</AppText>
+              <AppText style={styles.ctaText}>{cookLabel}</AppText>
               <Icon
                 name="chevronRight"
                 size={15}

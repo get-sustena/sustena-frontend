@@ -32,6 +32,7 @@ import { Icon } from "../../src/components/ui/Icon";
 import { useRecipesWithLocalFallback } from "../../src/hooks/api/useRecipes";
 import { useProfileAnswersQuery } from "../../src/hooks/api/useProfileAnswers";
 import { useHomeRecommendations } from "../../src/hooks/api/useRecommendations";
+import { useMealTime } from "../../src/hooks/useMealTime";
 import { apiRecipeToLocalRecipe } from "../../src/lib/api/adapters";
 import { finiteTimeCap } from "../../src/lib/plannerQuickSetup";
 import { useAuthStore } from "../../src/store/authStore";
@@ -76,7 +77,8 @@ export default function HomeScreen() {
     experience === "beginner" || experience === "intermediate"
       ? experience
       : undefined;
-  const recommendationsQuery = useHomeRecommendations();
+  const mealTime = useMealTime();
+  const recommendationsQuery = useHomeRecommendations(mealTime);
   const quickRecipesQuery = useRecipesWithLocalFallback({
     quickAndEasy: true,
     maxTotalTimeMinutes: Math.min(preferredTimeCap ?? 45, 45),
@@ -90,7 +92,9 @@ export default function HomeScreen() {
     ) ?? [];
   const quickRecipeResults =
     quickRecipesQuery.data?.items.map(apiRecipeToLocalRecipe) ?? [];
-  const [featuredIndex, setFeaturedIndex] = useState(0);
+  // Shuffle position for the current meal; a new meal time starts at the first pick.
+  const [shuffle, setShuffle] = useState({ mealTime, index: 0 });
+  const featuredIndex = shuffle.mealTime === mealTime ? shuffle.index : 0;
   const featuredRecipe = recipes[featuredIndex % Math.max(recipes.length, 1)];
   const quickRecipes = quickRecipeResults.filter(
     (recipe) =>
@@ -231,7 +235,7 @@ export default function HomeScreen() {
 
             <Pressable
               onPress={() => {
-                setFeaturedIndex((current) => current + 1);
+                setShuffle({ mealTime, index: featuredIndex + 1 });
                 showToast("New pick found!");
               }}
               style={({ pressed }) => [
@@ -252,6 +256,7 @@ export default function HomeScreen() {
           ) : featuredRecipe ? (
             <FeaturedRecipeCard
               recipe={featuredRecipe}
+              mealTime={mealTime}
               onPress={() => openRecipe(featuredRecipe.id)}
             />
           ) : (
