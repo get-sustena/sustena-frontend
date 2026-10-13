@@ -1,8 +1,9 @@
+import { FlashList, type FlashListRef } from "@shopify/flash-list";
 import { router } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FlatList, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { RecipeTile } from "../../src/components/recipe/RecipeTile";
+import { RecipeGridItem } from "../../src/components/recipe/RecipeGridItem";
 import { AppText } from "../../src/components/ui/AppText";
 import { Button } from "../../src/components/ui/Button";
 import { EmptyState } from "../../src/components/ui/EmptyState";
@@ -34,7 +35,7 @@ const EXPERIENCE_OPTIONS = [
 
 export default function RecipesScreen() {
   const insets = useSafeAreaInsets();
-  const listRef = useRef<FlatList<Recipe>>(null);
+  const listRef = useRef<FlashListRef<Recipe>>(null);
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search.trim(), SEARCH_DEBOUNCE_MS);
   const [activeFilter, setActiveFilter] = useState("all");
@@ -133,17 +134,13 @@ export default function RecipesScreen() {
         </View>
       </View>
 
-      <FlatList
+      <FlashList
         ref={listRef}
         data={recipes}
         keyExtractor={(item) => item.id}
         numColumns={2}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[
-          styles.gridContent,
-          recipes.length === 0 && styles.emptyGridContent,
-        ]}
-        columnWrapperStyle={recipes.length > 0 ? styles.columnWrapper : undefined}
+        contentContainerStyle={styles.gridContent}
         ListHeaderComponent={
           !experience && !experienceCardDismissed ? (
             <ExperienceCard
@@ -156,16 +153,8 @@ export default function RecipesScreen() {
             />
           ) : null
         }
-        renderItem={({ item }) => (
-          <RecipeTile
-            recipe={item}
-            onPress={() =>
-              router.push({
-                pathname: "/recipes/[id]",
-                params: { id: item.id },
-              })
-            }
-          />
+        renderItem={({ item, index }) => (
+          <RecipeGridItem recipe={item} index={index} />
         )}
         onEndReached={() => {
           if (recipesQuery.hasNextPage && !recipesQuery.isFetchingNextPage) {
@@ -325,16 +314,8 @@ const styles = StyleSheet.create({
   gridContent: {
     paddingBottom: 110,
   },
-  emptyGridContent: {
-    flexGrow: 1,
-  },
   errorState: {
     gap: theme.spacing.md,
-  },
-  columnWrapper: {
-    gap: 12,
-    marginBottom: 12,
-    paddingHorizontal: 20,
   },
   skeletonRow: {
     flexDirection: "row",

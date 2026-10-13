@@ -1,5 +1,6 @@
+import { FlashList } from "@shopify/flash-list";
 import { useMemo, useRef, useState } from "react";
-import { FlatList, Pressable, ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from "react-native";
 import { filterPantryPickerIngredients, PANTRY_CATEGORIES } from "../../lib/pantryIngredients";
 import { theme } from "../../theme/theme";
 import type { Ingredient } from "../../types/api";
@@ -98,64 +99,66 @@ export function PantryIngredientPickerSheet({ ingredients, savedIngredientIds, o
           </Pressable>
         ) : null}
       </View>
-      <FlatList
+      <FlashList
         key={isSearching ? "search-results" : "ingredient-list"}
         data={filtered}
         keyExtractor={(ingredient) => ingredient.id}
         numColumns={isSearching ? 2 : 1}
-        columnWrapperStyle={isSearching ? styles.gridRow : undefined}
         style={styles.results}
-        contentContainerStyle={[styles.resultsContent, isSearching ? styles.gridContent : styles.listContent]}
+        contentContainerStyle={styles.resultsContent}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
-        initialNumToRender={18}
-        maxToRenderPerBatch={24}
-        windowSize={7}
         ListEmptyComponent={<AppText style={styles.noResults}>No matching ingredients. Try another search.</AppText>}
-        renderItem={({ item: ingredient }) => {
+        renderItem={({ item: ingredient, index }) => {
               const saved = savedIds.has(ingredient.id);
               const selected = selectedSet.has(ingredient.id);
+              // FlashList has no columnWrapperStyle or content gap, so each cell carries its own spacing.
+              const cellStyle = isSearching
+                ? [styles.gridCell, index % 2 === 0 ? styles.gridCellStart : styles.gridCellEnd]
+                : styles.listCell;
               if (saved) {
                 return (
-                  <View
-                    key={ingredient.id}
-                    accessibilityRole="text"
-                    style={isSearching ? [styles.gridItem, styles.gridItemSelected] : styles.row}
+                  <View style={cellStyle}>
+                    <View
+                      accessibilityRole="text"
+                      style={isSearching ? [styles.gridItem, styles.gridItemSelected] : styles.row}
+                    >
+                      <IngredientImage ingredientId={ingredient.id} name={ingredient.displayName} size={isSearching ? 34 : 40} style={isSearching ? styles.gridThumb : styles.thumb} />
+                      <View style={styles.rowCopy}>
+                        <AppText style={isSearching ? styles.gridName : styles.name} numberOfLines={isSearching ? 2 : 1}>
+                          {ingredient.displayName}
+                        </AppText>
+                        {isSearching ? <AppText style={styles.gridSaved}>In pantry</AppText> : null}
+                      </View>
+                      {!isSearching ? <View style={styles.savedBadge}><AppText style={styles.savedBadgeText}>In pantry</AppText></View> : null}
+                      {isSearching ? <View style={styles.gridCheck}><Icon name="check" size={12} color="#FFFFFF" /></View> : null}
+                    </View>
+                  </View>
+                );
+              }
+              return (
+                <View style={cellStyle}>
+                  <Pressable
+                    onPress={() => toggle(ingredient.id)}
+                    disabled={isSubmitting}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: selected, disabled: isSubmitting }}
+                    style={isSearching ? [styles.gridItem, selected && styles.gridItemSelected] : [styles.row, selected && styles.rowSelected]}
                   >
+                    {!isSearching ? (
+                      <View style={[styles.checkbox, selected && styles.checkboxSelected]}>
+                        {selected ? <Icon name="check" size={14} color="#FFFFFF" /> : null}
+                      </View>
+                    ) : null}
                     <IngredientImage ingredientId={ingredient.id} name={ingredient.displayName} size={isSearching ? 34 : 40} style={isSearching ? styles.gridThumb : styles.thumb} />
                     <View style={styles.rowCopy}>
                       <AppText style={isSearching ? styles.gridName : styles.name} numberOfLines={isSearching ? 2 : 1}>
                         {ingredient.displayName}
                       </AppText>
-                      {isSearching ? <AppText style={styles.gridSaved}>In pantry</AppText> : null}
                     </View>
-                    {!isSearching ? <View style={styles.savedBadge}><AppText style={styles.savedBadgeText}>In pantry</AppText></View> : null}
-                    {isSearching ? <View style={styles.gridCheck}><Icon name="check" size={12} color="#FFFFFF" /></View> : null}
-                  </View>
-                );
-              }
-              return (
-                <Pressable
-                  key={ingredient.id}
-                  onPress={() => toggle(ingredient.id)}
-                  disabled={isSubmitting}
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked: selected, disabled: isSubmitting }}
-                  style={isSearching ? [styles.gridItem, selected && styles.gridItemSelected] : [styles.row, selected && styles.rowSelected]}
-                >
-                  {!isSearching ? (
-                    <View style={[styles.checkbox, selected && styles.checkboxSelected]}>
-                      {selected ? <Icon name="check" size={14} color="#FFFFFF" /> : null}
-                    </View>
-                  ) : null}
-                  <IngredientImage ingredientId={ingredient.id} name={ingredient.displayName} size={isSearching ? 34 : 40} style={isSearching ? styles.gridThumb : styles.thumb} />
-                  <View style={styles.rowCopy}>
-                    <AppText style={isSearching ? styles.gridName : styles.name} numberOfLines={isSearching ? 2 : 1}>
-                      {ingredient.displayName}
-                    </AppText>
-                  </View>
-                  {isSearching && selected ? <View style={styles.gridCheck}><Icon name="check" size={12} color="#FFFFFF" /></View> : null}
-                </Pressable>
+                    {isSearching && selected ? <View style={styles.gridCheck}><Icon name="check" size={12} color="#FFFFFF" /></View> : null}
+                  </Pressable>
+                </View>
               );
         }}
       />
@@ -203,9 +206,10 @@ const styles = StyleSheet.create({
   clear: { fontFamily: theme.fontFamily.bodyBold, fontSize: 12.5, color: "#1F7048" },
   results: { flex: 1, minHeight: 0 },
   resultsContent: { paddingBottom: 10 },
-  listContent: { gap: 6 },
-  gridContent: { gap: 8 },
-  gridRow: { gap: 8 },
+  listCell: { paddingBottom: 6 },
+  gridCell: { flexGrow: 1, flexDirection: "row", paddingBottom: 8 },
+  gridCellStart: { paddingRight: 4 },
+  gridCellEnd: { paddingLeft: 4 },
   row: { minHeight: 56, flexDirection: "row", alignItems: "center", gap: 9, paddingHorizontal: 4, paddingVertical: 7 },
   rowSelected: { backgroundColor: theme.colors.card2, borderRadius: 12, paddingHorizontal: 8 },
   checkbox: { width: 24, height: 24, borderRadius: 7, borderWidth: 1.7, borderColor: "#909090", backgroundColor: theme.colors.white, alignItems: "center", justifyContent: "center" },
@@ -215,7 +219,7 @@ const styles = StyleSheet.create({
   name: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 14.5, color: theme.colors.text },
   savedBadge: { minHeight: 24, paddingHorizontal: 9, borderRadius: 999, backgroundColor: theme.colors.card2, justifyContent: "center" },
   savedBadgeText: { fontFamily: theme.fontFamily.bodyBold, fontSize: 10.5, color: "#1F7048" },
-  gridItem: { width: "48.8%", minHeight: 58, flexDirection: "row", alignItems: "center", gap: 7, paddingHorizontal: 8, paddingVertical: 7, borderWidth: 0.75, borderColor: theme.colors.border, borderRadius: 14, backgroundColor: theme.colors.white },
+  gridItem: { flex: 1, minHeight: 58, flexDirection: "row", alignItems: "center", gap: 7, paddingHorizontal: 8, paddingVertical: 7, borderWidth: 0.75, borderColor: theme.colors.border, borderRadius: 14, backgroundColor: theme.colors.white },
   gridItemSelected: { borderColor: "#B9C9AB", backgroundColor: theme.colors.card2 },
   gridThumb: { width: 34, height: 34 },
   gridName: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 12.5, lineHeight: 15.25, color: theme.colors.text },
