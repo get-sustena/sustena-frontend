@@ -1,6 +1,5 @@
 import { FlashList, type FlashListRef } from "@shopify/flash-list";
 import { Image } from "expo-image";
-import { router } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from "react-native";
@@ -11,6 +10,7 @@ import { useAddPantryItemsMutation, usePantryQuery, useRemovePantryItemMutation 
 import { useKitchenPlannerMutation } from "../../hooks/api/usePlanner";
 import { apiRecipeToLocalRecipe } from "../../lib/api/adapters";
 import { getApiErrorMessage } from "../../lib/api/errors";
+import { openRecipe } from "../../lib/navigation/openRecipe";
 import { formatNaira } from "../../lib/formatters";
 import { matchesPantryCategory, matchesPantrySearch, PANTRY_CATEGORIES } from "../../lib/pantryIngredients";
 import { finiteTimeCap } from "../../lib/plannerQuickSetup";
@@ -176,7 +176,7 @@ export function PantryPane({ initialCategory }: Props) {
         {matches.length ? <AppText style={styles.resultsCount}>{matches.length} Matching Recipes</AppText> : null}
         <View style={styles.results}>
           {matches.map((match) => (
-            <Pressable key={match.recipe.id} onPress={() => router.push({ pathname: "/recipes/[id]", params: { id: match.recipe.id } })} style={styles.resultCard}>
+            <Pressable key={match.recipe.id} onPress={() => openRecipe(match.recipe.id, "matching_recipes")} style={styles.resultCard}>
               <RecipePhoto imageUrl={match.recipe.imageUrl} style={styles.resultPhoto} />
               <View style={styles.resultCopy}>
                 <AppText style={styles.resultName} numberOfLines={1}>{match.recipe.name}</AppText>

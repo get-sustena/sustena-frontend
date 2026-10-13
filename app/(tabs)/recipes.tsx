@@ -156,7 +156,7 @@ export default function RecipesScreen() {
           ) : null
         }
         renderItem={({ item, index }) => (
-          <RecipeGridItem recipe={item} index={index} />
+          <RecipeGridItem recipe={item} index={index} source="search" />
         )}
         onEndReached={() => {
           if (recipesQuery.hasNextPage && !recipesQuery.isFetchingNextPage) {

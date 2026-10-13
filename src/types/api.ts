@@ -924,6 +924,12 @@ export interface PushTokenResponse extends PushTokenRegisterRequest {
   updatedAt: ISODateTimeString;
 }
 
+export interface RecipeCookedResponse {
+  recipeId: string;
+  // False when this person's cook of this recipe was already counted today.
+  counted: boolean;
+}
+
 export interface ShoppingListCreateRequest {
   name: string;
   isActive?: boolean;

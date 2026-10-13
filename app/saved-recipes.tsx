@@ -54,7 +54,7 @@ export default function SavedRecipesScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.gridContent}
           renderItem={({ item, index }) => (
-            <RecipeGridItem recipe={item} index={index} />
+            <RecipeGridItem recipe={item} index={index} source="saved" />
           )}
         />
       )}

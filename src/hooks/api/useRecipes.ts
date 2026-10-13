@@ -7,6 +7,7 @@ import {
 } from "../../db/recipeRepository";
 import { recipesApi } from "../../lib/api";
 import { queryKeys } from "../../lib/query/queryKeys";
+import type { RecipeSource } from "../../lib/recipeSource";
 import type { RecipeSearchParams } from "../../types/api";
 
 function useRecipesQuery(params?: RecipeSearchParams) {
@@ -78,7 +79,7 @@ export function useInfiniteRecipesWithLocalFallback(
 
 // The source isn't part of the key: it only tells the backend where the
 // open came from, and the recipe is the same wherever it was opened.
-function useRecipeDetailQuery(recipeId?: string, source?: string) {
+function useRecipeDetailQuery(recipeId?: string, source?: RecipeSource) {
   const db = useSQLiteContext();
 
   return useQuery({
@@ -96,7 +97,7 @@ function useRecipeDetailQuery(recipeId?: string, source?: string) {
   });
 }
 
-export function useRecipeDetailWithLocalFallback(recipeId?: string, source?: string) {
+export function useRecipeDetailWithLocalFallback(recipeId?: string, source?: RecipeSource) {
   const db = useSQLiteContext();
   const apiQuery = useRecipeDetailQuery(recipeId, source);
   const localQuery = useQuery({

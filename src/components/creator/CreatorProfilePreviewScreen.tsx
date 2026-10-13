@@ -12,6 +12,7 @@ import { AppText } from "../ui/AppText";
 import { Icon } from "../ui/Icon";
 import { CreatorCollectionsStrip, type CreatorRecipeCollection } from "./CreatorCollectionsStrip";
 import { CreatorRecipeToolbar } from "./CreatorRecipeToolbar";
+import { openRecipe } from "../../lib/navigation/openRecipe";
 import { PublicCreatorRecipeTile } from "./PublicCreatorRecipeTile";
 import { ReportCreatorSheet } from "./ReportCreatorSheet";
 import { SortCreatorRecipesSheet, type CreatorRecipeSort } from "./SortCreatorRecipesSheet";
@@ -78,7 +79,7 @@ export function CreatorProfilePreviewScreen() {
           />
         ) : null}
 
-        {recipes.length ? <View style={styles.grid}>{shown.map((recipe) => <View key={recipe.id} style={styles.gridItem}><PublicCreatorRecipeTile recipe={recipe} onPress={() => router.push({ pathname: "/recipes/[id]", params: { id: recipe.id } })} /></View>)}</View> : (
+        {recipes.length ? <View style={styles.grid}>{shown.map((recipe) => <View key={recipe.id} style={styles.gridItem}><PublicCreatorRecipeTile recipe={recipe} onPress={() => openRecipe(recipe.id, "creator_profile")} /></View>)}</View> : (
           <View style={styles.empty}><View style={styles.emptyIcon}><Icon name="chefHat" size={25} color="#1f7048" /></View><AppText style={styles.emptyTitle}>No recipes yet</AppText><AppText style={styles.emptyCopy}>When {draft.displayName || "this creator"} publishes a recipe, it will show up here.</AppText></View>
         )}
       </ScrollView>
