@@ -146,6 +146,7 @@ Components read stores with selectors (`useAuthStore((s) => s.user)`), not by ta
 - Text goes through `AppText`, icons through `Icon`, both in `components/ui`.
 - Long lists use FlashList: the Recipes grid, Saved recipes and the pantry ingredient picker. FlashList has no `columnWrapperStyle`, and its `contentContainerStyle` takes only padding and background, so each cell carries its own spacing. Both recipe grids use `src/components/recipe/RecipeGridItem.tsx`, which adds the 20px page gutter and half of the 12px column gap. Cards in a row match heights because FlashList gives every cell in a row the tallest cell's height.
 - Typed search waits 300 ms after the last keystroke before querying (`src/hooks/useDebouncedValue.ts`).
+- Anything that depends on the time of day comes from `useTimeOfDay(read)` in `src/hooks/useTimeOfDay.ts`, such as `useTimeOfDay(getMealTime)` or `useTimeOfDay(getGreeting)`. It reads the clock again every minute and on return to the foreground. Don't call `new Date()` while rendering: the React Compiler caches a call that takes no inputs, so the value never changes.
 - Screens pad the top with `useSafeAreaInsets()` because the stack has no native header.
 
 ## Build, release and branches
@@ -164,7 +165,7 @@ Branches: `testing` is for local work. `main` is the deployment branch on GitHub
 | --- | --- |
 | Types | `npx tsc --noEmit` |
 | Lint | `npm run lint` |
-| Unit tests | `node --test tests/*.test.mjs` (21 tests; passing `tests/` as a folder fails on Windows) |
+| Unit tests | `node --test tests/*.test.mjs` (24 tests; passing `tests/` as a folder fails on Windows) |
 | Web preview | `npm run web`, then open http://localhost:8081 |
 
 ## Rules for changes
@@ -188,7 +189,6 @@ Found while reading the code against the frontend skills. None of these is fixed
 | The offline cache needs `qualityScore`, `qualityWarnings` and `source*` | `src/db/recipeRepository.ts` (`quality_warnings_json` is NOT NULL) | The backend keeps the fields. If it ever empties them, `qualityWarnings` must stay `[]`, never null or missing. |
 | The bundled recipe seed is out of date | `src/data/mobile_seed_recipes_published.json` (June 2026, 112 recipes, no meal tags or categories) | Offline phones relying on the seed can't filter recommendations by meal and get the unfiltered list. |
 | The featured card's chip shows the recipe's first tag | `src/components/recipe/FeaturedRecipeCard.tsx` | At lunch it can read "Dinner" beside "Cook This for Lunch". Needs a wording decision. |
-| The greeting never updates while the app stays open | `getGreeting()` in `app/(tabs)/home.tsx` | It takes no inputs, so the React Compiler caches the first result. "Good morning" stays until Home remounts. |
 | Rating a recipe leaves the Recipes grid showing the old rating | The infinite list key `["recipes", "infinite-list", ...]` isn't invalidated after rating | Tiles show the average rating. It updates only when the query goes stale. |
 | No error boundary anywhere | `app/` | One crashing screen takes down the whole app. |
 | The search field has no accessible label and no clear button | `src/components/ui/SearchInput.tsx` | Screen readers only get the placeholder, and clearing a search means deleting each character. |
@@ -217,3 +217,5 @@ All on 13 October 2026, on `testing`:
 - `903aad4` Every signed-in screen is guarded by `Stack.Protected`, with the route lists and their test.
 - `bb1265b` Home recommendations follow the time of day: breakfast from 6:00 to 10:59, lunch from 11:00 to 15:59, dinner from 16:00 and overnight. `src/lib/mealTime.ts` holds the clock rule and the meal rule (the meal's own tag, plus `main-meal` for lunch and dinner). `useMealTime` rechecks every minute and on return to the foreground. The request sends `mealTime`, the offline fallback filters by meal, and the button reads "Cook This Morning", "Cook This for Lunch" or "Cook This Tonight".
 - `312946a` Home's kitchen card no longer wraps the Proteins, Produce and Grains pills in its own button. The card's button sits behind the content, so the pills are separate buttons. This clears the two "button inside a button" errors in the web dev overlay and lets VoiceOver reach the pills on iOS. Tapping anywhere else on the card still opens the planner.
+- `8a8da74` `testing` merged into `main` and pushed, which deploys the web app.
+- `beed4eb` Home's greeting now updates while the app stays open. `useTimeOfDay` replaces `useMealTime` and drives both the greeting and the meal time. The wording and hours are unchanged: morning until 11:59, afternoon until 16:59, evening after that.
