@@ -19,7 +19,7 @@ export async function refreshMealReminders(_db: SQLiteDatabase) {
 
 export async function disableMealReminders(_db: SQLiteDatabase) {}
 
-export function onPushTokenChange(_listener: () => void) {
+export function registerNewPushTokens(_db: SQLiteDatabase) {
   return () => {};
 }
 

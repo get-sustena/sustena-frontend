@@ -5,8 +5,8 @@ import { MEAL_REMINDER_SOURCE } from "../lib/notifications/mealReminderData";
 import {
   disableMealReminders,
   onMealReminderOpened,
-  onPushTokenChange,
   refreshMealReminders,
+  registerNewPushTokens,
 } from "../lib/notifications/mealReminders";
 import { useAuthStore } from "../store/authStore";
 import { usePreferencesStore } from "../store/preferencesStore";
@@ -23,19 +23,16 @@ export function useMealReminders() {
     if (!isAuthenticated || !enabled) return;
 
     let active = true;
-    const refresh = () => {
-      void refreshMealReminders(db).then((stillAllowed) => {
-        // Notifications were turned off in the phone's settings, so the
-        // switch shouldn't keep claiming reminders are on.
-        if (active && !stillAllowed) {
-          setEnabled(false);
-          void disableMealReminders(db);
-        }
-      });
-    };
+    void refreshMealReminders(db).then((stillAllowed) => {
+      // Notifications were turned off in the phone's settings, so the
+      // switch shouldn't keep claiming reminders are on.
+      if (active && !stillAllowed) {
+        setEnabled(false);
+        void disableMealReminders(db);
+      }
+    });
 
-    refresh();
-    const stopListening = onPushTokenChange(refresh);
+    const stopListening = registerNewPushTokens(db);
     return () => {
       active = false;
       stopListening();

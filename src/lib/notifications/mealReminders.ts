@@ -14,6 +14,7 @@ import {
   getMealReminderRecipeId,
   MEAL_REMINDER_CHANNEL_ID,
 } from "./mealReminderData";
+import { createPhoneRegistration } from "./phoneRegistration";
 
 // Push meal reminders, approved by the founder on 13 October 2026: the backend
 // sends "Our Recommendation" at 8am, 1pm and 5pm Lagos time to every phone
@@ -48,25 +49,26 @@ export async function enableMealReminders(
       : await Notifications.requestPermissionsAsync();
   if (!permission.granted) return "denied";
 
-  return (await registerThisPhone(db)) ? "enabled" : "failed";
+  return (await phoneRegistration.register(db)) ? "enabled" : "failed";
 }
 
-// Called when the app opens with reminders on. It re-registers the phone
-// (Expo tokens can change, and the backend drops dead ones) without ever
-// asking for permission. Returns false when the person has since turned
-// Sustena's notifications off in the phone's settings.
+// Called when the app opens with reminders on. It re-registers the phone once
+// per app session (Expo tokens can change, and the backend drops dead ones)
+// without ever asking for permission. Returns false when the person has since
+// turned Sustena's notifications off in the phone's settings.
 export async function refreshMealReminders(db: SQLiteDatabase) {
   const permission = await Notifications.getPermissionsAsync();
   if (!permission.granted) return false;
 
   await ensureMealReminderChannel();
-  await registerThisPhone(db);
+  await phoneRegistration.ensureRegistered(db);
   return true;
 }
 
 // Best effort: switching off or signing out must work even offline. A token
 // the backend keeps is moved or dropped by its own clean-up.
 export async function disableMealReminders(db: SQLiteDatabase) {
+  phoneRegistration.forget();
   const token = await getStoredMealReminderToken(db).catch(() => null);
   if (!token) return;
 
@@ -74,9 +76,13 @@ export async function disableMealReminders(db: SQLiteDatabase) {
   await clearStoredMealReminderToken(db).catch(() => undefined);
 }
 
-// Re-registers when Android hands the app a new push token.
-export function onPushTokenChange(listener: () => void) {
-  const subscription = Notifications.addPushTokenListener(() => listener());
+// Registers the new token when the push service replaces this phone's token.
+// The listener also hears the token every time it's fetched; see
+// phoneRegistration.ts for why that's ignored.
+export function registerNewPushTokens(db: SQLiteDatabase) {
+  const subscription = Notifications.addPushTokenListener((deviceToken) => {
+    void phoneRegistration.onTokenReported(deviceToken, db);
+  });
   return () => subscription.remove();
 }
 
@@ -119,12 +125,24 @@ async function ensureMealReminderChannel() {
   });
 }
 
-async function registerThisPhone(db: SQLiteDatabase) {
+const phoneRegistration = createPhoneRegistration({
+  fetchDeviceToken: () => Notifications.getDevicePushTokenAsync(),
+  register: registerThisPhone,
+});
+
+async function registerThisPhone(
+  devicePushToken: Notifications.DevicePushToken,
+  db: SQLiteDatabase
+) {
   const projectId =
     Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
 
   try {
-    const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId });
+    // Passing the device token stops getExpoPushTokenAsync fetching it again.
+    const { data: token } = await Notifications.getExpoPushTokenAsync({
+      projectId,
+      devicePushToken,
+    });
     const previousToken = await getStoredMealReminderToken(db).catch(() => null);
 
     await pushTokensApi.registerPushToken({
