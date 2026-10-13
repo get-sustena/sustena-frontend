@@ -31,12 +31,20 @@ export const queryKeys = {
     all: ["recipes"] as const,
     list: (params?: RecipeSearchParams) =>
       ["recipes", "list", params ?? {}] as const,
+    infiniteList: (params?: Omit<RecipeSearchParams, "page">) =>
+      ["recipes", "infinite-list", params ?? {}] as const,
+    localFallback: (params?: RecipeSearchParams) =>
+      ["recipes", "local-fallback", params ?? {}] as const,
+    localFallbackDetail: (id: string) =>
+      ["recipes", "local-fallback-detail", id] as const,
+    localFavorites: ["recipes", "local-profile-favorites"] as const,
     detail: (id: string) => ["recipes", "detail", id] as const,
     slug: (slug: string) => ["recipes", "slug", slug] as const,
     tags: ["recipes", "tags"] as const,
   },
   recommendations: {
     home: ["recommendations", "home"] as const,
+    localFallback: ["recommendations", "local-fallback"] as const,
   },
   creators: {
     all: ["creators"] as const,

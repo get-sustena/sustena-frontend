@@ -10,6 +10,7 @@ import {
 } from "./api/useFavorites";
 import { Recipe } from "../data/recipes";
 import { apiFavoriteToRecipe } from "../lib/api/adapters";
+import { queryKeys } from "../lib/query/queryKeys";
 import { useFavoritesStore } from "../store/favoritesStore";
 
 function apiFavoriteToRecipeLike(
@@ -35,7 +36,7 @@ export function useFavoriteRecipes() {
   const removeFavoriteMutation = useRemoveFavoriteMutation();
 
   const localRecipesQuery = useQuery({
-    queryKey: ["recipes", "local-profile-favorites"] as const,
+    queryKey: queryKeys.recipes.localFavorites,
     queryFn: () => getLocalRecipes(db, { page: 1, pageSize: 500 }),
   });
   const localRecipes =

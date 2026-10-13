@@ -12,7 +12,7 @@ export function useHomeRecommendations() {
     queryFn: () => recommendationsApi.getRecommendations(12),
   });
   const localQuery = useQuery({
-    queryKey: ["recommendations", "local-fallback"] as const,
+    queryKey: queryKeys.recommendations.localFallback,
     queryFn: async (): Promise<RecommendationListResponse> => {
       const recipes = await getLocalRecipes(db, { page: 1, pageSize: 12 });
       return {

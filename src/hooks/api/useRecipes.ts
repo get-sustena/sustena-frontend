@@ -25,7 +25,7 @@ export function useRecipesWithLocalFallback(params?: RecipeSearchParams) {
   const db = useSQLiteContext();
   const apiQuery = useRecipesQuery(params);
   const localQuery = useQuery({
-    queryKey: ["recipes", "local-fallback", params ?? {}] as const,
+    queryKey: queryKeys.recipes.localFallback(params),
     queryFn: () => getLocalRecipes(db, params),
     enabled: apiQuery.isError,
   });
@@ -57,7 +57,7 @@ export function useInfiniteRecipesWithLocalFallback(
   const db = useSQLiteContext();
 
   return useInfiniteQuery({
-    queryKey: ["recipes", "infinite-list", params] as const,
+    queryKey: queryKeys.recipes.infiniteList(params),
     initialPageParam: 1,
     queryFn: async ({ pageParam }) => {
       const pageParams = { ...params, page: pageParam };
@@ -103,7 +103,7 @@ export function useRecipeDetailWithLocalFallback(recipeId?: string) {
   const db = useSQLiteContext();
   const apiQuery = useRecipeDetailQuery(recipeId);
   const localQuery = useQuery({
-    queryKey: ["recipes", "local-fallback-detail", recipeId ?? ""] as const,
+    queryKey: queryKeys.recipes.localFallbackDetail(recipeId ?? ""),
     queryFn: () => getLocalRecipeById(db, recipeId ?? ""),
     enabled: Boolean(recipeId),
   });
