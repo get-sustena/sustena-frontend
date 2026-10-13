@@ -8,12 +8,19 @@ const imageDirectory = join(projectDirectory, "assets/images/ingredients");
 const outputPath = join(projectDirectory, "src/assets/ingredientImageSources.ts");
 const outputDirectory = dirname(outputPath);
 const sourcePrefix = relative(outputDirectory, imageDirectory).replaceAll("\\", "/");
-const filenames = readdirSync(imageDirectory)
-  .filter((filename) => filename.endsWith(".png"))
-  .sort((left, right) => left.localeCompare(right));
+// New pictures are small WebPs; older ones are still PNGs. A slug with both uses the WebP.
+const filesBySlug = new Map();
+for (const filename of readdirSync(imageDirectory)) {
+  const match = filename.match(/^(.+)\.(webp|png)$/);
+  if (!match) continue;
+  const [, slug, extension] = match;
+  if (extension === "webp" || !filesBySlug.has(slug)) filesBySlug.set(slug, filename);
+}
+const slugs = [...filesBySlug.keys()].sort((left, right) => left.localeCompare(right));
+const filenames = slugs.map((slug) => filesBySlug.get(slug));
 
-const entries = filenames.map((filename) => {
-  const slug = filename.slice(0, -4);
+const entries = slugs.map((slug) => {
+  const filename = filesBySlug.get(slug);
   return `  ${JSON.stringify(slug)}: require(${JSON.stringify(`${sourcePrefix}/${filename}`)}),`;
 });
 
