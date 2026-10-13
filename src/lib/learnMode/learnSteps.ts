@@ -2,19 +2,21 @@
 import type {
   RecipeIngredient,
   RecipeInstruction,
-  RecipeInstructionTimer,
+  RecipeTimerSource,
 } from "../../types/api";
 // The .ts extension lets the unit tests load this file in Node.
 import { detectTimerPhrases } from "../recipeTimers.ts";
 
 // Where a timer's time sits in the step text, so it can be highlighted and
 // tapped. "for 15 minutes" highlights "15 minutes".
-export type TextRange = { start: number; end: number };
+type TextRange = { start: number; end: number };
 
+// One timer per duration; a step that says the same time twice highlights
+// both places, and either starts it.
 export type LearnTimer = {
   minSeconds: number;
   maxSeconds: number | null;
-  range: TextRange | null;
+  ranges: TextRange[];
 };
 
 export type LearnIngredient = {
@@ -34,7 +36,7 @@ export type LearnStep = {
 
 type LearnInstruction = Pick<
   RecipeInstruction,
-  "stepNumber" | "stepName" | "commonMistake" | "helpfulTip" | "segments" | "timers"
+  "stepNumber" | "stepName" | "text" | "commonMistake" | "helpfulTip" | "segments" | "timers"
 > & {
   // The step text as the recipe page shows it, scaled to the servings and
   // units chosen.
@@ -53,43 +55,64 @@ export function buildLearnSteps(
       text: instruction.displayText,
       tip: instruction.helpfulTip?.trim() || null,
       mistake: instruction.commonMistake?.trim() || null,
-      timers: getStepTimers(instruction.displayText, instruction.timers),
+      timers: getStepTimers(instruction),
       ingredients: getStepIngredients(instruction, ingredients),
     }));
 }
 
 // The backend's confirmed timers where a step has them; otherwise the times
 // written in the step, found the way the recipe editor finds them.
-function getStepTimers(text: string, confirmed: RecipeInstructionTimer[]): LearnTimer[] {
-  const written = detectTimerPhrases(text).map((phrase) => ({
+function getStepTimers(instruction: LearnInstruction): LearnTimer[] {
+  const { displayText } = instruction;
+  const written = detectTimerPhrases(displayText).map((phrase) => ({
     minSeconds: phrase.durationMinSeconds,
     maxSeconds: phrase.durationMaxSeconds ?? null,
-    range: timeRange(phrase.sourceText ?? "", phrase.sourceStart ?? 0),
+    ranges: [timeRange(phrase.sourceText ?? "", phrase.sourceStart ?? 0)],
   }));
-  if (!confirmed.length) return written;
+  if (!instruction.timers.length) return written;
 
-  const unused = [...written];
-  return [...confirmed]
+  const unmatched = [...written];
+  return [...instruction.timers]
     .sort((left, right) => left.position - right.position)
     .map((timer) => {
-      // Highlight the written time that says the same, if there is one.
-      const match = unused.findIndex(
-        (phrase) =>
-          phrase.minSeconds === timer.durationMinSeconds &&
-          phrase.maxSeconds === (timer.durationMaxSeconds ?? null)
+      const minSeconds = timer.durationMinSeconds;
+      const maxSeconds = timer.durationMaxSeconds ?? null;
+      const fromSources = sourceRanges(timer.sources ?? [], instruction.text, displayText);
+      if (fromSources.length) return { minSeconds, maxSeconds, ranges: fromSources };
+
+      // Older APIs send no sources: highlight the written time that says the same.
+      const match = unmatched.findIndex(
+        (phrase) => phrase.minSeconds === minSeconds && phrase.maxSeconds === maxSeconds
       );
-      const range = match >= 0 ? unused.splice(match, 1)[0].range : null;
-      return {
-        minSeconds: timer.durationMinSeconds,
-        maxSeconds: timer.durationMaxSeconds ?? null,
-        range,
-      };
+      const ranges = match >= 0 ? unmatched.splice(match, 1)[0].ranges : [];
+      return { minSeconds, maxSeconds, ranges };
     });
 }
 
 function timeRange(sourceText: string, sourceStart: number): TextRange {
   const lead = /^for\s+/i.exec(sourceText)?.[0].length ?? 0;
   return { start: sourceStart + lead, end: sourceStart + sourceText.length };
+}
+
+// A timer's places in the text shown. The offsets point into the step's own
+// text; when the shown text is scaled to other servings or units, each time
+// is found by its words instead, in order.
+function sourceRanges(sources: RecipeTimerSource[], text: string, displayText: string): TextRange[] {
+  if (displayText === text) {
+    return sources.flatMap(({ text: phrase, start, end }) =>
+      start !== null && end !== null && text.slice(start, end) === phrase ? [{ start, end }] : []
+    );
+  }
+
+  const ranges: TextRange[] = [];
+  let searchFrom = 0;
+  for (const { text: phrase } of sources) {
+    const at = displayText.indexOf(phrase, searchFrom);
+    if (at < 0) continue;
+    ranges.push({ start: at, end: at + phrase.length });
+    searchFrom = at + phrase.length;
+  }
+  return ranges;
 }
 
 // "Ingredients in this step": each ingredient the step's quantity segments

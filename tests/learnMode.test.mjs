@@ -28,6 +28,7 @@ const ingredient = (position, name, ingredientId = null) => ({
 const instruction = (stepNumber, displayText, extra = {}) => ({
   stepNumber,
   stepName: null,
+  text: displayText,
   commonMistake: null,
   helpfulTip: null,
   segments: [],
@@ -35,6 +36,8 @@ const instruction = (stepNumber, displayText, extra = {}) => ({
   displayText,
   ...extra,
 });
+
+const highlighted = (text, timer) => timer.ranges.map((range) => text.slice(range.start, range.end));
 
 test("each step takes its name, text, tip and mistake, and leaves empty parts empty", () => {
   const [first, second] = buildLearnSteps(
@@ -59,15 +62,53 @@ test("without confirmed timers, the times written in the step become timers", ()
   const [step] = buildLearnSteps([instruction(1, text)], []);
 
   assert.deepEqual(
-    step.timers.map((timer) => [timer.minSeconds, timer.maxSeconds, text.slice(timer.range.start, timer.range.end)]),
+    step.timers.map((timer) => [timer.minSeconds, timer.maxSeconds, highlighted(text, timer)]),
     [
-      [120, null, "2 minutes"],
-      [900, 1200, "15-20 mins"],
+      [120, null, ["2 minutes"]],
+      [900, 1200, ["15-20 mins"]],
     ]
   );
 });
 
-test("confirmed timers win, and highlight the written time that matches", () => {
+test("a confirmed timer highlights every place its sources point to", () => {
+  const text = "Stir for 5 minutes, add the leaves, then cook 5 minutes more.";
+  const fiveMinutes = {
+    id: "t1",
+    position: 0,
+    label: null,
+    durationMinSeconds: 300,
+    durationMaxSeconds: null,
+    sources: [
+      { text: "5 minutes", start: 9, end: 18 },
+      { text: "5 minutes", start: 46, end: 55 },
+    ],
+  };
+  const [step] = buildLearnSteps([instruction(1, text, { timers: [fiveMinutes] })], []);
+
+  assert.equal(step.timers.length, 1);
+  assert.deepEqual(step.timers[0].ranges, [
+    { start: 9, end: 18 },
+    { start: 46, end: 55 },
+  ]);
+});
+
+test("when the shown text is scaled, sources are found by their words", () => {
+  const text = "Add 2 cups of water and boil 10 minutes.";
+  const displayText = "Add 4 cups of water and boil 10 minutes.";
+  const timer = {
+    id: "t1",
+    position: 0,
+    label: null,
+    durationMinSeconds: 600,
+    durationMaxSeconds: null,
+    sources: [{ text: "10 minutes", start: 29, end: 39 }],
+  };
+  const [step] = buildLearnSteps([instruction(1, displayText, { text, timers: [timer] })], []);
+
+  assert.deepEqual(highlighted(displayText, step.timers[0]), ["10 minutes"]);
+});
+
+test("confirmed timers from older APIs highlight the written time that matches", () => {
   const text = "Simmer 15-20 mins, then rest 5 minutes.";
   const confirmed = [
     { id: "t2", position: 1, label: null, durationMinSeconds: 600, durationMaxSeconds: null },
@@ -76,9 +117,9 @@ test("confirmed timers win, and highlight the written time that matches", () => 
   const [step] = buildLearnSteps([instruction(1, text, { timers: confirmed })], []);
 
   assert.equal(step.timers.length, 2);
-  assert.equal(text.slice(step.timers[0].range.start, step.timers[0].range.end), "15-20 mins");
+  assert.deepEqual(highlighted(text, step.timers[0]), ["15-20 mins"]);
   assert.equal(step.timers[1].minSeconds, 600);
-  assert.equal(step.timers[1].range, null);
+  assert.deepEqual(step.timers[1].ranges, []);
 });
 
 test("step ingredients come from the quantity segments, once each, in order", () => {
