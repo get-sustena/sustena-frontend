@@ -78,7 +78,8 @@ docs/                Notes and backend handoffs (.gitignore lists /docs, so add 
 - A signed-out visitor sent to a signed-in URL lands on `index`, which forwards them to welcome or sign-in. Signing out removes the signed-in screens from history and lands on sign-in.
 - `tests/routeAccess.test.mjs` fails when a file in `app/` is in neither list, so a new screen can't go public by accident. Add every new screen to one of the lists.
 - `RootNavigator` reads the session itself because it sits inside `AppBootstrapGate`. Don't pass the guard down from `RootLayout`: that value can be a render behind on start-up and sends signed-in users to a blank screen.
-- The guard only stops the app from showing screens. `GET /recipes` and the detail endpoints still answer anyone. On 13 October 2026 the founder decided not to lock the API down (relayed by the backend chat), so anyone calling the API directly can still read recipes.
+- The guard only stops the app from showing screens. Until the backend change below is deployed, `GET /recipes` and the detail endpoints still answer anyone who calls the API directly.
+- Later on 13 October 2026, at the founder's request, the backend made `/recipes` (including tags and authoring-vocabulary), `/creators/*`, all five `/planner` routes, `/ingredients` and `/units` return 401 without sign-in (`cookease-backend` PR #7, merge `9f82d0d` on `new-pantry-flow`, not deployed yet). Sign-up, sign-in, password reset, the email links and `/health` stay open. The app needs no change: public screens only call the auth endpoints, start-up only calls the API when signed in, and a 401 goes through the same refresh-and-retry as `/me`.
 
 ## Navigation
 
@@ -185,7 +186,7 @@ Found while reading the code against the frontend skills. None of these is fixed
 
 | Gap | Where | Why it matters |
 | --- | --- | --- |
-| The API serves recipes to signed-out callers | Backend | The founder decided on 13 October 2026 not to lock it down. Recorded here so it stays a known choice. |
+| The live API still serves recipes to signed-out callers | Backend | Fixed in backend PR #7 (`9f82d0d`, `new-pantry-flow`) but not deployed yet. Remove this row once it's live. |
 | The offline cache needs `qualityScore`, `qualityWarnings` and `source*` | `src/db/recipeRepository.ts` (`quality_warnings_json` is NOT NULL) | The backend keeps the fields. If it ever empties them, `qualityWarnings` must stay `[]`, never null or missing. |
 | The bundled recipe seed is out of date | `src/data/mobile_seed_recipes_published.json` (June 2026, 112 recipes, no meal tags or categories) | Offline phones relying on the seed can't filter recommendations by meal and get the unfiltered list. |
 | The featured card's chip shows the recipe's first tag | `src/components/recipe/FeaturedRecipeCard.tsx` | At lunch it can read "Dinner" beside "Cook This for Lunch". Needs a wording decision. |
