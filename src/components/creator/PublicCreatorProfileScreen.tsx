@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
   nameRow: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 2 },
   name: { fontFamily: theme.fontFamily.display, fontSize: 23, lineHeight: 26.45, letterSpacing: -0.46, color: "#17291E" },
   rating: { flexDirection: "row", alignItems: "center", gap: 4 },
-  ratingText: { fontFamily: theme.fontFamily.monoBold, fontSize: 12, color: "#17291E" },
+  ratingText: { fontFamily: theme.fontFamily.body, fontSize: 12, color: theme.colors.text },
   handle: { fontSize: 14, color: "#5C6459" },
   bio: { marginBottom: 10, fontSize: 14.5, lineHeight: 21.75, color: "#1B211C" },
   specialities: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 16 },

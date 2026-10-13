@@ -111,9 +111,9 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   eyebrow: {
-    fontFamily: theme.fontFamily.monoBold,
+    fontFamily: theme.fontFamily.body,
     fontSize: 11,
-    letterSpacing: 1,
+    letterSpacing: 1.1,
     textTransform: "uppercase",
     color: theme.colors.accent,
   },

@@ -152,7 +152,7 @@ export function PlanSetupModal({
               <Icon name="chevronLeft" size={19} color={theme.colors.text} />
             </Pressable>
 
-            <AppText style={styles.eyebrow}>Plan Setup</AppText>
+            <AppText style={styles.headerTitle}>Plan setup</AppText>
             <View style={styles.headerSpacer} />
           </View>
 
@@ -174,7 +174,6 @@ export function PlanSetupModal({
                     style={[
                       styles.progressLabel,
                       isReached && styles.progressLabelReached,
-                      index === stepIndex && styles.progressLabelActive,
                     ]}
                   >
                     {getStepLabel(step)}
@@ -487,12 +486,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  eyebrow: {
-    fontFamily: theme.fontFamily.monoSemiBold,
-    fontSize: 12,
-    color: theme.colors.textMuted,
-    letterSpacing: 1,
-    textTransform: "uppercase",
+  headerTitle: {
+    fontFamily: theme.fontFamily.display,
+    fontSize: 17,
+    letterSpacing: -0.17,
+    color: theme.colors.navy,
   },
   headerSpacer: {
     width: 42,
@@ -517,19 +515,18 @@ const styles = StyleSheet.create({
   progressBarReached: {
     backgroundColor: theme.colors.green,
   },
+  // v6.8 renders every step label at Inter Regular; reached steps differ by colour.
   progressLabel: {
     width: "100%",
-    fontFamily: theme.fontFamily.monoMedium,
+    fontFamily: theme.fontFamily.body,
     fontSize: 10,
+    letterSpacing: 0.3,
     color: theme.colors.textMuted,
     textAlign: "center",
     textTransform: "uppercase",
   },
   progressLabelReached: {
     color: theme.colors.text,
-  },
-  progressLabelActive: {
-    fontFamily: theme.fontFamily.monoBold,
   },
   content: {
     flexGrow: 1,
@@ -575,7 +572,7 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
   },
   dayLabel: {
-    fontFamily: theme.fontFamily.mono,
+    fontFamily: theme.fontFamily.body,
     fontSize: 11,
     lineHeight: 14,
     color: theme.colors.textMuted,
@@ -640,10 +637,10 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   summaryLabel: {
-    fontFamily: theme.fontFamily.mono,
+    fontFamily: theme.fontFamily.body,
     fontSize: 12.5,
     color: "#9FB0A3",
-    letterSpacing: 0.6,
+    letterSpacing: 0.75,
     textTransform: "uppercase",
   },
   summaryValue: {

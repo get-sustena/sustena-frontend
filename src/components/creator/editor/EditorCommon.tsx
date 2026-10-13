@@ -279,9 +279,11 @@ const styles = StyleSheet.create({
   },
   stageCopy: { marginTop: 9, fontSize: 13, lineHeight: 20, color: theme.colors.textMedium },
   section: { marginBottom: 26, paddingBottom: 26, gap: 13, borderBottomWidth: 1, borderBottomColor: "#D9D9D9" },
+  // v6.8 .cr-section-heading > div.
   sectionTitle: {
-    fontFamily: theme.fontFamily.displaySemiBold,
-    fontSize: 19,
+    fontFamily: theme.fontFamily.display,
+    fontSize: 18,
+    letterSpacing: -0.32,
     color: theme.colors.navy,
   },
   sectionDescription: { marginTop: -7, fontSize: 12, lineHeight: 18, color: theme.colors.textMuted },
@@ -290,7 +292,7 @@ const styles = StyleSheet.create({
   label: { fontFamily: theme.fontFamily.bodyMedium, fontSize: 13, color: theme.colors.text },
   labelMeta: { fontSize: 11, color: theme.colors.textMuted },
   fieldMeta: { marginTop: 6, flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 10 },
-  count: { fontFamily: theme.fontFamily.mono, fontSize: 11.5, color: theme.colors.textMuted },
+  count: { fontFamily: theme.fontFamily.body, fontSize: 11.5, color: theme.colors.textMuted },
   helper: { flex: 1, fontSize: 12, lineHeight: 17, color: theme.colors.textMuted },
   input: {
     minHeight: 50,

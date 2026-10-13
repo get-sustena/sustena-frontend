@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
   genderCardActive: { borderColor: theme.colors.navy, backgroundColor: "rgba(52,182,115,0.08)" },
   genderLabel: { fontFamily: theme.fontFamily.bodyBold, fontSize: 14.5, color: theme.colors.text },
   remoteWrap: { marginTop: 14 },
-  remoteLabel: { fontFamily: theme.fontFamily.monoBold, fontSize: 12, letterSpacing: 1.2, textTransform: "uppercase", color: theme.colors.textMuted, marginBottom: 10 },
+  remoteLabel: { fontFamily: theme.fontFamily.body, fontSize: 12, letterSpacing: 1.2, textTransform: "uppercase", color: theme.colors.textMuted, marginBottom: 10 },
   segmented: { flexDirection: "row", gap: 4, borderRadius: 14, padding: 4, backgroundColor: theme.colors.card2 },
   segment: { flex: 1, paddingVertical: 11, paddingHorizontal: 8, borderRadius: 10, alignItems: "center" },
   segmentActive: { backgroundColor: theme.colors.white },

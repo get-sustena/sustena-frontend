@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
   timeInput: { minWidth: 36, padding: 0, fontFamily: theme.fontFamily.display, fontSize: 20, color: theme.colors.text },
   timeSuffix: { fontSize: 12, color: theme.colors.textMuted },
   costSection: { marginBottom: 30, padding: 18, borderRadius: 18, backgroundColor: "#F2F2F2" },
-  sectionTitle: { fontFamily: theme.fontFamily.displaySemiBold, fontSize: 19, color: theme.colors.navy },
+  sectionTitle: { fontFamily: theme.fontFamily.display, fontSize: 18, letterSpacing: -0.32, color: theme.colors.navy },
   sectionDescription: { marginTop: 5, fontSize: 12.5, lineHeight: 18, color: theme.colors.textMuted },
   costInputWrap: { minHeight: 52, marginTop: 15, paddingHorizontal: 14, flexDirection: "row", alignItems: "center", gap: 7, borderWidth: 1, borderColor: "#D9D9D9", borderRadius: 14, backgroundColor: "#FFFFFF" },
   currency: { fontFamily: theme.fontFamily.body, fontSize: 14.5, color: theme.colors.textMuted },

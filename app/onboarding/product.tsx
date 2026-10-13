@@ -530,11 +530,11 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.accent,
   },
   dayTabActiveText: {
-    fontFamily: theme.fontFamily.monoBold,
+    fontFamily: theme.fontFamily.bodyBold,
     fontSize: 11,
-    letterSpacing: 0.5,
+    letterSpacing: 0.55,
     textTransform: "uppercase",
-    color: theme.colors.text,
+    color: theme.colors.navy,
   },
   dayTabInactive: {
     paddingHorizontal: 12,
@@ -543,9 +543,9 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.08)",
   },
   dayTabInactiveText: {
-    fontFamily: theme.fontFamily.monoBold,
+    fontFamily: theme.fontFamily.bodyBold,
     fontSize: 11,
-    letterSpacing: 0.5,
+    letterSpacing: 0.55,
     textTransform: "uppercase",
     color: "rgba(251,251,247,0.5)",
   },
@@ -564,9 +564,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   glassEyebrow: {
-    fontFamily: theme.fontFamily.monoBold,
+    fontFamily: theme.fontFamily.bodyBold,
     fontSize: 9,
-    letterSpacing: 0.5,
+    letterSpacing: 0.54,
     textTransform: "uppercase",
     color: theme.colors.accent,
     marginBottom: 2,
@@ -586,9 +586,9 @@ const styles = StyleSheet.create({
     borderTopColor: "rgba(255,255,255,0.1)",
   },
   glassFooterLabel: {
-    fontFamily: theme.fontFamily.monoBold,
+    fontFamily: theme.fontFamily.bodyBold,
     fontSize: 9,
-    letterSpacing: 0.5,
+    letterSpacing: 0.54,
     textTransform: "uppercase",
     color: "rgba(251,251,247,0.5)",
   },
@@ -640,7 +640,7 @@ const styles = StyleSheet.create({
     color: "rgba(251,251,247,0.75)",
   },
   glassKvValue: {
-    fontFamily: theme.fontFamily.mono,
+    fontFamily: theme.fontFamily.body,
     fontSize: 12,
     color: theme.colors.accent,
   },
@@ -710,9 +710,9 @@ const styles = StyleSheet.create({
     textDecorationLine: "line-through",
   },
   checklistQty: {
-    fontFamily: theme.fontFamily.mono,
+    fontFamily: theme.fontFamily.body,
     fontSize: 12.5,
-    color: "rgba(251,251,247,0.4)",
+    color: "rgba(251,251,247,0.45)",
   },
   checklistQtyChecked: {
     color: "rgba(251,251,247,0.4)",

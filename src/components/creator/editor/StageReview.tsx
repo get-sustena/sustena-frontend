@@ -441,7 +441,7 @@ function openSourceIngredientPicker({
 const styles = StyleSheet.create({
   pickerList: { overflow: "hidden", borderWidth: 1, borderColor: "#D9D9D9", borderRadius: 16, backgroundColor: "#FFFFFF" },
   serveSection: { marginBottom: 26, paddingBottom: 26, borderBottomWidth: 1, borderBottomColor: "#E2E2E2" },
-  sectionTitle: { fontFamily: theme.fontFamily.displaySemiBold, fontSize: 19, color: theme.colors.navy },
+  sectionTitle: { fontFamily: theme.fontFamily.display, fontSize: 18, letterSpacing: -0.32, color: theme.colors.navy },
   sectionDescription: { marginTop: 5, marginBottom: 18, fontSize: 12.5, lineHeight: 18, color: theme.colors.textMuted },
   sectionBlock: { marginBottom: 18 },
   labelRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },

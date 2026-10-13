@@ -50,10 +50,10 @@ export function ProfileDetailsSheet() {
   return (
     <View style={styles.content}>
       <AppText style={styles.title}>Profile Details</AppText>
-      <Field label="Full Name" error={errors.fullName}><TextInput value={fullName} onChangeText={setFullName} style={styles.input} /></Field>
+      <Field label="Full name" error={errors.fullName}><TextInput value={fullName} onChangeText={setFullName} style={styles.input} /></Field>
       <Field label="Email" error={errors.email}><TextInput value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" style={styles.input} /></Field>
       <View style={styles.dobField}>
-        <AppText style={styles.label}>Date of Birth</AppText>
+        <AppText style={styles.label}>Date of birth</AppText>
         <View style={styles.dateRow}>
           <Pressable onPress={() => setPicker("month")} style={[styles.dateInput, styles.monthInput]}><AppText style={styles.dateText}>{MONTHS[month - 1]}</AppText><Icon name="chevronDown" size={13} color="#8a9187" /></Pressable>
           <Pressable onPress={() => setPicker("day")} style={styles.dateInput}><AppText style={styles.dateText}>{day}</AppText><Icon name="chevronDown" size={13} color="#8a9187" /></Pressable>
@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
   title: { marginBottom: 16, fontFamily: theme.fontFamily.display, fontSize: 19, color: "#17291E" },
   field: { marginBottom: 16 },
   dobField: { marginBottom: 4 },
-  label: { marginBottom: 8, fontFamily: theme.fontFamily.monoBold, fontSize: 12, letterSpacing: 1.2, textTransform: "uppercase", color: "#8a9187" },
+  label: { marginBottom: 8, fontFamily: theme.fontFamily.body, fontSize: 13, color: theme.colors.text },
   input: { width: "100%", paddingHorizontal: 14, paddingVertical: 13, borderRadius: 12, borderWidth: 1, borderColor: "#E1E1E1", backgroundColor: "#EEF2E7", fontFamily: theme.fontFamily.body, fontSize: 14.5, color: "#17291E" },
   error: { marginTop: 6, fontSize: 12.5, color: "#C0392E" },
   dateRow: { flexDirection: "row", gap: 10 },

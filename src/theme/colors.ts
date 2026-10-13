@@ -52,6 +52,8 @@ export const lightColors = {
   background: "#FBFBF7",
   // --st-page in the v6.8 prototype: recipe tiles and filter pills.
   page: "#FAFAFA",
+  // --st-control in the v6.8 prototype: the meal plan's total card.
+  control: "#F1F1F1",
   card: "#FFFFFF",
   card2: "#EDF3E4",
 

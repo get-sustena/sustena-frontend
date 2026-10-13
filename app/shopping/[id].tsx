@@ -1201,7 +1201,7 @@ const styles = StyleSheet.create({
   shareCardFooter: {
     marginTop: 20,
     textAlign: "center",
-    fontFamily: theme.fontFamily.mono,
+    fontFamily: theme.fontFamily.body,
     fontSize: 10,
     color: theme.colors.textDim,
     textTransform: "uppercase",

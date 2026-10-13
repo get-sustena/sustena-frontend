@@ -206,11 +206,9 @@ const styles = StyleSheet.create({
     paddingBottom: 4,
   },
   eyebrow: {
-    fontFamily: theme.fontFamily.monoBold,
-    fontSize: 12,
+    fontFamily: theme.fontFamily.body,
+    fontSize: 14,
     color: theme.colors.textMuted,
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
     marginBottom: 8,
   },
   title: {

@@ -37,5 +37,5 @@ const styles = StyleSheet.create({
   row: { minHeight: 60, flexDirection: "row", alignItems: "center", borderBottomWidth: 1, borderBottomColor: theme.colors.border },
   info: { flex: 1 },
   name: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 14, color: theme.colors.text },
-  current: { fontFamily: theme.fontFamily.mono, fontSize: 11.5, color: theme.colors.goldText, marginTop: 2 },
+  current: { fontFamily: theme.fontFamily.body, fontSize: 11.5, color: theme.colors.goldText, marginTop: 2 },
 });

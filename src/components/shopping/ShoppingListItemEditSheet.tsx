@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
   sheet: { minHeight: 0, flexShrink: 1 },
   sheetContent: { paddingBottom: 24 },
   title: { fontFamily: theme.fontFamily.display, fontSize: 19, color: theme.colors.navy, marginBottom: 16 },
-  label: { fontFamily: theme.fontFamily.monoMedium, fontSize: 11, color: theme.colors.textMuted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 },
+  label: { fontFamily: theme.fontFamily.body, fontSize: 11, color: theme.colors.textMuted, textTransform: "uppercase", letterSpacing: 1.1, marginBottom: 6 },
   input: { minHeight: 48, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.card2, borderRadius: 12, paddingHorizontal: 13, fontFamily: theme.fontFamily.body, fontSize: 14.5, color: theme.colors.navy, marginBottom: 14 },
   row: { flexDirection: "row", gap: 10 },
   field: { flex: 1 },

@@ -101,7 +101,7 @@ export default function SupportScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
       >
-        <AppText style={styles.sectionTitle}>How To</AppText>
+        <AppText style={styles.sectionTitle}>How to</AppText>
         {HOW_TO.map((item) => (
           <FaqRow
             key={item.question}
@@ -198,10 +198,9 @@ const styles = StyleSheet.create({
   sectionTitle: {
     marginTop: 14,
     marginBottom: 8,
-    fontFamily: theme.fontFamily.monoBold,
-    fontSize: 12,
+    fontFamily: theme.fontFamily.bodySemiBold,
+    fontSize: 14,
     color: theme.colors.textMuted,
-    textTransform: "uppercase",
   },
   faqTitle: {
     marginTop: 22,

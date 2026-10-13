@@ -526,7 +526,7 @@ export function BudgetPlannerPane() {
         </View>
       </Pressable>
 
-      <AppText style={styles.inputLabel}>Total Plan Budget</AppText>
+      <AppText style={styles.inputLabel}>Total budget</AppText>
 
       <View style={styles.inputRow}>
         <AppText style={styles.naira}>₦</AppText>
@@ -730,12 +730,7 @@ export function BudgetPlannerPane() {
           })}
 
           <View style={styles.totalCard}>
-            <View>
-              <AppText style={styles.totalLabel}>Total plan cost</AppText>
-              <AppText style={styles.totalValue}>
-                {formatNaira(totalSpend)}
-              </AppText>
-            </View>
+            <AppText style={styles.totalValue}>{formatNaira(totalSpend)}</AppText>
 
             <Pressable
               onPress={chooseShoppingListDestination}
@@ -959,17 +954,16 @@ const styles = StyleSheet.create({
     color: theme.colors.onDark,
   },
   setupHint: {
-    fontFamily: theme.fontFamily.mono,
+    fontFamily: theme.fontFamily.body,
     fontSize: 12,
+    letterSpacing: 0.36,
     color: "#9FB0A3",
     marginTop: 3,
   },
   inputLabel: {
-    fontFamily: theme.fontFamily.monoMedium,
-    fontSize: 12,
+    fontFamily: theme.fontFamily.bodySemiBold,
+    fontSize: 14,
     color: theme.colors.textMuted,
-    letterSpacing: 1,
-    textTransform: "uppercase",
     marginBottom: 10,
   },
   inputRow: {
@@ -1050,18 +1044,16 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     borderWidth: 1.5,
     borderColor: theme.colors.border,
-    backgroundColor: theme.colors.card,
+    backgroundColor: theme.colors.page,
   },
   dayChipActive: {
     borderColor: theme.colors.navy,
     backgroundColor: theme.colors.navy,
   },
   dayChipText: {
-    fontFamily: theme.fontFamily.monoBold,
+    fontFamily: theme.fontFamily.body,
     fontSize: 14,
-    letterSpacing: 0.5,
-    textTransform: "uppercase",
-    color: theme.colors.textMedium,
+    color: "#494D42",
   },
   dayChipTextActive: {
     color: "#C7CCC0",
@@ -1099,9 +1091,9 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   mealSlotLabel: {
-    fontFamily: theme.fontFamily.monoBold,
+    fontFamily: theme.fontFamily.body,
     fontSize: 11.5,
-    letterSpacing: 0.6,
+    letterSpacing: 0.69,
     textTransform: "uppercase",
     color: theme.colors.goldText,
     marginBottom: 4,
@@ -1113,7 +1105,7 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
   },
   mealMeta: {
-    fontFamily: theme.fontFamily.mono,
+    fontFamily: theme.fontFamily.body,
     fontSize: 12.5,
     color: theme.colors.textMedium,
     marginTop: 5,
@@ -1131,24 +1123,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: theme.colors.card2,
+    backgroundColor: theme.colors.control,
     borderRadius: 16,
     padding: 14,
     paddingHorizontal: 16,
     marginTop: 16,
   },
-  totalLabel: {
-    fontFamily: theme.fontFamily.mono,
-    fontSize: 11.5,
-    color: theme.colors.text,
-    textTransform: "uppercase",
-    letterSpacing: 0.6,
-  },
   totalValue: {
     fontFamily: theme.fontFamily.display,
     fontSize: 19,
     color: theme.colors.navy3,
-    marginTop: 2,
+    marginTop: 3,
   },
   addAllButton: {
     backgroundColor: theme.colors.navy,
@@ -1217,8 +1202,9 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   swapSheetSlot: {
-    fontFamily: theme.fontFamily.monoBold,
+    fontFamily: theme.fontFamily.body,
     fontSize: 11,
+    letterSpacing: 0.66,
     color: theme.colors.goldText,
     textTransform: "uppercase",
   },
