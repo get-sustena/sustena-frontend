@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { FlatList, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { RecipeTile } from "../../src/components/recipe/RecipeTile";
@@ -32,6 +32,7 @@ const EXPERIENCE_OPTIONS = [
 
 export default function RecipesScreen() {
   const insets = useSafeAreaInsets();
+  const listRef = useRef<FlatList<Recipe>>(null);
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
   const [experienceCardDismissed, setExperienceCardDismissed] = useState(false);
@@ -74,6 +75,11 @@ export default function RecipesScreen() {
   );
   const totalRecipes = recipesQuery.data?.pages[0]?.data.total ?? recipes.length;
 
+  // Search and filters stay pinned, so a change can happen mid-list.
+  function scrollListToTop() {
+    listRef.current?.scrollToOffset({ offset: 0, animated: false });
+  }
+
   return (
     <View style={styles.screen}>
       <View
@@ -99,7 +105,39 @@ export default function RecipesScreen() {
         </Pressable>
       </View>
 
+      <View>
+        <SearchInput
+          value={search}
+          onChangeText={(value) => {
+            setSearch(value);
+            scrollListToTop();
+          }}
+          placeholder="Search jollof, egusi, pasta..."
+        />
+
+        <View style={styles.filterWrapper}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterContent}
+          >
+            {RECIPE_FILTERS.map((filter) => (
+              <FilterChip
+                key={filter.value}
+                label={filter.label}
+                active={filter.value === activeFilter}
+                onPress={() => {
+                  setActiveFilter(filter.value);
+                  scrollListToTop();
+                }}
+              />
+            ))}
+          </ScrollView>
+        </View>
+      </View>
+
       <FlatList
+        ref={listRef}
         data={recipes}
         keyExtractor={(item) => item.id}
         numColumns={2}
@@ -110,41 +148,16 @@ export default function RecipesScreen() {
         ]}
         columnWrapperStyle={recipes.length > 0 ? styles.columnWrapper : undefined}
         ListHeaderComponent={
-          <View>
-            <SearchInput
-              value={search}
-              onChangeText={setSearch}
-              placeholder="Search jollof, egusi, pasta..."
+          !experience && !experienceCardDismissed ? (
+            <ExperienceCard
+              onDismiss={() => setExperienceCardDismissed(true)}
+              onSelect={(value) => {
+                setProfileAnswers({ experience: value });
+                updateProfileAnswers.mutate({ experience: value });
+                setExperienceCardDismissed(true);
+              }}
             />
-
-            <View style={styles.filterWrapper}>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.filterContent}
-              >
-                {RECIPE_FILTERS.map((filter) => (
-                  <FilterChip
-                    key={filter.value}
-                    label={filter.label}
-                    active={filter.value === activeFilter}
-                    onPress={() => setActiveFilter(filter.value)}
-                  />
-                ))}
-              </ScrollView>
-            </View>
-
-            {!experience && !experienceCardDismissed ? (
-              <ExperienceCard
-                onDismiss={() => setExperienceCardDismissed(true)}
-                onSelect={(value) => {
-                  setProfileAnswers({ experience: value });
-                  updateProfileAnswers.mutate({ experience: value });
-                  setExperienceCardDismissed(true);
-                }}
-              />
-            ) : null}
-          </View>
+          ) : null
         }
         renderItem={({ item }) => (
           <RecipeTile
