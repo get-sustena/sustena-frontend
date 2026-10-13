@@ -17,14 +17,15 @@ const SCRIM_FULL_COLORS = [
 ] as const;
 const SCRIM_FULL_LOCATIONS = [0, 0.52, 0.72, 1] as const;
 
-const SCRIM_COMPACT_COLORS = [
+// v6.8 photoScrimCompact; the profile recipe grid uses it too.
+export const SCRIM_COMPACT_COLORS = [
   "rgba(23,41,30,0)",
   "rgba(23,41,30,0)",
   "rgba(23,41,30,0.5)",
   "rgba(23,41,30,0.9)",
   "rgba(23,41,30,0.95)",
 ] as const;
-const SCRIM_COMPACT_LOCATIONS = [0, 0.4, 0.58, 0.75, 1] as const;
+export const SCRIM_COMPACT_LOCATIONS = [0, 0.4, 0.58, 0.75, 1] as const;
 
 type Props = {
   imageUrl?: string | null;

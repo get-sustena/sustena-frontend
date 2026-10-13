@@ -53,7 +53,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: 10,
-    backgroundColor: "#FBFCFA",
+    backgroundColor: theme.colors.page,
     zIndex: 2,
   },
   titleRow: {
@@ -72,9 +72,9 @@ const styles = StyleSheet.create({
   },
   count: {
     flexShrink: 0,
-    fontFamily: theme.fontFamily.monoBold,
+    fontFamily: theme.fontFamily.body,
     fontSize: 12,
-    color: "#8a9187",
+    color: theme.colors.textMuted,
   },
   sortButton: {
     flexShrink: 0,
@@ -84,9 +84,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "#E1E1E1",
-    backgroundColor: "#FFFFFF",
+    borderWidth: 0.75,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.white,
   },
   sortText: {
     fontFamily: theme.fontFamily.bodySemiBold,

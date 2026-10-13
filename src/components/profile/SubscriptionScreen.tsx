@@ -35,7 +35,7 @@ export function SubscriptionScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#FBFCFA" },
+  screen: { flex: 1, backgroundColor: theme.colors.page },
   header: { paddingHorizontal: 20, paddingBottom: 12, flexDirection: "row", alignItems: "center", gap: 8 },
   headerButton: { width: 44, height: 44, borderRadius: 12, borderWidth: 1, borderColor: "#E1E1E1", backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
   headerTitle: { flex: 1, paddingHorizontal: 10, fontFamily: theme.fontFamily.display, fontSize: 18, letterSpacing: -0.18, textAlign: "center", color: "#17291E" },

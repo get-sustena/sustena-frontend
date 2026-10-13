@@ -36,11 +36,12 @@ const styles = StyleSheet.create({
   coverWrap: { position: "relative", width: 70, height: 70, marginBottom: 7 },
   cover: { position: "relative", width: 70, height: 70, borderRadius: 35, overflow: "hidden" },
   activeRing: { position: "absolute", top: -2, left: -2, width: 74, height: 74, borderRadius: 37, borderWidth: 2, borderColor: "#17291E" },
-  activeInset: { ...StyleSheet.absoluteFill, borderRadius: 35, borderWidth: 3, borderColor: "#FBFCFA" },
-  fallback: { ...StyleSheet.absoluteFill, backgroundColor: "#EEF2E7" },
+  activeInset: { ...StyleSheet.absoluteFill, borderRadius: 35, borderWidth: 3, borderColor: theme.colors.page },
+  fallback: { ...StyleSheet.absoluteFill, backgroundColor: theme.colors.cream2 },
   scrim: { ...StyleSheet.absoluteFill, backgroundColor: "rgba(23,41,30,0.28)" },
   scrimActive: { backgroundColor: "rgba(23,41,30,0.12)" },
-  count: { position: "absolute", left: 0, right: 0, bottom: 8, fontFamily: theme.fontFamily.monoBold, fontSize: 10, textAlign: "center", color: "#FBFBF7" },
-  label: { fontFamily: theme.fontFamily.bodyMedium, fontSize: 11.5, lineHeight: 14.375, textAlign: "center", color: "#5C6459" },
-  labelActive: { fontFamily: theme.fontFamily.bodyBold, color: "#17291E" },
+  // v6.8 renders these at Inter Regular; the open collection differs by colour only.
+  count: { position: "absolute", left: 0, right: 0, bottom: 8, fontFamily: theme.fontFamily.body, fontSize: 10, textAlign: "center", color: theme.colors.page },
+  label: { fontFamily: theme.fontFamily.body, fontSize: 11.5, lineHeight: 14.375, textAlign: "center", color: theme.colors.textMedium },
+  labelActive: { color: theme.colors.text },
 });

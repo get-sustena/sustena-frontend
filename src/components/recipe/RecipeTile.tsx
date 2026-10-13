@@ -103,9 +103,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 2,
   },
-  // v6.8's rating style (the public profile's rating chip).
+  // v6.8's rating style (the public profile's rating chip renders Inter Regular).
   ratingText: {
-    fontFamily: theme.fontFamily.bodyBold,
+    fontFamily: theme.fontFamily.body,
     fontSize: 12,
     color: theme.colors.text,
   },

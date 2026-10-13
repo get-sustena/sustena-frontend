@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
   sheet: { paddingBottom: 18 },
   title: { marginBottom: 14, fontFamily: theme.fontFamily.display, fontSize: 19, color: "#17291E" },
   group: { marginBottom: 16 },
-  groupTitle: { marginBottom: 8, fontFamily: theme.fontFamily.monoBold, fontSize: 11.5, letterSpacing: 0.8, textTransform: "uppercase", color: "#8a9187" },
+  groupTitle: { marginBottom: 8, fontFamily: theme.fontFamily.body, fontSize: 11.5, letterSpacing: 0.92, textTransform: "uppercase", color: theme.colors.textMuted },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: 7 },
   chip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: "#E1E1E1", backgroundColor: "#EEF2E7", flexDirection: "row", alignItems: "center", gap: 5 },
   chipActive: { borderColor: "#17291E", backgroundColor: "#17291E" },

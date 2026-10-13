@@ -89,8 +89,8 @@ export function CreatorProfilePreviewScreen() {
 function initials(value: string) { return value.trim().split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase(); }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#FBFCFA" },
-  bar: { paddingHorizontal: 10, paddingBottom: 8, flexDirection: "row", alignItems: "center", gap: 4, borderBottomWidth: 1, borderBottomColor: "transparent", backgroundColor: "#FBFCFA", zIndex: 4 },
+  screen: { flex: 1, backgroundColor: theme.colors.page },
+  bar: { paddingHorizontal: 10, paddingBottom: 8, flexDirection: "row", alignItems: "center", gap: 4, borderBottomWidth: 1, borderBottomColor: "transparent", backgroundColor: theme.colors.page, zIndex: 4 },
   barScrolled: { borderBottomColor: "#E3EAD5" },
   barButton: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
   barTitle: { flex: 1, fontFamily: theme.fontFamily.bodySemiBold, fontSize: 15.5, color: "#17291E" },
