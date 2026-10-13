@@ -34,8 +34,10 @@ import { BottomSheetHost } from "../src/components/ui/BottomSheet";
 import { ProgressLoader } from "../src/components/ui/ProgressLoader";
 import { ToastHost } from "../src/components/ui/Toast";
 import { migrateDbIfNeeded } from "../src/db/migrations";
+import { SIGNED_IN_ROUTES } from "../src/lib/navigation/routeAccess";
 import { queryClient } from "../src/lib/query/queryClient";
 import { setupNetworkStatusListener } from "../src/lib/query/networkStatus";
+import { useAuthStore } from "../src/store/authStore";
 import { theme } from "../src/theme/theme";
 
 SplashScreen.preventAutoHideAsync();
@@ -89,14 +91,7 @@ export default function RootLayout() {
               <PersistenceEffects />
 
               <StatusBar style="dark" />
-              <Stack
-                screenOptions={{
-                  headerShown: false,
-                  contentStyle: {
-                    backgroundColor: theme.colors.background,
-                  },
-                }}
-              />
+              <RootNavigator />
 
               <ToastHost />
               <BottomSheetHost />
@@ -105,6 +100,34 @@ export default function RootLayout() {
         </SQLiteProvider>
       </Suspense>
     </QueryClientProvider>
+  );
+}
+
+// Reads the session itself rather than taking it from RootLayout. Rendered
+// inside AppBootstrapGate, it always sees the current sign-in state when the
+// stack mounts; a value passed down from RootLayout could be a render behind
+// and send a signed-in user to the welcome screen.
+function RootNavigator() {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+
+  return (
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        contentStyle: {
+          backgroundColor: theme.colors.background,
+        },
+      }}
+    >
+      {/* Listed first so a signed-out visitor sent away from a signed-in
+          screen lands here and is redirected onward. */}
+      <Stack.Screen name="index" />
+      <Stack.Protected guard={isAuthenticated}>
+        {SIGNED_IN_ROUTES.map((name) => (
+          <Stack.Screen key={name} name={name} />
+        ))}
+      </Stack.Protected>
+    </Stack>
   );
 }
 
