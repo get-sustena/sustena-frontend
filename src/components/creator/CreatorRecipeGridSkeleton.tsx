@@ -19,5 +19,5 @@ export function CreatorRecipeGridSkeleton() {
 }
 
 const styles = StyleSheet.create({
-  grid: { flexDirection: "row", flexWrap: "wrap", columnGap: CREATOR_GRID_GAP, rowGap: 14 },
+  grid: { flexDirection: "row", flexWrap: "wrap", gap: CREATOR_GRID_GAP },
 });

@@ -145,9 +145,9 @@ export function PublicCreatorProfileScreen() {
 function initials(value: string) { return value.trim().split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase(); }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#FBFCFA" },
+  screen: { flex: 1, backgroundColor: theme.colors.page },
   loading: { alignItems: "center", justifyContent: "center" },
-  bar: { paddingHorizontal: 10, paddingBottom: 8, flexDirection: "row", alignItems: "center", gap: 4, borderBottomWidth: 1, borderBottomColor: "transparent", backgroundColor: "#FBFCFA", zIndex: 4 },
+  bar: { paddingHorizontal: 10, paddingBottom: 8, flexDirection: "row", alignItems: "center", gap: 4, borderBottomWidth: 1, borderBottomColor: "transparent", backgroundColor: theme.colors.page, zIndex: 4 },
   barScrolled: { borderBottomColor: "#E3EAD5" },
   barButton: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
   barTitle: { flex: 1, fontFamily: theme.fontFamily.bodySemiBold, fontSize: 15.5, color: "#17291E" },
@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
   nameRow: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 2 },
   name: { fontFamily: theme.fontFamily.display, fontSize: 23, lineHeight: 26.45, letterSpacing: -0.46, color: "#17291E" },
   rating: { flexDirection: "row", alignItems: "center", gap: 4 },
-  ratingText: { fontFamily: theme.fontFamily.monoBold, fontSize: 12, color: "#17291E" },
+  ratingText: { fontFamily: theme.fontFamily.body, fontSize: 12, color: theme.colors.text },
   handle: { fontSize: 14, color: "#5C6459" },
   bio: { marginBottom: 10, fontSize: 14.5, lineHeight: 21.75, color: "#1B211C" },
   specialities: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 16 },

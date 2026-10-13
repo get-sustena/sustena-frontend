@@ -65,12 +65,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 20,
   },
+  // v6.8's step label (#create-progress-text).
   step: {
-    fontFamily: theme.fontFamily.monoBold,
-    fontSize: 12,
-    color: theme.colors.textMuted,
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
+    fontFamily: theme.fontFamily.body,
+    fontSize: 10.5,
+    color: theme.colors.textMedium,
+    letterSpacing: 0.42,
     marginBottom: 10,
   },
   title: {

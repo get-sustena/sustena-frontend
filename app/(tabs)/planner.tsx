@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BudgetPlannerPane } from "../../src/components/planner/BudgetPlannerPane";
 import { PantryPane } from "../../src/components/pantry/PantryPane";
+import { TAB_BAR_CLEARANCE } from "../../src/components/layout/tabBarClearance";
 import { AppText } from "../../src/components/ui/AppText";
 import { Icon } from "../../src/components/ui/Icon";
 import { usePantryStore } from "../../src/store/pantryStore";
@@ -13,7 +14,6 @@ export default function PantryScreen() {
   const { tab, category } = useLocalSearchParams<{ tab?: string; category?: string }>();
   const isBudget = tab === "budget";
   const pantryCount = usePantryStore((state) => state.ingredientIds.length);
-  const bottomPadding = Math.max(insets.bottom, 16) + 100;
 
   return (
     <View style={styles.screen}>
@@ -27,12 +27,12 @@ export default function PantryScreen() {
         <AppText style={[styles.meta, !isBudget && styles.kitchenMeta]}>{isBudget ? "" : `${pantryCount} ingredient${pantryCount === 1 ? "" : "s"}`}</AppText>
       </View>
       {isBudget ? (
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingBottom: bottomPadding }]}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
           <BudgetPlannerPane />
         </ScrollView>
       ) : (
         // The pantry scrolls itself so its search and categories can stay pinned.
-        <PantryPane key={category ?? "All"} initialCategory={category} bottomPadding={bottomPadding} />
+        <PantryPane key={category ?? "All"} initialCategory={category} />
       )}
     </View>
   );
@@ -47,5 +47,5 @@ const styles = StyleSheet.create({
   kitchenTitle: { fontSize: 34, lineHeight: 37, letterSpacing: -0.85, color: theme.colors.navy, textAlign: "left" },
   meta: { width: 76, fontFamily: theme.fontFamily.bodyMedium, fontSize: 11.5, color: theme.colors.textMuted, textAlign: "right" },
   kitchenMeta: { width: "auto", fontFamily: theme.fontFamily.bodySemiBold, fontSize: 12.5, color: theme.colors.textMedium, paddingBottom: 2 },
-  content: { paddingHorizontal: 20 },
+  content: { paddingHorizontal: 20, paddingBottom: TAB_BAR_CLEARANCE },
 });

@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1, paddingVertical: 0, fontFamily: theme.fontFamily.body, fontSize: 14, color: "#1B211C" },
   clear: { width: 28, height: 28, borderRadius: 14, backgroundColor: "#E1E1E1", alignItems: "center", justifyContent: "center" },
   content: { paddingHorizontal: 20, paddingBottom: 24 },
-  sectionTitle: { marginTop: 6, marginBottom: 8, fontFamily: theme.fontFamily.monoBold, fontSize: 11.5, letterSpacing: 0.92, textTransform: "uppercase", color: "#8a9187" },
+  sectionTitle: { marginTop: 6, marginBottom: 8, fontFamily: theme.fontFamily.body, fontSize: 11.5, letterSpacing: 0.92, textTransform: "uppercase", color: theme.colors.textMuted },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: 7, marginBottom: 10 },
   chip: { paddingHorizontal: 11, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: "#E1E1E1", backgroundColor: "#EEF2E7", fontFamily: theme.fontFamily.bodySemiBold, fontSize: 12, color: "#1f7048" },
   row: { minHeight: 58, paddingHorizontal: 4, flexDirection: "row", alignItems: "center", gap: 12, borderBottomWidth: 1, borderBottomColor: "#E1E1E1" },

@@ -50,5 +50,5 @@ const styles = StyleSheet.create({
   incompleteSubtitle: { marginBottom: 14, fontSize: 13, lineHeight: 18.2, color: "#9fb0a3" },
   track: { height: 7, overflow: "hidden", borderRadius: 999, backgroundColor: "rgba(255,255,255,0.14)" },
   fill: { height: "100%", borderRadius: 999, backgroundColor: "#34B673" },
-  progress: { marginTop: 9, fontFamily: theme.fontFamily.mono, fontSize: 12, letterSpacing: 0.36, color: "#9fb0a3" },
+  progress: { marginTop: 9, fontFamily: theme.fontFamily.body, fontSize: 12, letterSpacing: 0.36, color: "#9fb0a3" },
 });

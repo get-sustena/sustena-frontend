@@ -142,7 +142,7 @@ function formatGroup(group: string, separator?: string) {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#FBFCFA" },
+  screen: { flex: 1, backgroundColor: theme.colors.page },
   header: { paddingHorizontal: 20, paddingBottom: 10, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   backButton: { width: 42, height: 42, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: theme.colors.border, borderRadius: 12, backgroundColor: theme.colors.cream },
   title: { position: "absolute", left: 70, right: 70, bottom: 22, textAlign: "center", fontFamily: theme.fontFamily.display, fontSize: 15, color: theme.colors.navy },
@@ -158,9 +158,9 @@ const styles = StyleSheet.create({
   optionGroup: { marginTop: 2, fontSize: 10.5, color: theme.colors.textMuted },
   check: { width: 22, height: 22, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: theme.colors.border, borderRadius: 6 },
   checkSelected: { borderColor: theme.colors.navy, backgroundColor: theme.colors.navy },
-  footer: { paddingTop: 12, paddingHorizontal: 20, borderTopWidth: 1, borderTopColor: theme.colors.border, backgroundColor: "#FBFCFA" },
+  footer: { paddingTop: 12, paddingHorizontal: 20, borderTopWidth: 1, borderTopColor: theme.colors.border, backgroundColor: theme.colors.page },
   doneButton: { minHeight: 48, alignItems: "center", justifyContent: "center", borderRadius: 999, backgroundColor: theme.colors.navy },
   doneText: { fontFamily: theme.fontFamily.bodyBold, fontSize: 14, color: theme.colors.onDark },
-  unavailable: { flex: 1, padding: 20, alignItems: "center", justifyContent: "center", gap: 14, backgroundColor: "#FBFCFA" },
+  unavailable: { flex: 1, padding: 20, alignItems: "center", justifyContent: "center", gap: 14, backgroundColor: theme.colors.page },
   unavailableText: { fontSize: 13, color: theme.colors.textMuted },
 });

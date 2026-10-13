@@ -3,7 +3,7 @@ import { theme } from "../../theme/theme";
 import { AppText } from "./AppText";
 import { Icon, IconName } from "./Icon";
 
-type ButtonVariant = "primary" | "accent" | "outline" | "ghost" | "card";
+type ButtonVariant = "primary" | "ghost";
 
 type Props = PressableProps & {
   title: string;
@@ -14,12 +14,11 @@ type Props = PressableProps & {
 
 const TEXT_COLOR_BY_VARIANT: Record<ButtonVariant, string> = {
   primary: theme.colors.onDark,
-  accent: theme.colors.text,
-  outline: theme.colors.textMedium,
   ghost: theme.colors.orange,
-  card: theme.colors.text,
 };
 
+// v6.8's primary button (.saved-recipes-v65__browse): a 50px pill with Inter
+// Bold 15 and no letter spacing.
 export function Button({
   title,
   variant = "primary",
@@ -28,11 +27,7 @@ export function Button({
   disabled,
   ...props
 }: Props) {
-  const isGhost = variant === "ghost";
-  const isOutline = variant === "outline";
-  const isPrimary = variant === "primary";
-  const isAccent = variant === "accent";
-  const iconColor = disabled
+  const textColor = disabled
     ? theme.colors.textMuted
     : TEXT_COLOR_BY_VARIANT[variant];
 
@@ -48,30 +43,18 @@ export function Button({
       ]}
       {...props}
     >
-      {icon ? <Icon name={icon} size={16} color={iconColor} /> : null}
+      {icon ? <Icon name={icon} size={16} color={textColor} /> : null}
 
-      <AppText
-        style={[
-          styles.text,
-          isPrimary && styles.primaryText,
-          isAccent && styles.accentText,
-          isOutline && styles.outlineText,
-          isGhost && styles.ghostText,
-          variant === "card" && styles.cardText,
-          disabled && styles.disabledText,
-        ]}
-      >
-        {title}
-      </AppText>
+      <AppText style={[styles.text, { color: textColor }]}>{title}</AppText>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   base: {
-    minHeight: 48,
-    borderRadius: theme.radius.md,
-    paddingHorizontal: theme.spacing.xl,
+    minHeight: 50,
+    borderRadius: theme.radius.full,
+    paddingHorizontal: 26,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
@@ -80,21 +63,8 @@ const styles = StyleSheet.create({
   primary: {
     backgroundColor: theme.colors.navy,
   },
-  accent: {
-    backgroundColor: theme.colors.orange,
-  },
-  outline: {
-    backgroundColor: "transparent",
-    borderWidth: 1.5,
-    borderColor: theme.colors.border2,
-  },
   ghost: {
     backgroundColor: "transparent",
-  },
-  card: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1.5,
-    borderColor: theme.colors.border,
   },
   pressed: {
     opacity: 0.8,
@@ -105,25 +75,6 @@ const styles = StyleSheet.create({
   },
   text: {
     fontFamily: theme.fontFamily.bodyBold,
-    fontSize: theme.fontSize.md,
-    letterSpacing: 0.3,
-  },
-  primaryText: {
-    color: theme.colors.onDark,
-  },
-  accentText: {
-    color: theme.colors.text,
-  },
-  outlineText: {
-    color: theme.colors.textMedium,
-  },
-  ghostText: {
-    color: theme.colors.orange,
-  },
-  cardText: {
-    color: theme.colors.text,
-  },
-  disabledText: {
-    color: theme.colors.textMuted,
+    fontSize: 15,
   },
 });

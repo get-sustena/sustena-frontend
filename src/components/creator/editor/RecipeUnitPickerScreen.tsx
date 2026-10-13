@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
   searchBox: { minHeight: 48, paddingHorizontal: 13, flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderColor: theme.colors.border, borderRadius: 12, backgroundColor: theme.colors.surface2 },
   searchInput: { flex: 1, paddingVertical: 0, fontFamily: theme.fontFamily.body, fontSize: 14, color: theme.colors.text },
   list: { paddingHorizontal: 20, paddingBottom: 30 },
-  groupLabel: { marginTop: 14, marginBottom: 8, fontFamily: theme.fontFamily.monoBold, fontSize: 11.5, letterSpacing: 0.9, textTransform: "uppercase", color: theme.colors.textMuted },
+  groupLabel: { marginTop: 8, marginBottom: 8, fontFamily: theme.fontFamily.body, fontSize: 11.5, letterSpacing: 0.92, textTransform: "uppercase", color: theme.colors.textMuted },
   unitRow: { minHeight: 52, paddingHorizontal: 4, flexDirection: "row", alignItems: "center", gap: 12, borderBottomWidth: 1, borderBottomColor: theme.colors.border },
   check: { width: 22, height: 22, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: theme.colors.border, borderRadius: 6 },
   checkSelected: { borderColor: theme.colors.navy, backgroundColor: theme.colors.navy },

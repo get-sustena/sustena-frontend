@@ -42,6 +42,7 @@ import { useProfileAnswersStore } from "../../src/store/profileAnswersStore";
 import { openSheet, showToast } from "../../src/store/uiStore";
 import { theme } from "../../src/theme/theme";
 import { appImages } from "../../src/assets/appImages";
+import { TAB_BAR_CLEARANCE } from "../../src/components/layout/tabBarClearance";
 
 const KITCHEN_QUICK_CATEGORIES = ["Proteins", "Produce", "Grains"];
 
@@ -127,10 +128,7 @@ export default function HomeScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: Math.max(insets.bottom, 16) + 92 },
-        ]}
+        contentContainerStyle={styles.scrollContent}
       >
         <View style={styles.plannerSection}>
           <AppText style={[styles.sectionTitle, styles.plannerTitle]}>
@@ -138,7 +136,7 @@ export default function HomeScreen() {
           </AppText>
 
           <View
-            style={[styles.kitchenCardShadow, kitchenPressed && styles.pressed]}
+            style={[styles.kitchenCardFrame, kitchenPressed && styles.pressed]}
           >
             <View style={styles.kitchenCard}>
               <LinearGradient
@@ -441,6 +439,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.white,
   },
   scrollContent: {
+    paddingBottom: TAB_BAR_CLEARANCE,
     backgroundColor: theme.colors.white,
   },
   greeting: {
@@ -505,23 +504,18 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   shuffleText: {
-    fontFamily: theme.fontFamily.bodySemiBold,
+    fontFamily: theme.fontFamily.bodyMedium,
     fontSize: 12,
-    color: theme.colors.linkGreen,
+    color: theme.colors.navy3,
   },
   seeAllText: {
-    fontFamily: theme.fontFamily.bodySemiBold,
+    fontFamily: theme.fontFamily.bodyMedium,
     fontSize: 13,
-    color: theme.colors.linkGreen,
+    color: theme.colors.navy3,
   },
-  kitchenCardShadow: {
-    borderRadius: 20,
-    marginBottom: 14,
-    shadowColor: theme.colors.navy,
-    shadowOffset: { width: 0, height: 16 },
-    shadowOpacity: 0.28,
-    shadowRadius: 15,
-    elevation: 6,
+  // v6.8 has no shadow under this card, and 24px before the budget button.
+  kitchenCardFrame: {
+    marginBottom: 24,
   },
   kitchenCard: {
     borderRadius: 20,
@@ -572,7 +566,7 @@ const styles = StyleSheet.create({
   },
   kitchenPill: {
     borderRadius: 999,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: "rgba(255,255,255,0.16)",
     backgroundColor: "rgba(255,255,255,0.1)",
     paddingHorizontal: 13,
@@ -583,7 +577,7 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.97 }],
   },
   kitchenPillText: {
-    fontFamily: theme.fontFamily.monoBold,
+    fontFamily: theme.fontFamily.bodyBold,
     fontSize: 14,
     color: theme.colors.onDark,
   },

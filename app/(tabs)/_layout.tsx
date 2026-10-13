@@ -69,82 +69,85 @@ function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
 
   return (
     <View style={styles.wrapper} pointerEvents="box-none">
-      <View style={styles.bar} onLayout={handleLayout}>
-        <BlurView
-          intensity={40}
-          tint="dark"
-          style={StyleSheet.absoluteFill}
-        />
-        <View style={styles.tint} />
+      <View style={styles.barShadow}>
+        <View style={styles.bar} onLayout={handleLayout}>
+          {/* v6.8: an 86% navy layer over a 20px blur (intensity 100 on web). */}
+          <BlurView
+            intensity={100}
+            tint="default"
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={styles.tint} />
 
-        {barWidth > 0 ? (
-          <Animated.View style={[styles.indicator, indicatorStyle]} />
-        ) : null}
+          {barWidth > 0 ? (
+            <Animated.View style={[styles.indicator, indicatorStyle]} />
+          ) : null}
 
-        <View style={styles.row}>
-        {state.routes.map((route, index) => {
-          const { options } = descriptors[route.key];
-          const isFocused = state.index === index;
-          const label =
-            typeof options.title === "string" ? options.title : route.name;
-          const iconName = TAB_ICONS[route.name] ?? "home";
-          const showCartBadge = route.name === "shopping" && cartCount > 0;
+          <View style={styles.row}>
+            {state.routes.map((route, index) => {
+              const { options } = descriptors[route.key];
+              const isFocused = state.index === index;
+              const label =
+                typeof options.title === "string" ? options.title : route.name;
+              const iconName = TAB_ICONS[route.name] ?? "home";
+              const showCartBadge = route.name === "shopping" && cartCount > 0;
 
-          function handlePress() {
-            const event = navigation.emit({
-              type: "tabPress",
-              target: route.key,
-              canPreventDefault: true,
-            });
+              function handlePress() {
+                const event = navigation.emit({
+                  type: "tabPress",
+                  target: route.key,
+                  canPreventDefault: true,
+                });
 
-            if (event.defaultPrevented) return;
+                if (event.defaultPrevented) return;
 
-            if (route.name === "planner") {
-              router.navigate("/(tabs)/planner");
-            } else if (!isFocused) {
-              navigation.navigate(route.name);
-            }
-          }
+                if (route.name === "planner") {
+                  router.navigate("/(tabs)/planner");
+                } else if (!isFocused) {
+                  navigation.navigate(route.name);
+                }
+              }
 
-          return (
-            <Pressable
-              key={route.key}
-              onPress={handlePress}
-              style={styles.tab}
-              accessibilityRole="button"
-              accessibilityState={isFocused ? { selected: true } : {}}
-            >
-              <View
-                style={[
-                  styles.iconWrap,
-                  isFocused && styles.iconWrapActive,
-                ]}
-              >
-                <Icon
-                  name={iconName}
-                  size={20}
-                  color={
-                    isFocused ? theme.colors.onDark : theme.colors.textDim
-                  }
-                />
+              return (
+                <Pressable
+                  key={route.key}
+                  onPress={handlePress}
+                  style={styles.tab}
+                  accessibilityRole="button"
+                  accessibilityState={isFocused ? { selected: true } : {}}
+                >
+                  <View
+                    style={[
+                      styles.iconWrap,
+                      isFocused && styles.iconWrapActive,
+                    ]}
+                  >
+                    <Icon
+                      name={iconName}
+                      size={20}
+                      color={
+                        isFocused ? theme.colors.onDark : theme.colors.textDim
+                      }
+                    />
 
-                {showCartBadge ? (
-                  <View style={styles.cartBadge}>
-                    <AppText style={styles.cartBadgeText}>
-                      {cartCount > 9 ? "9+" : cartCount}
-                    </AppText>
+                    {showCartBadge ? (
+                      <View style={styles.cartBadge}>
+                        <AppText style={styles.cartBadgeText}>
+                          {cartCount > 9 ? "9+" : cartCount}
+                        </AppText>
+                      </View>
+                    ) : null}
                   </View>
-                ) : null}
-              </View>
 
-              <AppText
-                style={[styles.label, isFocused && styles.labelActive]}
-              >
-                {label}
-              </AppText>
-            </Pressable>
-          );
-        })}
+                  <AppText
+                    style={[styles.label, isFocused && styles.labelActive]}
+                  >
+                    {label}
+                  </AppText>
+                </Pressable>
+              );
+            })}
+          </View>
         </View>
       </View>
     </View>
@@ -158,22 +161,23 @@ const styles = StyleSheet.create({
     right: 14,
     bottom: Platform.select({ ios: 22, default: 16 }),
   },
+  // The shadow sits outside the clipped bar so the rounded clip can't cut it.
+  barShadow: {
+    borderRadius: 24,
+    boxShadow: "0px 24px 46px -14px rgba(10,18,13,0.55)",
+  },
   bar: {
     height: 60,
     borderRadius: 24,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: "rgba(255,255,255,0.09)",
     overflow: "hidden",
-    backgroundColor: "rgba(19,34,25,0.5)",
-    shadowColor: "#0A120D",
-    shadowOffset: { width: 0, height: 14 },
-    shadowOpacity: 0.55,
-    shadowRadius: 26,
-    elevation: 12,
   },
   tint: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: "rgba(19,34,25,0.55)",
+    borderRadius: 24,
+    backgroundColor: "rgba(19,34,25,0.86)",
+    boxShadow: "inset 0px 1px 0px rgba(255,255,255,0.07)",
   },
   row: {
     flex: 1,
@@ -207,8 +211,9 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: -6,
     right: -9,
-    width: 18,
-    height: 18,
+    minWidth: 17,
+    height: 17,
+    paddingHorizontal: 4,
     borderRadius: 999,
     backgroundColor: theme.colors.orange,
     borderWidth: 2,
@@ -217,9 +222,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   cartBadgeText: {
-    fontFamily: theme.fontFamily.monoBold,
+    fontFamily: theme.fontFamily.bodyBold,
     fontSize: 11,
-    color: theme.colors.text,
+    color: theme.colors.navy,
   },
   label: {
     fontFamily: theme.fontFamily.bodyMedium,
@@ -228,7 +233,6 @@ const styles = StyleSheet.create({
     opacity: 0.9,
   },
   labelActive: {
-    fontFamily: theme.fontFamily.bodyBold,
     color: theme.colors.onDark,
     opacity: 1,
   },

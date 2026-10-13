@@ -93,10 +93,11 @@ const styles = StyleSheet.create({
   info: {
     flex: 1,
   },
+  // v6.8 renders settings row labels at Inter Medium ([data-label]).
   label: {
-    fontFamily: theme.fontFamily.bodySemiBold,
+    fontFamily: theme.fontFamily.bodyMedium,
     fontSize: 14,
-    color: "#17291E",
+    color: theme.colors.navy,
   },
   subtitle: {
     fontFamily: theme.fontFamily.body,

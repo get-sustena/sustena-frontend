@@ -20,6 +20,7 @@ import { closeSheet, openSheet, showToast } from "../../store/uiStore";
 import { theme } from "../../theme/theme";
 import type { Ingredient } from "../../types/api";
 import { IngredientImage } from "../ingredient/IngredientImage";
+import { TAB_BAR_CLEARANCE } from "../layout/tabBarClearance";
 import { RecipePhoto } from "../recipe/RecipePhoto";
 import { AppText } from "../ui/AppText";
 import { EmptyState } from "../ui/EmptyState";
@@ -27,9 +28,9 @@ import { Icon } from "../ui/Icon";
 import { PantryIngredientPickerSheet } from "./PantryIngredientPickerSheet";
 import { PantryListSkeleton, PantryMatchesSkeleton } from "./PantrySkeletons";
 
-type Props = { initialCategory?: string; bottomPadding: number };
+type Props = { initialCategory?: string };
 
-export function PantryPane({ initialCategory, bottomPadding }: Props) {
+export function PantryPane({ initialCategory }: Props) {
   const db = useSQLiteContext();
   const { height } = useWindowDimensions();
   const listRef = useRef<FlashListRef<Ingredient>>(null);
@@ -154,12 +155,12 @@ export function PantryPane({ initialCategory, bottomPadding }: Props) {
     }
   }
 
-  if (catalogQuery.isPending || (pantryQuery.isPending && !pantryIds.length)) return <PaneScroll bottomPadding={bottomPadding}><PantryListSkeleton /></PaneScroll>;
-  if (catalogQuery.isError) return <PaneScroll bottomPadding={bottomPadding}><EmptyState iconName="offline" title="Could not load ingredients" message={getApiErrorMessage(catalogQuery.error)} /></PaneScroll>;
+  if (catalogQuery.isPending || (pantryQuery.isPending && !pantryIds.length)) return <PaneScroll><PantryListSkeleton /></PaneScroll>;
+  if (catalogQuery.isError) return <PaneScroll><EmptyState iconName="offline" title="Could not load ingredients" message={getApiErrorMessage(catalogQuery.error)} /></PaneScroll>;
 
   if (showResults) {
     return (
-      <PaneScroll bottomPadding={bottomPadding}>
+      <PaneScroll>
         <Pressable onPress={() => setShowResults(false)} style={styles.resultsBack}>
           <Icon name="chevronLeft" size={16} color="#1F7048" />
           <AppText style={styles.resultsBackText}>Edit pantry</AppText>
@@ -183,7 +184,7 @@ export function PantryPane({ initialCategory, bottomPadding }: Props) {
                 <AppText style={styles.resultMatch}>
                   Uses {match.matchedIngredientCount} of your ingredients · {match.missingIngredientCount === 0 ? "Ready to cook" : `${match.missingIngredientCount} more needed`}
                 </AppText>
-                <AppText style={styles.resultMeta} numberOfLines={1}>
+                <AppText style={styles.resultHave} numberOfLines={1}>
                   Have: {match.matchedIngredients.join(", ")}
                 </AppText>
               </View>
@@ -197,7 +198,7 @@ export function PantryPane({ initialCategory, bottomPadding }: Props) {
 
   if (!pantryIds.length) {
     return (
-      <PaneScroll bottomPadding={bottomPadding}>
+      <PaneScroll>
         <View style={styles.empty}>
           <AppText style={styles.emptyCopy}>Add what you already have at home. Sustena will use it to find meals you can actually make.</AppText>
           <Image
@@ -245,7 +246,7 @@ export function PantryPane({ initialCategory, bottomPadding }: Props) {
         data={visibleIngredients}
         keyExtractor={(ingredient) => ingredient.id}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: bottomPadding }}
+        contentContainerStyle={styles.pageContent}
         ListHeaderComponent={<AppText style={styles.count}>{pantryIds.length} ingredients{activeCategory !== "All" ? ` · ${activeCategory}` : ""}</AppText>}
         ListEmptyComponent={
           <View style={styles.searchEmpty}>
@@ -285,9 +286,9 @@ export function PantryPane({ initialCategory, bottomPadding }: Props) {
 }
 
 // Loading, empty and results states scroll as one page, as the Pantry tab did before it pinned the search.
-function PaneScroll({ bottomPadding, children }: { bottomPadding: number; children: ReactNode }) {
+function PaneScroll({ children }: { children: ReactNode }) {
   return (
-    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.pageContent, { paddingBottom: bottomPadding }]}>
+    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.pageContent}>
       {children}
     </ScrollView>
   );
@@ -296,7 +297,7 @@ function PaneScroll({ bottomPadding, children }: { bottomPadding: number; childr
 const styles = StyleSheet.create({
   pane: { flex: 1 },
   pinned: { paddingHorizontal: 20 },
-  pageContent: { paddingHorizontal: 20 },
+  pageContent: { paddingHorizontal: 20, paddingBottom: TAB_BAR_CLEARANCE },
   empty: { paddingTop: 4 },
   emptyCopy: { maxWidth: 330, fontFamily: theme.fontFamily.body, fontSize: 14, lineHeight: 21, color: theme.colors.textMedium },
   emptyVisual: { width: "100%", maxWidth: 326, height: 224, alignSelf: "center", marginTop: 96, marginBottom: 28 },
@@ -321,7 +322,7 @@ const styles = StyleSheet.create({
   searchEmptyIcon: { width: 56, height: 56, borderRadius: 17, backgroundColor: theme.colors.card2, alignItems: "center", justifyContent: "center", marginBottom: 14 },
   searchEmptyTitle: { fontFamily: theme.fontFamily.display, fontSize: 18, color: theme.colors.text },
   searchEmptyCopy: { maxWidth: 250, marginTop: 8, textAlign: "center", fontFamily: theme.fontFamily.body, fontSize: 13, lineHeight: 19, color: theme.colors.textMedium },
-  ingredientRow: { minHeight: 60, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 10, borderWidth: 0.75, borderColor: theme.colors.border, borderRadius: 14, backgroundColor: theme.colors.card },
+  ingredientRow: { minHeight: 60, flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 6, paddingLeft: 10, paddingRight: 8, borderWidth: 0.75, borderColor: theme.colors.border, borderRadius: 14, backgroundColor: theme.colors.card },
   ingredientThumb: { width: 48, height: 48 },
   ingredientName: { flex: 1, fontFamily: theme.fontFamily.bodySemiBold, fontSize: 14.5, color: theme.colors.text },
   remove: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
@@ -329,7 +330,7 @@ const styles = StyleSheet.create({
   findButtonText: { fontFamily: theme.fontFamily.bodyBold, fontSize: 14.5, color: theme.colors.onDark },
   resultsBack: { minHeight: 44, flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 },
   resultsBackText: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 13.5, color: "#1F7048" },
-  resultsCount: { fontFamily: theme.fontFamily.monoBold, fontSize: 12, letterSpacing: 1, textTransform: "uppercase", color: theme.colors.textMuted, marginTop: 6, marginBottom: 12 },
+  resultsCount: { fontFamily: theme.fontFamily.body, fontSize: 12, letterSpacing: 1, textTransform: "uppercase", color: theme.colors.textMuted, marginTop: 6, marginBottom: 12 },
   noMatches: { paddingHorizontal: 20, paddingVertical: 32, alignItems: "center" },
   noMatchesIcon: { width: 56, height: 56, borderRadius: 20, backgroundColor: "#EEF2E7", alignItems: "center", justifyContent: "center", marginBottom: 14 },
   noMatchesText: { fontFamily: theme.fontFamily.body, fontSize: 14, lineHeight: 21, color: theme.colors.textMedium, textAlign: "center" },
@@ -338,9 +339,10 @@ const styles = StyleSheet.create({
   resultPhoto: { width: 52, height: 52, borderRadius: 12 },
   resultCopy: { flex: 1, minWidth: 0 },
   resultName: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 15, color: theme.colors.text },
-  resultMeta: { fontFamily: theme.fontFamily.mono, fontSize: 11, color: theme.colors.textMedium, marginTop: 3 },
-  resultMatch: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 11, color: theme.colors.linkGreen, marginTop: 4 },
+  resultMeta: { fontFamily: theme.fontFamily.body, fontSize: 13, color: theme.colors.textMedium, marginTop: 3 },
+  resultMatch: { fontFamily: theme.fontFamily.body, fontSize: 11, color: theme.colors.navy3, marginTop: 4 },
+  resultHave: { fontFamily: theme.fontFamily.body, fontSize: 11, color: theme.colors.textMuted, marginTop: 2 },
   matchBadge: { minWidth: 46, paddingHorizontal: 8, paddingVertical: 5, borderWidth: 0.75, borderColor: "#BEE0CD", borderRadius: 8, backgroundColor: "#E7F3EC", alignItems: "center" },
-  matchValue: { fontFamily: theme.fontFamily.monoBold, fontSize: 12, color: theme.colors.navy3 },
-  matchLabel: { fontFamily: theme.fontFamily.mono, fontSize: 8, letterSpacing: 0.5, textTransform: "uppercase", color: theme.colors.navy3 },
+  matchValue: { fontFamily: theme.fontFamily.body, fontSize: 12, color: theme.colors.navy3 },
+  matchLabel: { fontFamily: theme.fontFamily.body, fontSize: 8, letterSpacing: 0.5, textTransform: "uppercase", color: theme.colors.navy3 },
 });

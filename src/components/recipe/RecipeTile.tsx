@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { Recipe } from "../../data/recipes";
 import { theme } from "../../theme/theme";
 import { AppText } from "../ui/AppText";
+import { Icon } from "../ui/Icon";
 import { RecipePhoto } from "./RecipePhoto";
 
 type Props = {
@@ -19,7 +20,6 @@ export function RecipeTile({ recipe, onPress }: Props) {
       <RecipePhoto
         imageUrl={recipe.imageUrl}
         fallbackLabel="recipe photo"
-        fallbackLabelVariant="compact"
         style={styles.photo}
       />
 
@@ -42,7 +42,7 @@ export function RecipeTile({ recipe, onPress }: Props) {
           <View style={styles.communityRow}>
             <View style={styles.communitySpacer} />
             <View style={styles.rating}>
-              <AppText style={styles.ratingStar}>★</AppText>
+              <Icon name="star" size={11} color={theme.colors.orange} />
               <AppText style={styles.ratingText}>
                 {recipe.averageRating?.toFixed(1)}
               </AppText>
@@ -58,16 +58,11 @@ const styles = StyleSheet.create({
   tile: {
     flex: 1,
     minWidth: 0,
-    backgroundColor: theme.colors.card,
-    borderWidth: 1,
+    backgroundColor: theme.colors.page,
+    borderWidth: 0.5,
     borderColor: theme.colors.border,
     borderRadius: 16,
     overflow: "hidden",
-    shadowColor: "#1B211C",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.24,
-    shadowRadius: 24,
-    elevation: 3,
   },
   pressed: {
     opacity: 0.9,
@@ -91,9 +86,9 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   meta: {
-    fontFamily: theme.fontFamily.mono,
+    fontFamily: theme.fontFamily.body,
     fontSize: 13,
-    letterSpacing: 0,
+    letterSpacing: 0.39,
     color: theme.colors.textMedium,
   },
   communityRow: {
@@ -108,13 +103,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 2,
   },
-  ratingStar: {
-    fontSize: 11,
-    color: theme.colors.orange,
-  },
+  // v6.8's rating style (the public profile's rating chip renders Inter Regular).
   ratingText: {
-    fontFamily: theme.fontFamily.monoBold,
-    fontSize: 10.5,
-    color: theme.colors.textMedium,
+    fontFamily: theme.fontFamily.body,
+    fontSize: 12,
+    color: theme.colors.text,
   },
 });

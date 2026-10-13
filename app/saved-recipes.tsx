@@ -83,8 +83,9 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontFamily: theme.fontFamily.display,
-    fontSize: 18,
-    letterSpacing: -0.2,
+    fontSize: 19,
+    lineHeight: 23,
+    letterSpacing: -0.19,
     color: theme.colors.navy,
   },
   gridContent: {
@@ -103,19 +104,22 @@ const styles = StyleSheet.create({
     paddingTop: 60,
   },
   emptyImage: { width: "100%", maxWidth: 288, aspectRatio: 3 / 2, marginBottom: 28 },
+  // v6.8 .saved-recipes-v65__empty-title and __empty-copy.
   emptyTitle: {
     fontFamily: theme.fontFamily.display,
-    fontSize: 19,
+    fontSize: 21,
+    lineHeight: 25,
+    letterSpacing: -0.25,
     color: theme.colors.navy,
-    marginBottom: 8,
+    marginBottom: 10,
   },
   emptyText: {
     fontFamily: theme.fontFamily.body,
-    fontSize: 14,
-    lineHeight: 21,
+    fontSize: 15,
+    lineHeight: 22.5,
     color: theme.colors.textMedium,
     textAlign: "center",
-    maxWidth: 230,
-    marginBottom: 22,
+    maxWidth: 270,
+    marginBottom: 24,
   },
 });

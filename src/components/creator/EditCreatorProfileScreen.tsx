@@ -247,7 +247,7 @@ const styles = StyleSheet.create({
   bioInput: { width: "100%", minHeight: 84, paddingHorizontal: 16, paddingVertical: 14, borderRadius: 14, borderWidth: 1.5, borderColor: "#E1E1E1", backgroundColor: "#FFFFFF", fontFamily: theme.fontFamily.body, fontSize: 14.5, color: "#1B211C" },
   bioHelperRow: { flexDirection: "row", justifyContent: "space-between", gap: 10, marginTop: 6 },
   bioHelper: { flex: 1, fontSize: 12, color: "#8a9187" },
-  bioCount: { fontFamily: theme.fontFamily.mono, fontSize: 11.5, color: "#8a9187" },
+  bioCount: { fontFamily: theme.fontFamily.body, fontSize: 11.5, color: theme.colors.textMuted },
   specialitiesField: { paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "#E1E1E1" },
   specialitiesHeading: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 },
   specialitiesHeadingSelected: { marginBottom: 8 },

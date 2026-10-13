@@ -165,7 +165,7 @@ The founder approved these on 13 October 2026. The backend sends "Our Recommenda
 
 | Target | How |
 | --- | --- |
-| Web | Vercel runs `npx expo export --platform web` and serves `dist/` as a single-page app (`vercel.json` rewrites every path to `index.html` and sets the COOP/COEP headers that SQLite on web needs). See `docs/WEB_DEPLOYMENT.md`. |
+| Web | Vercel runs `npx expo export --platform web` and serves `dist/` as a single-page app (`vercel.json` rewrites every path to `index.html` and sets the COOP/COEP headers that SQLite on web needs). Browsers keep everything under `/_expo/static/` and `/assets/` for a year (`public, max-age=31536000, immutable`, Vercel's recommendation for content-hashed files). This is safe only because Expo puts a content hash in every one of those file names. `index.html` keeps Vercel's default `max-age=0, must-revalidate`, so a deploy reaches people on their next visit. See `docs/WEB_DEPLOYMENT.md`. |
 | Android / iOS | EAS Build. Profiles in `eas.json`: `development` (dev client), `preview` (internal, Android APK), `production` (store, build number auto-increments). Expo owner `cookease-org`, bundle ID `com.getsustena.app`. |
 | Over-the-air updates | `expo-updates` with one channel per profile. `runtimeVersion` uses the fingerprint policy, so a native change forces a new build. |
 
@@ -178,7 +178,7 @@ Branches: `testing` is for local work. `main` is the deployment branch on GitHub
 | Types | `npx tsc --noEmit` |
 | Lint | `npm run lint` |
 | Unused code | `npm run lint:unused` (knip; the founder's rule is no dead code, so this should report nothing. `expo-symbols` is kept on purpose and listed in `knip.json`'s `ignoreDependencies`) |
-| Unit tests | `node --test tests/*.test.mjs` (28 tests; passing `tests/` as a folder fails on Windows) |
+| Unit tests | `node --test tests/*.test.mjs` (32 tests; passing `tests/` as a folder fails on Windows) |
 | Web preview | `npm run web`, then open http://localhost:8081 |
 
 ## Rules for changes
@@ -201,7 +201,7 @@ Found while reading the code against the frontend skills. None of these is fixed
 | --- | --- | --- |
 | The offline cache needs `qualityScore`, `qualityWarnings` and `source*` | `src/db/recipeRepository.ts` (`quality_warnings_json` is NOT NULL) | The backend keeps the fields. If it ever empties them, `qualityWarnings` must stay `[]`, never null or missing. |
 | The bundled recipe seed is out of date | `src/data/mobile_seed_recipes_published.json` (June 2026, 112 recipes, no meal tags or categories) | Offline phones relying on the seed can't filter recommendations by meal and get the unfiltered list. |
-| A second tab of the web app stays blank | `SQLiteProvider` in `app/_layout.tsx`; expo-sqlite's web storage lets one tab hold the database file | The second tab can't open the database, nothing catches the error, and the page renders nothing. The founder wants both tabs usable. Fix in progress. |
+| A second tab of the web app stays blank | `SQLiteProvider` in `app/_layout.tsx`; expo-sqlite's web storage lets one tab hold the database file | The second tab can't open the database, nothing catches the error, and the page renders nothing. Quick reloads can do the same while the previous page still holds the file, and browser panes that share storage block each other. The founder wants both tabs usable, with a standard fix. Fix in progress. |
 | Rating a recipe leaves the Recipes grid showing the old rating | The infinite list key `["recipes", "infinite-list", ...]` isn't invalidated after rating | Tiles show the average rating. It updates only when the query goes stale. |
 | No error boundary anywhere | `app/` | One crashing screen takes down the whole app. |
 | The search field has no accessible label and no clear button | `src/components/ui/SearchInput.tsx` | Screen readers only get the placeholder, and clearing a search means deleting each character. |
@@ -240,3 +240,6 @@ All on 13 October 2026, on `testing`:
 - `e7f12d4` Start-up retries `/auth/me` after a dropped connection (2, 5, 15, then every 30 seconds), so the user and their name still load.
 - `4832077`, `8f069d1`, `5e3a541` Dead code removed (founder rule): 18 unused files, unused hooks, API calls, helpers, types, query keys and 51 style keys, and five unused packages. `npm run lint:unused` (knip) keeps it that way.
 - `1a6f76b`, `f8f3836`, `c579680` Skeleton loaders replace the logo loader in the tabs (Home, Recipes, Pantry, Profile, Shopping list, budget planner), and the Profile recipe grid now fills its row.
+- `e3dd4c2`, `c5dc400` Push meal reminders on Android (see "Push meal reminders").
+- `4046a1e` PR #2 merged into `main` (via `gh`) and live: the budget button, the `/auth/me` retry, the dead-code removal, skeletons and meal reminders. The first APK with meal reminders was built from this commit (EAS build `99057917`, `preview` profile).
+- `39e509a` Browsers keep the content-hashed files under `/_expo/static/` and `/assets/` for a year. `index.html` is still checked on every visit.

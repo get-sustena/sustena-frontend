@@ -2,7 +2,8 @@ import { Platform, useWindowDimensions } from "react-native";
 import { WEB_APP_MAX_WIDTH } from "../layout/WebAppFrame";
 
 const PAGE_PADDING = 20;
-export const CREATOR_GRID_GAP = 10;
+// v6.8 #cp-grid: gap 8px across and down.
+export const CREATOR_GRID_GAP = 8;
 
 // Width of one card in the Profile tab's three-across recipe grid. Worked out
 // from the screen width (the web app frame caps it at 480) rather than

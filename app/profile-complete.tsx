@@ -103,7 +103,7 @@ export default function ProfileCompleteScreen() {
       </View>
 
       <View style={styles.section}>
-        <AppText style={styles.sectionTitle}>About You</AppText>
+        <AppText style={styles.sectionTitle}>About you</AppText>
         <View style={styles.sectionCard}>
           <QuestionRow
             icon={PROFILE_QUESTION_META.nickname.icon}
@@ -127,7 +127,7 @@ export default function ProfileCompleteScreen() {
       </View>
 
       <View style={styles.section}>
-        <AppText style={styles.sectionTitle}>Your Cooking Life</AppText>
+        <AppText style={styles.sectionTitle}>Your cooking life</AppText>
         <View style={styles.sectionCard}>
           <QuestionRow
             icon={PROFILE_QUESTION_META.lifestyle.icon}
@@ -163,7 +163,7 @@ export default function ProfileCompleteScreen() {
       </View>
 
       <View style={styles.section}>
-        <AppText style={styles.sectionTitle}>What You&apos;re Here For</AppText>
+        <AppText style={styles.sectionTitle}>What you&apos;re here for</AppText>
         <View style={styles.sectionCard}>
           <QuestionRow
             icon={PROFILE_QUESTION_META.goals.icon}
@@ -181,7 +181,7 @@ export default function ProfileCompleteScreen() {
       </View>
 
       <View style={styles.section}>
-        <AppText style={styles.sectionTitle}>One Last Thing</AppText>
+        <AppText style={styles.sectionTitle}>One last thing</AppText>
         <View style={styles.sectionCard}>
           <QuestionRow
             icon={PROFILE_QUESTION_META.heard.icon}
@@ -314,7 +314,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   progressCount: {
-    fontFamily: theme.fontFamily.mono,
+    fontFamily: theme.fontFamily.body,
     fontSize: 12,
     color: theme.colors.textMuted,
     marginTop: 6,
@@ -323,11 +323,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   sectionTitle: {
-    fontFamily: theme.fontFamily.monoBold,
-    fontSize: 12,
+    fontFamily: theme.fontFamily.body,
+    fontSize: 14,
     color: theme.colors.textMuted,
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
     marginTop: 22,
     marginBottom: 4,
   },

@@ -24,6 +24,7 @@ import { getApiErrorMessage } from "../../src/lib/api/errors";
 import { finiteTimeCap } from "../../src/lib/plannerQuickSetup";
 import { useProfileAnswersStore } from "../../src/store/profileAnswersStore";
 import { theme } from "../../src/theme/theme";
+import { TAB_BAR_CLEARANCE } from "../../src/components/layout/tabBarClearance";
 
 const PAGE_SIZE = 30;
 const SEARCH_DEBOUNCE_MS = 300;
@@ -289,7 +290,7 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: theme.fontFamily.display,
     fontSize: 26,
-    letterSpacing: 0,
+    letterSpacing: -0.39,
     color: theme.colors.navy,
   },
   bookmarkButton: {
@@ -315,7 +316,7 @@ const styles = StyleSheet.create({
     gap: theme.spacing.sm,
   },
   gridContent: {
-    paddingBottom: 110,
+    paddingBottom: TAB_BAR_CLEARANCE,
   },
   errorState: {
     gap: theme.spacing.md,
@@ -332,11 +333,11 @@ const styles = StyleSheet.create({
   skeletonCard: {
     flex: 1,
     minWidth: 0,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: theme.colors.border,
     borderRadius: 16,
     overflow: "hidden",
-    backgroundColor: theme.colors.card,
+    backgroundColor: theme.colors.page,
   },
   skeletonBody: {
     paddingHorizontal: 13,
@@ -364,15 +365,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 18,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: theme.colors.border,
     borderRadius: 18,
     backgroundColor: theme.colors.white,
-    shadowColor: theme.colors.text,
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.08,
-    shadowRadius: 24,
-    elevation: 2,
   },
   experienceClose: {
     position: "absolute",
@@ -387,11 +383,9 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   experienceEyebrow: {
-    fontFamily: theme.fontFamily.monoBold,
-    fontSize: 11,
+    fontFamily: theme.fontFamily.body,
+    fontSize: 14,
     color: theme.colors.textMuted,
-    letterSpacing: 0,
-    textTransform: "uppercase",
     marginBottom: 8,
   },
   experienceTitle: {
@@ -407,19 +401,18 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   experienceOption: {
-    minHeight: 38,
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    borderWidth: 1.5,
+    borderWidth: 0.5,
     borderColor: theme.colors.border,
     borderRadius: 999,
     backgroundColor: theme.colors.white,
   },
   experienceOptionLabel: {
-    fontFamily: theme.fontFamily.bodySemiBold,
+    fontFamily: theme.fontFamily.body,
     fontSize: 13,
     color: theme.colors.text,
   },

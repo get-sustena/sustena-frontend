@@ -4,7 +4,13 @@ import { Image } from "expo-image";
 import { Href, router, useLocalSearchParams } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
 import { useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { RecipePhoto } from "../../src/components/recipe/RecipePhoto";
 import { IngredientImage } from "../../src/components/ingredient/IngredientImage";
@@ -72,9 +78,15 @@ import type {
 } from "../../src/types/api";
 import { createLocalId } from "../../src/lib/id";
 
+// --rd-muted in the v6.8 recipe page.
+const INGREDIENT_CHEVRON_COLOR = "#686E66";
+
 export default function RecipeDetailScreen() {
   const db = useSQLiteContext();
   const insets = useSafeAreaInsets();
+  const { width: windowWidth } = useWindowDimensions();
+  // v6.8: font-size clamp(27px, 8vw, 34px), line-height 1.04, tracking -0.035em.
+  const titleSize = Math.min(34, Math.max(27, windowWidth * 0.08));
   const { id, source } = useLocalSearchParams<{ id: string; source?: string }>();
 
   const recipeQuery = useRecipeDetailWithLocalFallback(id, source);
@@ -383,7 +395,6 @@ export default function RecipeDetailScreen() {
 
   function openIngredientUnitSheet(
     ingredientId: string,
-    ingredientName: string,
     options: IngredientUnitOption[],
     selectedValue: string
   ) {
@@ -397,7 +408,6 @@ export default function RecipeDetailScreen() {
 
     openSheet(
       <IngredientUnitSheet
-        ingredientName={ingredientName}
         options={options}
         selectedValue={selectedValue}
         onSelect={(value) => {
@@ -632,11 +642,7 @@ export default function RecipeDetailScreen() {
         automaticallyAdjustContentInsets={false}
         contentInsetAdjustmentBehavior="never"
       >
-        <RecipePhoto
-          imageUrl={recipe.imageUrl}
-          fallbackLabel="recipe photo"
-          style={styles.photo}
-        />
+        <RecipePhoto imageUrl={recipe.imageUrl} style={styles.photo} />
 
         <View style={styles.titleBlock}>
           <View style={styles.tagRow}>
@@ -647,7 +653,18 @@ export default function RecipeDetailScreen() {
             ))}
           </View>
 
-          <AppText style={styles.heroTitle}>{recipe.name}</AppText>
+          <AppText
+            style={[
+              styles.heroTitle,
+              {
+                fontSize: titleSize,
+                lineHeight: titleSize * 1.04,
+                letterSpacing: titleSize * -0.035,
+              },
+            ]}
+          >
+            {recipe.name}
+          </AppText>
 
           <Pressable
             disabled={!recipeDetail?.creator}
@@ -696,20 +713,25 @@ export default function RecipeDetailScreen() {
           <View style={styles.statsCard}>
             <StatCell
               icon="timer"
-              value={recipe.time}
+              value={
+                recipe.totalTimeMinutes
+                  ? `${recipe.totalTimeMinutes} min`
+                  : recipe.time
+              }
               label="Time"
-              borderRight
+              align="flex-start"
             />
             <StatCell
               icon="star"
               value={recipeDetail?.averageRating?.toFixed(1) ?? "0.0"}
               label="Rating"
-              borderRight
+              align="center"
             />
             <StatCell
               icon="chefHat"
               value={recipe.difficulty}
               label="Level"
+              align="flex-end"
             />
           </View>
         </View>
@@ -717,7 +739,7 @@ export default function RecipeDetailScreen() {
         <View style={styles.body}>
           {recipeDetail && !recipeDetail.baseServings ? null : (
             <>
-              <SectionHeader title="Adjust recipe" />
+              <SectionHeader title="Adjust recipe" first />
               <View style={styles.servingCard}>
                 <Pressable
                   onPress={() => setServings((current) => Math.max(1, current - 1))}
@@ -745,7 +767,10 @@ export default function RecipeDetailScreen() {
             </>
           )}
 
-          <SectionHeader title="Ingredients" />
+          <SectionHeader
+            title="Ingredients"
+            first={Boolean(recipeDetail && !recipeDetail.baseServings)}
+          />
           <View style={styles.unitModeRow}>
             {[
               { value: "metric" as const, label: "Metric" },
@@ -828,7 +853,6 @@ export default function RecipeDetailScreen() {
                         onPress={() =>
                           openIngredientUnitSheet(
                             ingredient.id,
-                            ingredient.name,
                             unitOptions,
                             selectedValue
                           )
@@ -846,17 +870,19 @@ export default function RecipeDetailScreen() {
                         </AppText>
                         <Icon
                           name="chevronDown"
-                          size={11}
-                          color={theme.colors.textMuted}
+                          size={10}
+                          color={INGREDIENT_CHEVRON_COLOR}
                         />
                       </Pressable>
                     ) : (
-                      <AppText
-                        numberOfLines={1}
-                        style={styles.ingredientPlainAmount}
-                      >
-                        {displayAmount}
-                      </AppText>
+                      <View style={styles.ingredientChip}>
+                        <AppText
+                          numberOfLines={1}
+                          style={styles.ingredientChipText}
+                        >
+                          {displayAmount}
+                        </AppText>
+                      </View>
                     )}
                   </View>
                 );
@@ -942,7 +968,6 @@ export default function RecipeDetailScreen() {
                     onPress={() =>
                       openIngredientUnitSheet(
                         ingredient.id,
-                        ingredient.name,
                         localUnitOptions,
                         selectedValue
                       )
@@ -960,8 +985,8 @@ export default function RecipeDetailScreen() {
                     </AppText>
                     <Icon
                       name="chevronDown"
-                      size={11}
-                      color={theme.colors.textMuted}
+                      size={10}
+                      color={INGREDIENT_CHEVRON_COLOR}
                     />
                   </Pressable>
                 </View>
@@ -971,20 +996,17 @@ export default function RecipeDetailScreen() {
 
           {scaledCost !== null ? (
             <>
-              <SectionHeader title="Estimated Cost" />
+              <SectionHeader title="Estimated cost" />
               <View style={styles.costRow}>
-                <View style={styles.costMain}>
-                  <AppText style={styles.costLabel}>Estimated cost</AppText>
-                  <AppText style={styles.costValue}>
-                    {formatNaira(scaledCost)}
-                  </AppText>
-                </View>
+                <AppText style={styles.costValue}>
+                  {formatNaira(scaledCost)}
+                </AppText>
 
                 <View style={styles.costPer}>
+                  <AppText style={styles.costPerLabel}>Per person</AppText>
                   <AppText style={styles.costValueSecondary}>
                     {costPerPerson !== null ? formatNaira(costPerPerson) : "--"}
                   </AppText>
-                  <AppText style={styles.costPerLabel}>per person</AppText>
                 </View>
               </View>
             </>
@@ -1053,7 +1075,7 @@ export default function RecipeDetailScreen() {
       <View
         style={[
           styles.ctaBar,
-          { paddingBottom: insets.bottom + 14 },
+          { paddingBottom: insets.bottom + 11 },
         ]}
       >
         {scaledCost !== null ? (
@@ -1088,21 +1110,16 @@ type IngredientUnitOption = {
 };
 
 function IngredientUnitSheet({
-  ingredientName,
   options,
   selectedValue,
   onSelect,
 }: {
-  ingredientName: string;
   options: IngredientUnitOption[];
   selectedValue: string;
   onSelect: (value: string) => void;
 }) {
   return (
     <View style={styles.unitSheet}>
-      <AppText style={styles.unitSheetEyebrow}>
-        {capitalizeWords(ingredientName)}
-      </AppText>
       <AppText style={styles.unitSheetTitle}>Choose a unit</AppText>
 
       <ScrollView
@@ -1111,7 +1128,7 @@ function IngredientUnitSheet({
         showsVerticalScrollIndicator={options.length > 6}
         nestedScrollEnabled
       >
-        {options.map((option, index) => {
+        {options.map((option) => {
           const selected = option.value === selectedValue;
 
           return (
@@ -1120,15 +1137,12 @@ function IngredientUnitSheet({
               onPress={() => onSelect(option.value)}
               style={[
                 styles.unitSheetOption,
-                index === options.length - 1 && styles.unitSheetOptionLast,
+                selected && styles.unitSheetOptionSelected,
               ]}
+              accessibilityRole="button"
+              accessibilityState={{ selected }}
             >
-              <AppText
-                style={[
-                  styles.unitSheetOptionName,
-                  selected && styles.unitSheetOptionNameSelected,
-                ]}
-              >
+              <AppText style={styles.unitSheetOptionName}>
                 {option.label}
               </AppText>
               <View style={styles.unitSheetOptionRight}>
@@ -1136,7 +1150,7 @@ function IngredientUnitSheet({
                   {option.preview}
                 </AppText>
                 {selected ? (
-                  <Icon name="check" size={17} color={theme.colors.green} />
+                  <Icon name="check" size={16} color={theme.colors.navy3} />
                 ) : null}
               </View>
             </Pressable>
@@ -1250,36 +1264,41 @@ function getAvailableUnitName(unit: string | null, index: number) {
   return capitalizeWords(unit.replace(/[_-]+/g, " "));
 }
 
+// v6.8 lays the three stats out left, centre and right, with the label for
+// screen readers only.
 function StatCell({
   icon,
   value,
   label,
-  borderRight,
+  align,
 }: {
   icon: "timer" | "chefHat" | "star";
   value: string;
   label: string;
-  borderRight?: boolean;
+  align: "flex-start" | "center" | "flex-end";
 }) {
   return (
-    <View style={[styles.statCell, borderRight && styles.statCellBorder]}>
+    <View
+      style={[styles.statCell, { justifyContent: align }]}
+      accessible
+      accessibilityLabel={`${label}: ${value}`}
+    >
       <Icon
         name={icon}
-        size={15}
+        size={icon === "star" ? 15 : 16}
         color={icon === "star" ? theme.colors.orange : theme.colors.textMutedAlt}
         filled={icon === "star"}
       />
       <AppText style={styles.statCellValue}>{value}</AppText>
-      <AppText style={styles.statCellLabel}>{label}</AppText>
     </View>
   );
 }
 
-function SectionHeader({ title }: { title: string }) {
+// The first section after the stats sits 27px below them, the rest 34px apart.
+function SectionHeader({ title, first = false }: { title: string; first?: boolean }) {
   return (
-    <View style={styles.sectionHeader}>
+    <View style={[styles.sectionHeader, first && styles.sectionHeaderFirst]}>
       <AppText style={styles.sectionTitle}>{title}</AppText>
-      <View style={styles.sectionRule} />
     </View>
   );
 }
@@ -1378,40 +1397,38 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 6,
     flexWrap: "wrap",
-    marginBottom: 12,
+    marginBottom: 11,
   },
   tag: {
+    minHeight: 24,
+    justifyContent: "center",
     paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: 8,
-    borderWidth: 0,
+    borderRadius: 7,
     backgroundColor: "#F1F1EF",
   },
   tagText: {
-    fontFamily: theme.fontFamily.bodySemiBold,
+    fontFamily: theme.fontFamily.bodyBold,
     fontSize: 10.5,
-    letterSpacing: 0,
+    letterSpacing: 0.2625,
     textTransform: "uppercase",
-    color: theme.colors.text,
+    color: "#4E554D",
   },
+  // Size, line height and tracking follow the screen width (see titleSize).
   heroTitle: {
     fontFamily: theme.fontFamily.display,
-    fontSize: 32,
-    letterSpacing: -1,
-    lineHeight: 34,
     color: theme.colors.navy,
-    marginBottom: 10,
+    marginBottom: 12,
   },
   creatorRow: {
-    marginBottom: 20,
+    marginBottom: 16,
     flexDirection: "row",
     alignItems: "center",
     gap: 9,
   },
   creatorAvatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
   },
   creatorAvatarFallback: {
     alignItems: "center",
@@ -1436,28 +1453,21 @@ const styles = StyleSheet.create({
     color: theme.colors.textMedium,
   },
   statsCard: {
-    marginBottom: 8,
     flexDirection: "row",
-    backgroundColor: "transparent",
+    gap: 10,
   },
   statCell: {
     flex: 1,
+    minHeight: 22,
     alignItems: "center",
-    paddingVertical: 0,
-    paddingHorizontal: 4,
     gap: 6,
     flexDirection: "row",
   },
-  statCellBorder: {
-    borderRightWidth: 0,
-  },
   statCellValue: {
-    fontFamily: theme.fontFamily.monoBold,
-    fontSize: 13,
-    color: theme.colors.text,
-  },
-  statCellLabel: {
-    display: "none",
+    fontFamily: theme.fontFamily.bodySemiBold,
+    fontSize: 13.5,
+    letterSpacing: -0.135,
+    color: theme.colors.navy,
   },
   body: {
     paddingHorizontal: 20,
@@ -1469,23 +1479,25 @@ const styles = StyleSheet.create({
     marginTop: 34,
     marginBottom: 14,
   },
+  sectionHeaderFirst: {
+    marginTop: 27,
+  },
   sectionTitle: {
     fontFamily: theme.fontFamily.display,
     fontSize: 20,
-    color: theme.colors.text,
+    lineHeight: 22,
+    color: theme.colors.navy,
     letterSpacing: -0.4,
-  },
-  sectionRule: {
-    display: "none",
   },
   servingCard: {
     width: 210,
     alignSelf: "center",
     backgroundColor: theme.colors.white,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderWidth: 0.5,
+    borderColor: "#E2E2E0",
     borderRadius: 999,
-    padding: 4,
+    paddingVertical: 3,
+    paddingHorizontal: 4,
     flexDirection: "row",
     alignItems: "center",
     gap: 16,
@@ -1512,9 +1524,9 @@ const styles = StyleSheet.create({
     color: theme.colors.navy,
   },
   servingLabel: {
-    fontFamily: theme.fontFamily.body,
+    fontFamily: theme.fontFamily.bodyMedium,
     fontSize: 13,
-    color: theme.colors.textMedium,
+    color: "#545B53",
   },
   unitModeRow: {
     flexDirection: "row",
@@ -1525,20 +1537,19 @@ const styles = StyleSheet.create({
     height: 44,
     minWidth: 0,
     borderRadius: 999,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.cream,
+    borderWidth: 0.5,
+    borderColor: "#E2E2E0",
+    backgroundColor: theme.colors.page,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 5,
+    paddingHorizontal: 9,
   },
   unitModeButtonSelected: {
-    borderColor: theme.colors.navy,
     backgroundColor: theme.colors.navy,
   },
   unitModeButtonText: {
     fontFamily: theme.fontFamily.bodySemiBold,
-    fontSize: 13,
+    fontSize: 12.5,
     color: theme.colors.text,
     textAlign: "center",
   },
@@ -1564,75 +1575,63 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: theme.colors.text,
   },
+  // v6.8 .rd-v6-amount.
   ingredientChip: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 4,
     flexShrink: 0,
-    maxWidth: "48%",
-    backgroundColor: "#F5F3EC",
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    minHeight: 36,
+    maxWidth: 136,
+    backgroundColor: "#F1F1EF",
+    borderWidth: 0.75,
+    borderColor: "#E2E2E0",
     borderRadius: 999,
     paddingHorizontal: 10,
-    paddingVertical: 7,
   },
   ingredientChipText: {
     flexShrink: 1,
-    fontFamily: theme.fontFamily.monoBold,
-    fontSize: 14,
-    color: theme.colors.text,
-  },
-  ingredientPlainAmount: {
-    fontFamily: theme.fontFamily.mono,
-    fontSize: 14,
-    color: theme.colors.textMuted,
-    flexShrink: 0,
-    maxWidth: "48%",
+    fontFamily: theme.fontFamily.bodySemiBold,
+    fontSize: 13,
+    letterSpacing: -0.13,
+    color: theme.colors.navy,
   },
   pressed: {
     opacity: 0.85,
   },
+  // v6.8 .rd-v6-cost: the total on the left, "Per person" above its amount on the right.
   costRow: {
     backgroundColor: "#F5F3EC",
-    borderWidth: 0,
     borderRadius: 16,
-    padding: theme.spacing.lg,
+    paddingVertical: 16,
+    paddingHorizontal: 17,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: theme.spacing.lg,
-  },
-  costMain: {
-    flex: 1,
+    gap: 16,
   },
   costPer: {
     alignItems: "flex-end",
   },
-  costLabel: {
-    fontFamily: theme.fontFamily.body,
-    fontSize: 13,
-    color: theme.colors.textMuted,
-    letterSpacing: 0,
-    textTransform: "none",
-    marginBottom: 5,
-  },
   costValue: {
     fontFamily: theme.fontFamily.display,
     fontSize: 26,
-    lineHeight: 28,
-    color: theme.colors.text,
-  },
-  costValueSecondary: {
-    fontFamily: theme.fontFamily.monoBold,
-    fontSize: 16,
-    color: theme.colors.navy,
+    lineHeight: 26,
+    color: theme.colors.navy3,
   },
   costPerLabel: {
     fontFamily: theme.fontFamily.body,
-    fontSize: 11.5,
+    fontSize: 12,
+    letterSpacing: 0.96,
+    textTransform: "uppercase",
     color: theme.colors.textMuted,
-    marginTop: 2,
+    marginBottom: 5,
+  },
+  costValueSecondary: {
+    fontFamily: theme.fontFamily.body,
+    fontSize: 16,
+    color: theme.colors.navy,
   },
   stepsCard: {
     position: "relative",
@@ -1640,10 +1639,10 @@ const styles = StyleSheet.create({
   stepsLine: {
     position: "absolute",
     left: 42,
-    top: 14,
-    bottom: 14,
-    width: 1,
-    backgroundColor: theme.colors.border,
+    top: 2,
+    bottom: 2,
+    width: 0.75,
+    backgroundColor: "#E2E2E0",
   },
   stepItem: {
     flexDirection: "row",
@@ -1663,14 +1662,16 @@ const styles = StyleSheet.create({
   stepNumberText: {
     fontFamily: theme.fontFamily.display,
     fontSize: 21,
-    color: theme.colors.text,
+    lineHeight: 24,
+    letterSpacing: -0.42,
+    color: theme.colors.navy,
   },
   stepText: {
     flex: 1,
     fontFamily: theme.fontFamily.body,
     fontSize: 15,
     lineHeight: 24,
-    color: theme.colors.text,
+    color: "#20241F",
     paddingTop: 3,
   },
   toolSection: {
@@ -1691,8 +1692,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: theme.spacing.md,
     paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomWidth: 0.75,
+    borderBottomColor: "rgba(216,227,202,0.7)",
   },
   toolItemLast: {
     borderBottomWidth: 0,
@@ -1706,7 +1707,7 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
   },
   toolPrice: {
-    fontFamily: theme.fontFamily.mono,
+    fontFamily: theme.fontFamily.body,
     fontSize: 13,
     color: theme.colors.textMedium,
     marginTop: 3,
@@ -1729,20 +1730,19 @@ const styles = StyleSheet.create({
     bottom: 0,
     flexDirection: "row",
     alignItems: "center",
-    gap: 14,
+    gap: 12,
     paddingHorizontal: 20,
-    paddingTop: 14,
-    paddingBottom: 14,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.surface2,
-    backgroundColor: theme.colors.white,
+    paddingTop: 11,
+    borderTopWidth: 0.75,
+    borderTopColor: "#E2E2E0",
+    backgroundColor: "rgba(255,255,255,0.97)",
   },
   ctaCost: {
     flexShrink: 0,
   },
   ctaCostLabel: {
     fontFamily: theme.fontFamily.body,
-    fontSize: 11.5,
+    fontSize: 11,
     color: theme.colors.textMedium,
   },
   ctaCostValue: {
@@ -1761,25 +1761,20 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   ctaButtonText: {
-    fontFamily: theme.fontFamily.bodySemiBold,
-    fontSize: 15,
+    fontFamily: theme.fontFamily.bodyBold,
+    fontSize: 14,
     color: theme.colors.onDark,
   },
   unitSheet: {
     paddingBottom: 24,
   },
-  unitSheetEyebrow: {
-    fontFamily: theme.fontFamily.monoBold,
-    fontSize: 12,
-    color: theme.colors.textMuted,
-    letterSpacing: 0,
-    textTransform: "uppercase",
-    marginBottom: 4,
-  },
+  // v6.8 .unit-sheet-*.
   unitSheetTitle: {
     fontFamily: theme.fontFamily.display,
-    fontSize: 19,
-    color: theme.colors.text,
+    fontSize: 21,
+    lineHeight: 23,
+    letterSpacing: -0.42,
+    color: theme.colors.navy,
     marginBottom: 14,
   },
   unitSheetOptions: {
@@ -1787,28 +1782,25 @@ const styles = StyleSheet.create({
   },
   unitSheetOptionsContent: {
     flexGrow: 0,
+    gap: 4,
   },
   unitSheetOption: {
-    minHeight: 52,
-    paddingHorizontal: 4,
+    minHeight: 54,
+    paddingHorizontal: 8,
+    borderRadius: 12,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    gap: 14,
   },
-  unitSheetOptionLast: {
-    borderBottomWidth: 0,
+  unitSheetOptionSelected: {
+    backgroundColor: "#F1F1EF",
   },
   unitSheetOptionName: {
     flex: 1,
-    fontFamily: theme.fontFamily.bodyMedium,
+    fontFamily: theme.fontFamily.bodySemiBold,
     fontSize: 15,
-    color: theme.colors.text,
-  },
-  unitSheetOptionNameSelected: {
-    fontFamily: theme.fontFamily.bodyBold,
+    lineHeight: 19,
     color: theme.colors.navy,
   },
   unitSheetOptionRight: {
@@ -1820,8 +1812,8 @@ const styles = StyleSheet.create({
   },
   unitSheetPreview: {
     flexShrink: 1,
-    fontFamily: theme.fontFamily.mono,
-    fontSize: 12.5,
+    fontFamily: theme.fontFamily.bodyMedium,
+    fontSize: 13,
     color: theme.colors.textMedium,
     textAlign: "right",
   },

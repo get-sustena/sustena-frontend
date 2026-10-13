@@ -30,9 +30,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: theme.radius.full,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: theme.colors.border,
-    backgroundColor: theme.colors.card,
+    backgroundColor: theme.colors.page,
   },
   activeChip: {
     borderColor: theme.colors.navy,
@@ -43,9 +43,9 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.97 }],
   },
   label: {
-    fontFamily: theme.fontFamily.bodySemiBold,
+    fontFamily: theme.fontFamily.bodyMedium,
     fontSize: 13,
-    color: theme.colors.text,
+    color: theme.colors.navy,
   },
   activeLabel: {
     color: theme.colors.onDark,

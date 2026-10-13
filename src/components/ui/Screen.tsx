@@ -33,9 +33,10 @@ export function Screen({
 }
 
 const styles = StyleSheet.create({
+  // v6.8's recipe, saved recipes and profile pages sit on white (--st-surface).
   safe: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: theme.colors.white,
   },
   scrollContent: {
     paddingBottom: 110,

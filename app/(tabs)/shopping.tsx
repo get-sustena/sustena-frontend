@@ -37,6 +37,7 @@ import { useShoppingListsStore } from "../../src/store/shoppingListsStore";
 import { closeSheet, openSheet, showToast } from "../../src/store/uiStore";
 import { theme } from "../../src/theme/theme";
 import { ShoppingListMeta } from "../../src/types/shoppingList";
+import { TAB_BAR_CLEARANCE } from "../../src/components/layout/tabBarClearance";
 
 type ListSummary = {
   itemCount: number;
@@ -435,7 +436,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingTop: 4,
-    paddingBottom: 120,
+    paddingBottom: TAB_BAR_CLEARANCE,
   },
   header: {
     paddingHorizontal: 20,
@@ -448,7 +449,7 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: theme.fontFamily.display,
     fontSize: 26,
-    letterSpacing: 0,
+    letterSpacing: -0.39,
     color: theme.colors.navy,
   },
   newListButton: {
@@ -461,7 +462,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  newListButtonText: { fontFamily: theme.fontFamily.bodyBold, fontSize: 13, color: theme.colors.onDark },
+  newListButtonText: { fontFamily: theme.fontFamily.bodyBold, fontSize: 13.5, color: theme.colors.onDark },
   empty: {
     alignItems: "center",
     paddingHorizontal: 20,
@@ -513,9 +514,9 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   listOverviewCount: {
-    fontFamily: theme.fontFamily.bodySemiBold,
-    fontSize: 13,
-    color: theme.colors.text,
+    fontFamily: theme.fontFamily.body,
+    fontSize: 12.5,
+    color: theme.colors.textMedium,
   },
   listOverviewOrder: {
     fontFamily: theme.fontFamily.body,
@@ -553,10 +554,10 @@ const styles = StyleSheet.create({
     fontFamily: theme.fontFamily.display,
     fontSize: 16,
     lineHeight: 21,
-    color: theme.colors.navy,
+    color: theme.colors.text,
   },
   listMetaRow: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 7, marginTop: 5 },
-  listMetaCount: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 12.5, color: theme.colors.navy },
+  listMetaCount: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 12.5, color: theme.colors.text },
   listMeta: {
     fontFamily: theme.fontFamily.body,
     fontSize: 12.5,
