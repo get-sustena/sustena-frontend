@@ -449,7 +449,7 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: theme.fontFamily.display,
     fontSize: 26,
-    letterSpacing: 0,
+    letterSpacing: -0.39,
     color: theme.colors.navy,
   },
   newListButton: {
@@ -462,7 +462,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  newListButtonText: { fontFamily: theme.fontFamily.bodyBold, fontSize: 13, color: theme.colors.onDark },
+  newListButtonText: { fontFamily: theme.fontFamily.bodyBold, fontSize: 13.5, color: theme.colors.onDark },
   empty: {
     alignItems: "center",
     paddingHorizontal: 20,
@@ -514,9 +514,9 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   listOverviewCount: {
-    fontFamily: theme.fontFamily.bodySemiBold,
-    fontSize: 13,
-    color: theme.colors.text,
+    fontFamily: theme.fontFamily.body,
+    fontSize: 12.5,
+    color: theme.colors.textMedium,
   },
   listOverviewOrder: {
     fontFamily: theme.fontFamily.body,
@@ -554,10 +554,10 @@ const styles = StyleSheet.create({
     fontFamily: theme.fontFamily.display,
     fontSize: 16,
     lineHeight: 21,
-    color: theme.colors.navy,
+    color: theme.colors.text,
   },
   listMetaRow: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 7, marginTop: 5 },
-  listMetaCount: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 12.5, color: theme.colors.navy },
+  listMetaCount: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 12.5, color: theme.colors.text },
   listMeta: {
     fontFamily: theme.fontFamily.body,
     fontSize: 12.5,

@@ -168,6 +168,6 @@ const styles = StyleSheet.create({
   compactSection: { paddingTop: 14 },
   sectionTitle: { marginBottom: 8, fontFamily: theme.fontFamily.bodySemiBold, fontSize: 14, color: "#8a9187" },
   completionCard: { marginVertical: 14 },
-  signOut: { marginHorizontal: 20, marginTop: 20, paddingVertical: 14, borderRadius: 999, borderWidth: 1.5, borderColor: "#E1E1E1", backgroundColor: "transparent", alignItems: "center" },
+  signOut: { marginHorizontal: 20, marginTop: 20, paddingVertical: 14, borderRadius: 999, borderWidth: 0.75, borderColor: theme.colors.border, backgroundColor: "transparent", alignItems: "center" },
   signOutText: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 15, color: "#C0392E" },
 });
