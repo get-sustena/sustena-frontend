@@ -151,6 +151,16 @@ Components read stores with selectors (`useAuthStore((s) => s.user)`), not by ta
 - Anything that depends on the time of day comes from `useTimeOfDay(read)` in `src/hooks/useTimeOfDay.ts`, such as `useTimeOfDay(getMealTime)` or `useTimeOfDay(getGreeting)`. It reads the clock again every minute and on return to the foreground. Don't call `new Date()` while rendering: the React Compiler caches a call that takes no inputs, so the value never changes.
 - Screens pad the top with `useSafeAreaInsets()` because the stack has no native header.
 
+## Push meal reminders
+
+The founder approved these on 13 October 2026. The backend sends "Our Recommendation" at 8am, 1pm and 5pm Lagos time, with titles "Your breakfast pick", "Your lunch pick" and "Your dinner pick", and text like "Akara and Pap, you can cook this in 25 minutes" (only the name if the recipe has no cooking time).
+
+- **Phones only.** `src/lib/notifications/mealReminders.ts` uses `expo-notifications`. `mealReminders.web.ts` does nothing, because Expo push doesn't reach the web app, and the Settings switch is hidden on web.
+- **Permission comes only from the Settings "Meal Reminders" switch** (founder's rule). Turning it on creates the Android channel `meal-reminders`, asks for permission, gets the Expo push token (EAS `projectId`) and registers it with `POST /me/push-tokens {token, platform, timeZone}`. Turning it off, or signing out, calls `DELETE /me/push-tokens/{encoded token}`. The registered token is kept in `local_metadata` (`meal_reminder_push_token`).
+- **Staying registered:** `useMealReminders` (mounted in `RootNavigator`) registers again on every app start while reminders are on, and when Android issues a new token. If notifications were turned off in the phone's settings, it switches reminders off.
+- **Tapping a reminder** opens `/recipes/[id]` with `source=meal_reminder`, which the recipe page passes on `GET /recipes/{id}` so the backend records it on `recipe_opened`. `getMealReminderRecipeId` ignores any other kind of notification.
+- **Native setup:** `app.json` has the `expo-notifications` plugin (white Sustena-mark icon `assets/images/notification-icon.png`, brand green, default channel `meal-reminders`) and `android.googleServicesFile` (`google-services.json`, Firebase project `sustena-app`). The FCM V1 key lives in EAS credentials, never in the repo. Notifications only work in a real build (APK), not Expo Go.
+
 ## Build, release and branches
 
 | Target | How |
