@@ -3,7 +3,7 @@ import { AxiosError } from "axios";
 import { ApiError, ApiValidationError } from "../../types/api";
 import { API_BASE_URL } from "./config";
 
-export class ApiClientError extends Error {
+class ApiClientError extends Error {
   status: number;
   code?: string;
   payload?: unknown;
@@ -110,7 +110,7 @@ function getNetworkErrorMessage(error: AxiosError) {
   return `Could not reach the API at ${API_BASE_URL}. Check that the backend is running, the port is correct, and this device can access that host.`;
 }
 
-export function parseErrorPayload(payload: unknown) {
+function parseErrorPayload(payload: unknown) {
   if (isValidationErrorPayload(payload)) {
     return payload.detail
       .map((item) => {

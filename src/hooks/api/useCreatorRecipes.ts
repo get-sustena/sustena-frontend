@@ -83,21 +83,6 @@ export function useDuplicateRecipeMutation() {
   });
 }
 
-export function useCreateRecipeEditDraftMutation() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: creatorRecipesApi.createRecipeEditDraft,
-    onSuccess: (recipe) => {
-      queryClient.setQueryData(
-        queryKeys.creatorRecipes.detail(recipe.id),
-        recipe
-      );
-      invalidateRecipeLibraries(queryClient);
-    },
-  });
-}
-
 export function useSavePublishedRecipeEditMutation() {
   const queryClient = useQueryClient();
 
@@ -133,22 +118,6 @@ export function usePublishRecipeMutation() {
   return useMutation({
     mutationFn: ({ recipeId, revision }: { recipeId: string; revision: number }) =>
       creatorRecipesApi.publishRecipe(recipeId, revision),
-    onSuccess: (recipe) => {
-      queryClient.setQueryData(
-        queryKeys.creatorRecipes.detail(recipe.id),
-        recipe
-      );
-      invalidateRecipeLibraries(queryClient);
-    },
-  });
-}
-
-export function useUnpublishRecipeMutation() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ recipeId, revision }: { recipeId: string; revision: number }) =>
-      creatorRecipesApi.unpublishRecipe(recipeId, revision),
     onSuccess: (recipe) => {
       queryClient.setQueryData(
         queryKeys.creatorRecipes.detail(recipe.id),

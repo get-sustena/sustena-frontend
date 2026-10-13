@@ -83,11 +83,3 @@ export function useKitchenPlannerMutation() {
     mutationFn: plannerApi.getKitchenMatches,
   });
 }
-
-export function useTimetablePlannerMutation() {
-  return useMutation({
-    mutationFn: plannerApi.getMealPlan,
-  });
-}
-
-export const useMealPlanMutation = useTimetablePlannerMutation;

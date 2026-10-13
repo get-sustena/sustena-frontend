@@ -18,15 +18,3 @@ export function createInitialIngredientUnitSelections({
     {}
   );
 }
-
-export function getNextUnitMode(current: UnitMode): UnitMode {
-  if (current === "metric") return "cups";
-  if (current === "cups") return "imperial";
-  return "metric";
-}
-
-export function getUnitModeLabel(unitMode: UnitMode) {
-  if (unitMode === "metric") return "g/mL";
-  if (unitMode === "cups") return "cups";
-  return "oz/lb";
-}

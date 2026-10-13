@@ -3,8 +3,6 @@ import {
   BudgetPlannerResponse,
   KitchenPlannerRequest,
   KitchenPlannerResponse,
-  MealPlanRequest,
-  MealPlanResponse,
   PlannerSettings,
   PlannerSettingsUpdateRequest,
 } from "../../types/api";
@@ -36,14 +34,6 @@ export function updatePlannerSettings(payload: PlannerSettingsUpdateRequest) {
 export function getKitchenMatches(payload: KitchenPlannerRequest) {
   return apiRequest<KitchenPlannerResponse>({
     url: "/planner/kitchen",
-    method: "POST",
-    data: payload,
-  });
-}
-
-export function getMealPlan(payload: MealPlanRequest) {
-  return apiRequest<MealPlanResponse>({
-    url: "/planner/meal-plan",
     method: "POST",
     data: payload,
   });

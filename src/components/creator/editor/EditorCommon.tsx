@@ -13,8 +13,7 @@ import { setRecipeVocabularyPicker } from "../../../store/recipeVocabularyPicker
 import { theme } from "../../../theme/theme";
 import { RecipeVocabularyItem } from "../../../types/api";
 import { AppText } from "../../ui/AppText";
-import { Button } from "../../ui/Button";
-import { Icon, IconName } from "../../ui/Icon";
+import { Icon } from "../../ui/Icon";
 
 export function EditorStageIntro({
   eyebrow: _eyebrow,
@@ -31,23 +30,6 @@ export function EditorStageIntro({
       <AppText style={styles.stageCopy}>{children}</AppText>
     </View>
   );
-}
-
-export function StageRequirementNote() {
-  return (
-    <AppText style={styles.requirementNote}>
-      Everything on this page is required to publish, unless marked Optional or
-      Recommended.
-    </AppText>
-  );
-}
-
-export function EditorGroupLabel({ children }: { children: ReactNode }) {
-  return <AppText style={styles.groupLabel}>{children}</AppText>;
-}
-
-export function EditorGroupCard({ children }: { children: ReactNode }) {
-  return <View style={styles.groupCard}>{children}</View>;
 }
 
 export function EditorSection({
@@ -126,32 +108,6 @@ export function EditorTextInput(props: TextInputProps) {
         focused && styles.inputFocused,
       ]}
     />
-  );
-}
-
-export function EditorNumberInput({
-  value,
-  onChange,
-  suffix,
-  placeholder = "0",
-}: {
-  value: number | null;
-  onChange: (value: number | null) => void;
-  suffix?: string;
-  placeholder?: string;
-}) {
-  return (
-    <View style={styles.numberInputWrap}>
-      <TextInput
-        value={value === null ? "" : String(value)}
-        onChangeText={(text) => onChange(parseNonNegativeNumber(text))}
-        keyboardType="number-pad"
-        placeholder={placeholder}
-        placeholderTextColor={theme.colors.textMuted}
-        style={styles.numberInput}
-      />
-      {suffix ? <AppText style={styles.suffix}>{suffix}</AppText> : null}
-    </View>
   );
 }
 
@@ -244,91 +200,6 @@ export function ChoiceRow<T extends string>({
   );
 }
 
-export function IconAction({
-  icon,
-  label,
-  danger,
-  disabled,
-  onPress,
-}: {
-  icon: IconName;
-  label: string;
-  danger?: boolean;
-  disabled?: boolean;
-  onPress: () => void;
-}) {
-  const color = danger ? theme.colors.red : theme.colors.textMedium;
-  return (
-    <Pressable
-      accessibilityLabel={label}
-      disabled={disabled}
-      hitSlop={8}
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.iconAction,
-        pressed && styles.pressed,
-        disabled && styles.disabled,
-      ]}
-    >
-      <Icon name={icon} size={16} color={color} />
-    </Pressable>
-  );
-}
-
-export function InlineNotice({
-  tone = "info",
-  icon = "help",
-  children,
-}: {
-  tone?: "info" | "success" | "warning" | "danger";
-  icon?: IconName;
-  children: ReactNode;
-}) {
-  const color = {
-    info: theme.colors.navy3,
-    success: theme.colors.green,
-    warning: theme.colors.goldText,
-    danger: theme.colors.red,
-  }[tone];
-  return (
-    <View
-      style={[
-        styles.notice,
-        tone === "danger" && styles.noticeDanger,
-        tone === "warning" && styles.noticeWarning,
-      ]}
-    >
-      <Icon name={icon} size={18} color={color} />
-      <AppText style={[styles.noticeText, { color }]}>{children}</AppText>
-    </View>
-  );
-}
-
-export function EmptyEditorState({
-  icon,
-  title,
-  body,
-  action,
-  onAction,
-}: {
-  icon: IconName;
-  title: string;
-  body: string;
-  action: string;
-  onAction: () => void;
-}) {
-  return (
-    <View style={styles.empty}>
-      <View style={styles.emptyIcon}>
-        <Icon name={icon} size={28} color={theme.colors.navy3} />
-      </View>
-      <AppText style={styles.emptyTitle}>{title}</AppText>
-      <AppText style={styles.emptyBody}>{body}</AppText>
-      <Button title={action} onPress={onAction} style={styles.emptyButton} />
-    </View>
-  );
-}
-
 export function openVocabularyPicker({
   title,
   description,
@@ -390,13 +261,6 @@ export function Card({
   return <View style={[styles.card, style]}>{children}</View>;
 }
 
-function parseNonNegativeNumber(value: string) {
-  const normalized = value.replace(/[^0-9]/g, "");
-  if (!normalized) return null;
-  const parsed = Number(normalized);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
 function formatLabel(value: string) {
   return value
     .split(/[-_]/)
@@ -405,38 +269,7 @@ function formatLabel(value: string) {
 }
 
 const styles = StyleSheet.create({
-  requirementNote: {
-    marginTop: 0,
-    marginBottom: 14,
-    fontSize: 11.5,
-    lineHeight: 15.5,
-    color: theme.colors.textMuted,
-  },
-  groupLabel: {
-    marginTop: 2,
-    marginBottom: 7,
-    fontFamily: theme.fontFamily.monoBold,
-    fontSize: 10,
-    letterSpacing: 1.05,
-    textTransform: "uppercase",
-    color: theme.colors.textMuted,
-  },
-  groupCard: {
-    marginBottom: 16,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 15,
-    backgroundColor: theme.colors.white,
-  },
   intro: { paddingTop: 8, paddingBottom: 24 },
-  eyebrow: {
-    fontFamily: theme.fontFamily.monoMedium,
-    fontSize: 10,
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
-    color: theme.colors.navy3,
-  },
   stageTitle: {
     fontFamily: theme.fontFamily.display,
     fontSize: 28,
@@ -472,18 +305,6 @@ const styles = StyleSheet.create({
   },
   inputFocused: { borderColor: "#777777" },
   multiline: { minHeight: 104, paddingTop: 13, textAlignVertical: "top" },
-  numberInputWrap: {
-    minHeight: 50,
-    paddingHorizontal: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 14,
-    backgroundColor: theme.colors.white,
-  },
-  numberInput: { flex: 1, paddingVertical: 0, fontFamily: theme.fontFamily.body, fontSize: 14, color: theme.colors.text },
-  suffix: { fontSize: 12, color: theme.colors.textMuted },
   selection: {
     minHeight: 68,
     paddingHorizontal: 16,
@@ -506,30 +327,6 @@ const styles = StyleSheet.create({
   choiceSelected: { borderColor: theme.colors.navy, backgroundColor: theme.colors.navy },
   choiceText: { fontFamily: theme.fontFamily.body, fontSize: 12, color: theme.colors.textMedium },
   choiceTextSelected: { color: theme.colors.white },
-  iconAction: { width: 34, height: 34, alignItems: "center", justifyContent: "center", borderRadius: 9, backgroundColor: theme.colors.surface2 },
-  notice: { padding: 13, flexDirection: "row", alignItems: "flex-start", gap: 9, borderRadius: 12, backgroundColor: theme.colors.surface2 },
-  noticeDanger: { backgroundColor: "#FBF0EE" },
-  noticeWarning: { backgroundColor: "#FFF7E6" },
-  noticeText: { flex: 1, fontSize: 11.5, lineHeight: 17 },
-  empty: { paddingHorizontal: 24, paddingVertical: 30, alignItems: "center", borderWidth: 1, borderColor: theme.colors.border, borderRadius: 17, backgroundColor: theme.colors.white },
-  emptyIcon: { width: 54, height: 54, alignItems: "center", justifyContent: "center", borderRadius: 27, backgroundColor: theme.colors.surface2 },
-  emptyTitle: { marginTop: 11, textAlign: "center", fontFamily: theme.fontFamily.bodySemiBold, fontSize: 15 },
-  emptyBody: { maxWidth: 260, marginTop: 5, textAlign: "center", fontSize: 11.5, lineHeight: 18, color: theme.colors.textMuted },
-  emptyButton: { marginTop: 15, alignSelf: "stretch" },
-  pickerSheet: { paddingBottom: 22 },
-  pickerTitle: { fontFamily: theme.fontFamily.display, fontSize: 22, color: theme.colors.navy },
-  pickerDescription: { marginTop: 5, fontSize: 12, lineHeight: 18, color: theme.colors.textMuted },
-  pickerSearch: { minHeight: 46, marginTop: 14, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderColor: theme.colors.border, borderRadius: 11, backgroundColor: theme.colors.surface2 },
-  pickerSearchInput: { flex: 1, paddingVertical: 0, fontFamily: theme.fontFamily.body, fontSize: 13, color: theme.colors.text },
-  pickerList: { maxHeight: 390, marginTop: 8 },
-  pickerOption: { minHeight: 53, flexDirection: "row", alignItems: "center", gap: 12, borderBottomWidth: 1, borderBottomColor: theme.colors.border },
-  pickerOptionCopy: { flex: 1 },
-  pickerOptionLabel: { fontFamily: theme.fontFamily.bodyMedium, fontSize: 13.5 },
-  pickerOptionGroup: { marginTop: 2, fontSize: 10.5, color: theme.colors.textMuted },
-  check: { width: 24, height: 24, alignItems: "center", justifyContent: "center", borderWidth: 1.5, borderColor: theme.colors.borderStrong, borderRadius: 12 },
-  checkSelected: { borderColor: theme.colors.navy, backgroundColor: theme.colors.navy },
-  pickerDone: { marginTop: 14 },
   card: { marginBottom: 12, padding: 13, gap: 12, borderWidth: 1, borderColor: theme.colors.border, borderRadius: 14, backgroundColor: theme.colors.white },
   pressed: { opacity: 0.82 },
-  disabled: { opacity: 0.35 },
 });

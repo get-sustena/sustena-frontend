@@ -20,25 +20,6 @@ export async function getStoredShoppingLists(db: SQLiteDatabase) {
   );
 }
 
-export async function insertShoppingList(
-  db: SQLiteDatabase,
-  list: ShoppingListMeta
-) {
-  await db.runAsync(
-    `
-    INSERT INTO shopping_lists (id, name, is_default_synced_list, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?)
-    `,
-    [
-      list.id,
-      list.name,
-      list.isDefaultSyncedList ? 1 : 0,
-      list.createdAt,
-      list.updatedAt,
-    ]
-  );
-}
-
 export async function upsertShoppingList(
   db: SQLiteDatabase,
   list: ShoppingListMeta

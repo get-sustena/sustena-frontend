@@ -4,7 +4,7 @@ import * as SecureStore from "expo-secure-store";
 const ACCESS_TOKEN_KEY = "cookease_access_token";
 const REFRESH_TOKEN_KEY = "cookease_refresh_token";
 
-export type StoredAuthTokens = {
+type StoredAuthTokens = {
   accessToken: string;
   refreshToken: string;
 };

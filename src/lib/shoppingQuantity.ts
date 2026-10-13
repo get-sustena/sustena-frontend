@@ -10,7 +10,7 @@ const UNICODE_FRACTIONS: Record<string, number> = {
   "⅞": 0.875,
 };
 
-export type StructuredShoppingQuantity = {
+type StructuredShoppingQuantity = {
   quantity: string;
   amount: number | null;
   displayQuantity: string;

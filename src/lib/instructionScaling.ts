@@ -55,7 +55,7 @@ export function formatScaledInstruction({
     .join("");
 }
 
-export function scaleDecimalString(
+function scaleDecimalString(
   baseQuantity: string,
   selectedServings: number,
   baseServings: number

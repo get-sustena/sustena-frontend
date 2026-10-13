@@ -3,7 +3,7 @@ import { closeSheet } from "../../../store/uiStore";
 import { theme } from "../../../theme/theme";
 import { AppText } from "../../ui/AppText";
 
-export type RecipeEditorAction = {
+type RecipeEditorAction = {
   label: string;
   danger?: boolean;
   disabled?: boolean;

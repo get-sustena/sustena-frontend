@@ -1,5 +1,5 @@
 
-export type RecipeFilter = {
+type RecipeFilter = {
   label: string;
   value: string;
 };

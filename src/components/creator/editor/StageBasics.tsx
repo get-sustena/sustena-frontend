@@ -119,11 +119,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: theme.colors.textMedium,
   },
-  coverBrowse: {
-    fontSize: 11,
-    color: theme.colors.textMedium,
-    textDecorationLine: "underline",
-  },
   uploading: {
     ...StyleSheet.absoluteFill,
     alignItems: "center",

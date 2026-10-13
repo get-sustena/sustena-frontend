@@ -32,7 +32,7 @@ type RetryableAxiosRequestConfig = InternalAxiosRequestConfig & {
 
 let refreshPromise: Promise<RefreshTokenResponse | null> | null = null;
 
-export const apiClient: AxiosInstance = createAxiosInstance({
+const apiClient: AxiosInstance = createAxiosInstance({
   baseURL: API_BASE_URL,
   timeout: API_TIMEOUT_MS,
   headers: {

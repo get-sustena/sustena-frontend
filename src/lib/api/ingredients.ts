@@ -1,18 +1,11 @@
 import { Ingredient, IngredientSearchParams } from "../../types/api";
 import { apiRequest } from "./client";
 
-export function getIngredients(params?: IngredientSearchParams) {
+function getIngredients(params?: IngredientSearchParams) {
   return apiRequest<Ingredient[]>({
     url: "/ingredients",
     method: "GET",
     params,
-  });
-}
-
-export function getIngredientCategories() {
-  return apiRequest<string[]>({
-    url: "/ingredients/categories",
-    method: "GET",
   });
 }
 

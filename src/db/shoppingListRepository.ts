@@ -173,10 +173,6 @@ export async function deleteCheckedShoppingListItems(
   );
 }
 
-export async function deleteAllShoppingListItems(db: SQLiteDatabase) {
-  await db.runAsync(`DELETE FROM shopping_list_items`);
-}
-
 export async function deleteShoppingListItemsForList(
   db: SQLiteDatabase,
   listId: string

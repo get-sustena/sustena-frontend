@@ -6,7 +6,6 @@ import {
   ForgotPasswordRequest,
   ForgotPasswordResponse,
   LoginRequest,
-  LogoutAllResponse,
   LogoutRequest,
   LogoutResponse,
   ResetPasswordRequest,
@@ -98,17 +97,6 @@ export async function logout() {
   }
 
   await clearAuthTokens();
-}
-
-export async function logoutAll() {
-  try {
-    return await apiRequest<LogoutAllResponse>({
-      url: "/auth/logout-all",
-      method: "POST",
-    });
-  } finally {
-    await clearAuthTokens();
-  }
 }
 
 export function forgotPassword(payload: ForgotPasswordRequest) {

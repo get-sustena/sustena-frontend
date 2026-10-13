@@ -32,26 +32,6 @@ export function useRemoveFavoriteMutation() {
   });
 }
 
-export function useToggleFavoriteMutation(
-  recipeId: string,
-  currentlyFavorited: boolean
-) {
-  const addFavorite = useAddFavoriteMutation();
-  const removeFavorite = useRemoveFavoriteMutation();
-
-  return currentlyFavorited
-    ? {
-        ...removeFavorite,
-        mutate: () => removeFavorite.mutate(recipeId),
-        mutateAsync: () => removeFavorite.mutateAsync(recipeId),
-      }
-    : {
-        ...addFavorite,
-        mutate: () => addFavorite.mutate(recipeId),
-        mutateAsync: () => addFavorite.mutateAsync(recipeId),
-      };
-}
-
 function invalidateFavoriteBackedQueries(queryClient: QueryClient) {
   return async () => {
     await Promise.all([

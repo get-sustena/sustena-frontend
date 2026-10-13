@@ -463,17 +463,6 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 2,
   },
-  notifDot: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: theme.colors.orange,
-    borderWidth: 1.5,
-    borderColor: theme.colors.card,
-  },
   pressed: {
     opacity: 0.9,
     transform: [{ scale: 0.99 }],

@@ -1,5 +1,4 @@
 import type { IconName } from "../../ui/Icon";
-import type { ProfileAnswers } from "../../../types/profileAnswers";
 
 export type ProfileQuestionField =
   | "nickname"
@@ -179,19 +178,6 @@ export const HEARD_OPTIONS: ProfileOption[] = [
   { value: "appstore", label: "App Store" },
   { value: "other", label: "Other" },
 ];
-
-export const OPTIONS_BY_FIELD: Partial<Record<keyof ProfileAnswers, ProfileOption[]>> = {
-  gender: GENDER_OPTIONS,
-  lifestyle: LIFESTYLE_OPTIONS,
-  remoteFlex: REMOTE_FLEX_OPTIONS,
-  experience: EXPERIENCE_OPTIONS,
-  goals: GOAL_OPTIONS,
-  challenges: CHALLENGE_OPTIONS,
-  habitWho: HABIT_WHO_OPTIONS,
-  habitFreq: HABIT_FREQ_OPTIONS,
-  habitTime: HABIT_TIME_OPTIONS,
-  heard: HEARD_OPTIONS,
-};
 
 export function labelFor(options: ProfileOption[], value: string | null) {
   return options.find((option) => option.value === value)?.label;

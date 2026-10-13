@@ -55,11 +55,3 @@ export function filterPantryPickerIngredients(
     a.displayName.localeCompare(b.displayName)
   );
 }
-
-export function pantryDisplayCategory(ingredient: Ingredient) {
-  return (
-    PANTRY_CATEGORIES.find(
-      (category) => category !== "All" && matchesPantryCategory(ingredient, category)
-    ) ?? "Pantry"
-  );
-}

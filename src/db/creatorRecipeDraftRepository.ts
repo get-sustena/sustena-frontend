@@ -1,7 +1,7 @@
 import { type SQLiteDatabase } from "expo-sqlite";
 import { RecipeDraftWriteRequest } from "../types/api";
 
-export type CachedCreatorRecipeDraft = {
+type CachedCreatorRecipeDraft = {
   id: string;
   revision: number | null;
   payload: RecipeDraftWriteRequest;

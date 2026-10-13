@@ -28,7 +28,7 @@ export function isClosedResourceError(error: unknown) {
   );
 }
 
-export function isDatabaseLockedError(error: unknown) {
+function isDatabaseLockedError(error: unknown) {
   if (!(error instanceof Error)) {
     return false;
   }

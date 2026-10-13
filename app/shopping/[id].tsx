@@ -927,9 +927,6 @@ const styles = StyleSheet.create({
   allInPantryNotice: { padding: 14, marginBottom: 15, borderWidth: 1, borderColor: theme.colors.border, borderRadius: 14, backgroundColor: theme.colors.card2, flexDirection: "row", alignItems: "center", gap: 11 },
   allInPantryIcon: { width: 34, height: 34, borderRadius: 10, backgroundColor: theme.colors.white, alignItems: "center", justifyContent: "center" },
   allInPantryText: { flex: 1, fontFamily: theme.fontFamily.body, fontSize: 13.5, lineHeight: 20, color: theme.colors.text },
-  errorState: {
-    gap: theme.spacing.md,
-  },
   summaryCard: {
     marginHorizontal: 20,
     marginBottom: 16,

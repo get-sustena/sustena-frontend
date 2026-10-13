@@ -1,6 +1,5 @@
 import {
   CreatorRecipeListParams,
-  IngredientSearchParams,
   MyRecipeListParams,
   RecipeSearchParams,
 } from "../../types/api";
@@ -14,9 +13,6 @@ export const queryKeys = {
     all: ["units"] as const,
   },
   ingredients: {
-    list: (params?: IngredientSearchParams) =>
-      ["ingredients", "list", params ?? {}] as const,
-    categories: ["ingredients", "categories"] as const,
     catalog: ["ingredients", "catalog"] as const,
   },
   pantry: {
@@ -40,8 +36,6 @@ export const queryKeys = {
       ["recipes", "local-fallback-detail", id] as const,
     localFavorites: ["recipes", "local-profile-favorites"] as const,
     detail: (id: string) => ["recipes", "detail", id] as const,
-    slug: (slug: string) => ["recipes", "slug", slug] as const,
-    tags: ["recipes", "tags"] as const,
   },
   recommendations: {
     // Pantry, preference and profile changes invalidate this prefix, which
@@ -72,17 +66,10 @@ export const queryKeys = {
   favorites: {
     all: ["favorites"] as const,
   },
-  shoppingList: {
-    active: ["shopping-list", "active"] as const,
-  },
   shoppingLists: {
     all: ["shopping-lists"] as const,
   },
   planner: {
     settings: ["planner", "settings"] as const,
-    budget: (payload: unknown) => ["planner", "budget", payload] as const,
-    kitchen: (payload: unknown) => ["planner", "kitchen", payload] as const,
-    timetable: (payload: unknown) =>
-      ["planner", "timetable", payload] as const,
   },
 };

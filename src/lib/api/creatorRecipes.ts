@@ -71,14 +71,6 @@ export function publishRecipe(recipeId: string, revision: number) {
   });
 }
 
-export function unpublishRecipe(recipeId: string, revision: number) {
-  return apiRequest<RecipeDraft>({
-    url: `/me/recipes/${encodeURIComponent(recipeId)}/unpublish`,
-    method: "POST",
-    params: { revision },
-  });
-}
-
 export function deleteRecipe(recipeId: string, revision: number) {
   return apiRequest<void>({
     url: `/me/recipes/${encodeURIComponent(recipeId)}`,
