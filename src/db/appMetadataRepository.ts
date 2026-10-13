@@ -2,6 +2,7 @@ import type { SQLiteDatabase } from "expo-sqlite";
 import { runWithSqliteRetry } from "./sqliteGuards";
 
 const WELCOME_SEEN_KEY = "welcome_seen";
+const MEAL_REMINDER_TOKEN_KEY = "meal_reminder_push_token";
 
 export async function getHasSeenWelcome(db: SQLiteDatabase) {
   return runWithSqliteRetry(async () => {
@@ -28,5 +29,46 @@ export async function markWelcomeSeen(db: SQLiteDatabase) {
       `,
       [WELCOME_SEEN_KEY, "1", now]
     );
+  });
+}
+
+// The Expo push token this phone last registered for meal reminders, kept so
+// the switch and sign-out can unregister it without asking Expo again.
+export async function getStoredMealReminderToken(db: SQLiteDatabase) {
+  return runWithSqliteRetry(async () => {
+    const result = await db.getFirstAsync<{ value: string }>(
+      "SELECT value FROM local_metadata WHERE key = ?",
+      [MEAL_REMINDER_TOKEN_KEY]
+    );
+
+    return result?.value ?? null;
+  });
+}
+
+export async function saveStoredMealReminderToken(
+  db: SQLiteDatabase,
+  token: string
+) {
+  await runWithSqliteRetry(async () => {
+    const now = new Date().toISOString();
+
+    await db.runAsync(
+      `
+      INSERT INTO local_metadata (key, value, updated_at)
+      VALUES (?, ?, ?)
+      ON CONFLICT(key) DO UPDATE SET
+        value = excluded.value,
+        updated_at = excluded.updated_at
+      `,
+      [MEAL_REMINDER_TOKEN_KEY, token, now]
+    );
+  });
+}
+
+export async function clearStoredMealReminderToken(db: SQLiteDatabase) {
+  await runWithSqliteRetry(async () => {
+    await db.runAsync("DELETE FROM local_metadata WHERE key = ?", [
+      MEAL_REMINDER_TOKEN_KEY,
+    ]);
   });
 }

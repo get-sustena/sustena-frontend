@@ -76,13 +76,15 @@ export function useInfiniteRecipesWithLocalFallback(
   });
 }
 
-function useRecipeDetailQuery(recipeId?: string) {
+// The source isn't part of the key: it only tells the backend where the
+// open came from, and the recipe is the same wherever it was opened.
+function useRecipeDetailQuery(recipeId?: string, source?: string) {
   const db = useSQLiteContext();
 
   return useQuery({
     queryKey: queryKeys.recipes.detail(recipeId ?? ""),
     queryFn: async () => {
-      const recipe = await recipesApi.getRecipeById(recipeId ?? "");
+      const recipe = await recipesApi.getRecipeById(recipeId ?? "", source);
 
       void cacheRecipeDetail(db, recipe).catch((error) => {
         console.error("Failed to cache recipe detail locally", error);
@@ -94,9 +96,9 @@ function useRecipeDetailQuery(recipeId?: string) {
   });
 }
 
-export function useRecipeDetailWithLocalFallback(recipeId?: string) {
+export function useRecipeDetailWithLocalFallback(recipeId?: string, source?: string) {
   const db = useSQLiteContext();
-  const apiQuery = useRecipeDetailQuery(recipeId);
+  const apiQuery = useRecipeDetailQuery(recipeId, source);
   const localQuery = useQuery({
     queryKey: queryKeys.recipes.localFallbackDetail(recipeId ?? ""),
     queryFn: () => getLocalRecipeById(db, recipeId ?? ""),

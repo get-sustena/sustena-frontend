@@ -10,6 +10,7 @@ export * as pantryApi from "./pantry";
 export * as plannerApi from "./planner";
 export * as preferencesApi from "./preferences";
 export * as profileAnswersApi from "./profileAnswers";
+export * as pushTokensApi from "./pushTokens";
 export * as recommendationsApi from "./recommendations";
 export * as recipesApi from "./recipes";
 export * as shoppingListApi from "./shoppingList";

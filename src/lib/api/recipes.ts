@@ -14,10 +14,13 @@ export function getRecipes(params?: RecipeSearchParams) {
   });
 }
 
-export function getRecipeById(recipeId: string) {
+// `source` says where in the app the recipe was opened from (for example
+// "meal_reminder"); the backend records it on its recipe_opened event.
+export function getRecipeById(recipeId: string, source?: string) {
   return apiRequest<RecipeDetail>({
     url: `/recipes/${recipeId}`,
     method: "GET",
+    params: source ? { source } : undefined,
   }).then(normalizeRecipeDetail);
 }
 

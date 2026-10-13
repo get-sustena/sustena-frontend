@@ -23,7 +23,8 @@ type PreferencesState = UserPreferences & {
 
   toggleHaptics: () => void;
   toggleDataSaver: () => void;
-  toggleMealReminders: () => void;
+  // Set, not toggled: turning reminders on can fail (permission, network).
+  setMealRemindersEnabled: (enabled: boolean) => void;
 
   completeOnboarding: () => void;
   resetPreferences: () => void;
@@ -112,10 +113,8 @@ export const usePreferencesStore = create<PreferencesState>((set, get) => ({
     }));
   },
 
-  toggleMealReminders: () => {
-    set((state) => ({
-      mealRemindersEnabled: !state.mealRemindersEnabled,
-    }));
+  setMealRemindersEnabled: (enabled) => {
+    set({ mealRemindersEnabled: enabled });
   },
 
   completeOnboarding: () => {

@@ -10,6 +10,7 @@ import {
 } from "../../lib/accountSession";
 import { authApi } from "../../lib/api";
 import { waitForAccountBackgroundTasks } from "../../lib/accountBackgroundTasks";
+import { disableMealReminders } from "../../lib/notifications/mealReminders";
 import { queryKeys } from "../../lib/query/queryKeys";
 import { useAuthStore } from "../../store/authStore";
 
@@ -76,6 +77,8 @@ export function useLogoutMutation() {
       beginSignOut();
       await queryClient.cancelQueries();
       await waitForAccountBackgroundTasks();
+      // While still signed in, so this phone stops getting the account's reminders.
+      await disableMealReminders(db);
       return authApi.logout();
     },
     onSettled: () => finalizeLocalLogout(db, queryClient, clearAuth),

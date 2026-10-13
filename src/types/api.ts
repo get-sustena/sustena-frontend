@@ -910,6 +910,20 @@ export interface ShoppingListRecipeBatchRequest {
 
 export type ShoppingListItemUpdate = ShoppingListItemUpdateRequest;
 
+export type PushPlatform = "android" | "ios";
+
+// A phone registered for meal reminders: POST /me/push-tokens.
+export interface PushTokenRegisterRequest {
+  token: string;
+  platform: PushPlatform;
+  timeZone: string;
+}
+
+export interface PushTokenResponse extends PushTokenRegisterRequest {
+  createdAt: ISODateTimeString;
+  updatedAt: ISODateTimeString;
+}
+
 export interface ShoppingListCreateRequest {
   name: string;
   isActive?: boolean;
