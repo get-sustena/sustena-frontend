@@ -240,3 +240,6 @@ All on 13 October 2026, on `testing`:
 - `e7f12d4` Start-up retries `/auth/me` after a dropped connection (2, 5, 15, then every 30 seconds), so the user and their name still load.
 - `4832077`, `8f069d1`, `5e3a541` Dead code removed (founder rule): 18 unused files, unused hooks, API calls, helpers, types, query keys and 51 style keys, and five unused packages. `npm run lint:unused` (knip) keeps it that way.
 - `1a6f76b`, `f8f3836`, `c579680` Skeleton loaders replace the logo loader in the tabs (Home, Recipes, Pantry, Profile, Shopping list, budget planner), and the Profile recipe grid now fills its row.
+- `e3dd4c2`, `c5dc400` Push meal reminders on Android (see "Push meal reminders").
+- `4046a1e` PR #2 merged into `main` (via `gh`) and live: the budget button, the `/auth/me` retry, the dead-code removal, skeletons and meal reminders. The first APK with meal reminders was built from this commit (EAS build `99057917`, `preview` profile).
+- `39e509a` Browsers keep the content-hashed files under `/_expo/static/` and `/assets/` for a year. `index.html` is still checked on every visit.
