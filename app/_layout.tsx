@@ -1,26 +1,15 @@
 
-import {
-  BricolageGrotesque_500Medium,
-  BricolageGrotesque_600SemiBold,
-  BricolageGrotesque_700Bold,
-  BricolageGrotesque_800ExtraBold,
-  useFonts as useBricolageFonts,
-} from "@expo-google-fonts/bricolage-grotesque";
-import {
-  GeistMono_400Regular,
-  GeistMono_500Medium,
-  GeistMono_600SemiBold,
-  GeistMono_700Bold,
-  useFonts as useGeistMonoFonts,
-} from "@expo-google-fonts/geist-mono";
-import {
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
-  useFonts as useInterFonts,
-} from "@expo-google-fonts/inter";
+// One import per weight, as the expo-google-fonts README shows: importing a
+// package's index pulls every weight and italic into the app bundle.
+import { BricolageGrotesque_600SemiBold } from "@expo-google-fonts/bricolage-grotesque/600SemiBold";
+import { BricolageGrotesque_700Bold } from "@expo-google-fonts/bricolage-grotesque/700Bold";
+import { BricolageGrotesque_800ExtraBold } from "@expo-google-fonts/bricolage-grotesque/800ExtraBold";
+import { Inter_400Regular } from "@expo-google-fonts/inter/400Regular";
+import { Inter_500Medium } from "@expo-google-fonts/inter/500Medium";
+import { Inter_600SemiBold } from "@expo-google-fonts/inter/600SemiBold";
+import { Inter_700Bold } from "@expo-google-fonts/inter/700Bold";
 import { QueryClientProvider } from "@tanstack/react-query";
+import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { SQLiteProvider } from "expo-sqlite";
@@ -47,28 +36,15 @@ setupNetworkStatusListener();
 configureMealReminderNotifications();
 
 export default function RootLayout() {
-  const [interLoaded] = useInterFonts({
+  const [fontsLoaded] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
     Inter_600SemiBold,
     Inter_700Bold,
-  });
-
-  const [bricolageLoaded] = useBricolageFonts({
-    BricolageGrotesque_500Medium,
     BricolageGrotesque_600SemiBold,
     BricolageGrotesque_700Bold,
     BricolageGrotesque_800ExtraBold,
   });
-
-  const [geistMonoLoaded] = useGeistMonoFonts({
-    GeistMono_400Regular,
-    GeistMono_500Medium,
-    GeistMono_600SemiBold,
-    GeistMono_700Bold,
-  });
-
-  const fontsLoaded = interLoaded && bricolageLoaded && geistMonoLoaded;
 
   useEffect(() => {
     if (fontsLoaded) {
