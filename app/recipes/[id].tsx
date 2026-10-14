@@ -345,8 +345,8 @@ export default function RecipeDetailScreen() {
     }));
   const displayTags = getRecipeDetailTags(recipeDetail, recipe?.tags ?? []);
 
-  // Nutrition (PRD v6.8 section 15). Creator recipes have none, so they show
-  // no strip, no eye, no calorie lines and no oil tip.
+  // Nutrition (PRD v6.8 section 15), for Sustena and creator recipes alike. A
+  // recipe with nothing counted shows no strip, eye, calorie lines or oil tip.
   const nutritionPerServing = recipeDetail?.nutritionPerServing ?? null;
   const nutritionBaseServings = recipeDetail?.baseServings ?? 1;
   const caloriesOnIngredients = useIngredientCaloriesShown();

@@ -440,7 +440,7 @@ export interface RecipeNote {
 }
 
 export interface RecipeDetail extends RecipeListItem {
-  // 1 serving; null for creator recipes and recipes with nothing counted.
+  // 1 serving; null when nothing in the recipe can be counted.
   nutritionPerServing?: NutrientValues | null;
   description: string | null;
   baseServingsSource: MetadataSource | null;
