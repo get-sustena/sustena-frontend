@@ -2,6 +2,7 @@
 import { AxiosError } from "axios";
 import { ApiError, ApiValidationError } from "../../types/api";
 import { API_BASE_URL } from "./config";
+import { validationFieldErrors } from "./validationErrors";
 
 class ApiClientError extends Error {
   status: number;
@@ -48,23 +49,9 @@ export function getApiErrorMessage(error: unknown) {
   return "Something went wrong. Please try again.";
 }
 
+// A 422's messages by field (validationErrors.ts), to show under each field.
 export function getApiValidationFieldErrors(error: unknown) {
-  const payload = getErrorPayload(error);
-
-  if (!isValidationErrorPayload(payload)) {
-    return {};
-  }
-
-  return payload.detail.reduce<Record<string, string>>((acc, item) => {
-    const field = getValidationFieldName(item.loc);
-
-    if (!field || acc[field]) {
-      return acc;
-    }
-
-    acc[field] = item.msg;
-    return acc;
-  }, {});
+  return validationFieldErrors(getErrorPayload(error));
 }
 
 export function toApiClientError(error: unknown): ApiClientError {
