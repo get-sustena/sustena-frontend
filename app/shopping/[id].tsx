@@ -21,11 +21,14 @@ import { ShoppingItemsSkeleton } from "../../src/components/shopping/ShoppingIte
 import { AppText } from "../../src/components/ui/AppText";
 import { Icon } from "../../src/components/ui/Icon";
 import { Logo } from "../../src/components/ui/Logo";
-import { deleteShoppingListItem, insertShoppingListItem } from "../../src/db/shoppingItemRows";
+import {
+  deleteShoppingListItem,
+  insertShoppingListItem,
+  mapShoppingListRowToItem,
+} from "../../src/db/shoppingItemRows";
 import {
   deleteCheckedShoppingListItems,
   getStoredShoppingListItems,
-  mapShoppingListRowToItem,
   replaceShoppingListItemsForList,
 } from "../../src/db/shoppingListRepository";
 import {
@@ -370,9 +373,7 @@ function LocalListDetail({ listId, shareOnOpen }: { listId: string; shareOnOpen:
         .filter((item) => !item.deletedAt)
         .map((item) => ({ ...apiShoppingItemToLocalItem(item), listId }));
 
-      await replaceShoppingListItemsForList(db, listId, serverItems);
-
-      setItems(serverItems);
+      setItems(await replaceShoppingListItemsForList(db, listId, serverItems));
     } catch (error) {
       console.error("Failed to refresh shopping list from server", error);
     }

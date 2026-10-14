@@ -1,28 +1,12 @@
 import { type SQLiteDatabase } from "expo-sqlite";
-import { DEFAULT_SHOPPING_LIST_ID, ShoppingListItem } from "../types/shoppingList";
+import { ShoppingListItem } from "../types/shoppingList";
 import { runWithSqliteRetry } from "./sqliteGuards";
 import { runWriteTransaction } from "./writeTransaction";
-import { insertShoppingListItem } from "./shoppingItemRows";
-
-type ShoppingListItemRow = {
-  id: string;
-  ingredient_id: string | null;
-  name: string;
-  emoji: string;
-  quantity: string;
-  amount: number | null;
-  display_quantity: string | null;
-  unit: string | null;
-  category: string;
-  estimated_price: number | null;
-  price_status: "unknown" | "estimated" | "confirmed";
-  client_mutation_id: string | null;
-  checked: number;
-  source_recipe_id: string | null;
-  created_at: string;
-  updated_at: string;
-  list_id: string | null;
-};
+import {
+  insertShoppingListItem,
+  replaceListItemsKeepingPendingEdits,
+  type ShoppingListItemRow,
+} from "./shoppingItemRows";
 
 export async function getStoredShoppingListItems(
   db: SQLiteDatabase,
@@ -62,26 +46,18 @@ export async function insertShoppingListItems(
   });
 }
 
-export async function replaceShoppingListItemsForList(
+// Saves a server reply for one list, keeping edits not yet sent. Returns
+// the list as saved.
+export function replaceShoppingListItemsForList(
   db: SQLiteDatabase,
   listId: string,
   items: ShoppingListItem[]
 ) {
-  await runWithSqliteRetry(async () => {
-    await runWriteTransaction(db, async (transactionDb) => {
-      await transactionDb.runAsync(
-        "DELETE FROM shopping_list_items WHERE list_id = ?",
-        [listId]
-      );
-
-      for (const item of items) {
-        await insertShoppingListItem(transactionDb, {
-          ...item,
-          listId,
-        });
-      }
-    });
-  });
+  return runWithSqliteRetry(() =>
+    runWriteTransaction(db, (transactionDb) =>
+      replaceListItemsKeepingPendingEdits(transactionDb, listId, items)
+    )
+  );
 }
 
 export async function deleteCheckedShoppingListItems(
@@ -127,28 +103,4 @@ export async function getShoppingListItemSummaries(db: SQLiteDatabase) {
     GROUP BY list_id
     `
   );
-}
-
-export function mapShoppingListRowToItem(
-  row: ShoppingListItemRow
-): ShoppingListItem {
-  return {
-    id: row.id,
-    ingredientId: row.ingredient_id ?? undefined,
-    name: row.name,
-    emoji: row.emoji,
-    quantity: row.quantity,
-    amount: row.amount ?? undefined,
-    displayQuantity: row.display_quantity ?? undefined,
-    unit: row.unit ?? undefined,
-    category: row.category,
-    estimatedPrice: row.estimated_price,
-    priceStatus: row.price_status,
-    clientMutationId: row.client_mutation_id ?? undefined,
-    checked: Boolean(row.checked),
-    sourceRecipeId: row.source_recipe_id ?? undefined,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-    listId: row.list_id ?? DEFAULT_SHOPPING_LIST_ID,
-  };
 }

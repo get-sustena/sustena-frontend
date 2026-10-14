@@ -26,9 +26,9 @@ import {
   getStoredPantryIngredientIds,
   replaceStoredPantry,
 } from "../db/pantryRepository";
+import { mapShoppingListRowToItem } from "../db/shoppingItemRows";
 import {
   getStoredShoppingListItems,
-  mapShoppingListRowToItem,
   replaceShoppingListItemsForList,
 } from "../db/shoppingListRepository";
 import {
@@ -154,7 +154,7 @@ export function useAppBootstrap(enabled = true) {
       }));
       for (const [index, list] of start.shoppingLists.entries()) {
         await upsertShoppingList(db, listMetadata[index]);
-        await replaceShoppingListItemsForList(
+        const saved = await replaceShoppingListItemsForList(
           db,
           list.id,
           list.items.map((item) => ({
@@ -162,17 +162,11 @@ export function useAppBootstrap(enabled = true) {
             listId: list.id,
           }))
         );
+        if (list.isActive) {
+          hydrateShoppingItems(saved);
+        }
       }
       hydrateShoppingLists(listMetadata);
-      const active = start.shoppingLists.find((list) => list.isActive);
-      if (active) {
-        hydrateShoppingItems(
-          active.items.map((item) => ({
-            ...apiShoppingItemToLocalItem(item),
-            listId: active.id,
-          }))
-        );
-      }
     }
 
     async function bootstrap() {

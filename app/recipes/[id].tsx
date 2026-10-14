@@ -522,10 +522,10 @@ export default function RecipeDetailScreen() {
         ...apiShoppingItemToLocalItem(item),
         listId: destinationListId,
       }));
+      const saved = await replaceShoppingListItemsForList(db, destinationListId, authoritativeItems);
       if (destinationListId === activeListId) {
-        hydrateItems(authoritativeItems);
+        hydrateItems(saved);
       }
-      await replaceShoppingListItemsForList(db, destinationListId, authoritativeItems);
     } catch {
       const localItems = items.map((item) => ({ ...item, listId: destinationListId }));
       if (destinationListId === activeListId) {

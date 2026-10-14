@@ -407,10 +407,10 @@ export function BudgetPlannerPane() {
         ...apiShoppingItemToLocalItem(item),
         listId: destinationListId,
       }));
+      const saved = await replaceShoppingListItemsForList(db, destinationListId, localItems);
       if (destinationListId === activeListId) {
-        hydrateItems(localItems);
+        hydrateItems(saved);
       }
-      await replaceShoppingListItemsForList(db, destinationListId, localItems);
       router.push({
         pathname: "/shopping/[id]",
         params: { id: destinationListId },
