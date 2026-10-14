@@ -22,19 +22,12 @@ import { SavedPhoto } from "../../src/components/ui/SavedPhoto";
 import { ProgressLoader } from "../../src/components/ui/ProgressLoader";
 import { Screen } from "../../src/components/ui/Screen";
 import {
-  deleteFavoriteRecipe,
-  insertFavoriteRecipe,
-} from "../../src/db/favoritesRepository";
-import {
   insertShoppingListItems,
   replaceShoppingListItemsForList,
 } from "../../src/db/shoppingListRepository";
 import { enqueueSyncOperation } from "../../src/db/syncQueueRepository";
-import {
-  useAddFavoriteMutation,
-  useRemoveFavoriteMutation,
-} from "../../src/hooks/api/useFavorites";
 import { useIngredientCatalogQuery } from "../../src/hooks/api/useIngredients";
+import { useFavoriteCommands } from "../../src/hooks/useFavoriteCommands";
 import {
   useRecipeDetailWithLocalFallback,
 } from "../../src/hooks/api/useRecipes";
@@ -121,8 +114,6 @@ export default function RecipeDetailScreen() {
   const recipe = recipeDetail
     ? apiRecipeToLocalRecipe(recipeDetail)
     : undefined;
-  const addFavoriteMutation = useAddFavoriteMutation();
-  const removeFavoriteMutation = useRemoveFavoriteMutation();
 
   const defaultServingSize = usePreferencesStore(
     (state) => state.defaultServingSize
@@ -144,12 +135,12 @@ export default function RecipeDetailScreen() {
     recipe ? state.isFavorite(recipe.id) : false
   );
   const [favoriteOverride, setFavoriteOverride] = useState<boolean | null>(null);
+  // The phone's copy of a recipe says "not saved" for everyone, so without
+  // the server's copy, the saved recipes kept on the phone decide.
   const isFavorite =
-    favoriteOverride ?? recipeDetail?.isFavorited ?? localIsFavorite;
-  const addFavoriteLocal = useFavoritesStore((state) => state.addFavorite);
-  const removeFavoriteLocal = useFavoritesStore(
-    (state) => state.removeFavorite
-  );
+    favoriteOverride ??
+    (shouldSyncApi && recipeDetail ? recipeDetail.isFavorited : localIsFavorite);
+  const favoriteCommands = useFavoriteCommands();
 
   const [ingredientUnitSelections, setIngredientUnitSelections] = useState(
     () => {
@@ -387,42 +378,7 @@ export default function RecipeDetailScreen() {
 
     const nextIsFavorite = !isFavorite;
     setFavoriteOverride(nextIsFavorite);
-
-    if (nextIsFavorite) {
-      addFavoriteLocal(recipe.id);
-    } else {
-      removeFavoriteLocal(recipe.id);
-    }
-
-    // Persist favorites locally before attempting server sync.
-    const localWrite = nextIsFavorite
-      ? insertFavoriteRecipe(db, recipe.id)
-      : deleteFavoriteRecipe(db, recipe.id);
-
-    await localWrite.catch((error) => {
-      console.error("Failed to persist favorite locally", error);
-    });
-
-    if (!shouldSyncApi || !recipeDetail) {
-      return;
-    }
-
-    try {
-      if (nextIsFavorite) {
-        await addFavoriteMutation.mutateAsync(recipeDetail.id);
-      } else {
-        await removeFavoriteMutation.mutateAsync(recipeDetail.id);
-      }
-    } catch (error) {
-      console.error("Failed to sync favorite, queuing for retry", error);
-      await enqueueSyncOperation(
-        db,
-        nextIsFavorite ? "favorite_add" : "favorite_remove",
-        { recipeId: recipeDetail.id }
-      ).catch((queueError) => {
-        console.error("Failed to queue favorite sync", queueError);
-      });
-    }
+    await favoriteCommands.setFavorite(recipe.id, nextIsFavorite);
   }
 
   function selectGlobalUnitMode(mode: UnitMode) {

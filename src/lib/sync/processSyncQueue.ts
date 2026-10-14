@@ -18,6 +18,7 @@ import {
   shoppingListsApi,
 } from "../api";
 import { apiShoppingItemToLocalItem } from "../api/adapters";
+import { runFavoriteCommand } from "../favorites/favoriteCommands";
 import { runShoppingCommand } from "../shopping/shoppingReplay";
 import { replayOutbox } from "./outboxReplay";
 
@@ -40,7 +41,10 @@ async function runOperation(db: SQLiteDatabase, operation: SyncQueueOperation) {
     toLocalItem: apiShoppingItemToLocalItem,
     transact: (work) => runWriteTransaction(db, work),
   });
-  if (handled) return;
+  if (handled || (await runFavoriteCommand(operation, {
+      addFavorite: favoritesApi.addFavorite,
+      removeFavorite: favoritesApi.removeFavorite,
+    }))) return;
 
   // Older edits may name an item by the temporary id it had when queued.
   const payload = operation.payload as Record<string, unknown>;
@@ -50,18 +54,6 @@ async function runOperation(db: SQLiteDatabase, operation: SyncQueueOperation) {
   }
 
   switch (operation.kind) {
-    case "favorite_add": {
-      const { recipeId } = operation.payload as { recipeId: string };
-      await favoritesApi.addFavorite(recipeId);
-      return;
-    }
-
-    case "favorite_remove": {
-      const { recipeId } = operation.payload as { recipeId: string };
-      await favoritesApi.removeFavorite(recipeId);
-      return;
-    }
-
     case "shopping_toggle": {
       const { itemId, checked } = operation.payload as {
         itemId: string;
