@@ -1,5 +1,5 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { useSQLiteContext } from "expo-sqlite";
+import { useSQLiteContext, type SQLiteDatabase } from "expo-sqlite";
 import {
   cacheRecipeDetail,
   getLocalRecipeById,
@@ -84,17 +84,33 @@ function useRecipeDetailQuery(recipeId?: string, source?: RecipeSource) {
 
   return useQuery({
     queryKey: queryKeys.recipes.detail(recipeId ?? ""),
-    queryFn: async () => {
-      const recipe = await recipesApi.getRecipeById(recipeId ?? "", source);
-
-      void cacheRecipeDetail(db, recipe).catch((error) => {
-        console.error("Failed to cache recipe detail locally", error);
-      });
-
-      return recipe;
-    },
+    queryFn: () => fetchRecipeDetail(db, recipeId ?? "", source),
     enabled: Boolean(recipeId),
   });
+}
+
+// For screens opened from the recipe page, such as its nutrition page: they
+// use the recipe already loaded, so opening them doesn't count as opening the
+// recipe again. It's fetched only when it isn't loaded, as after a reload.
+export function useLoadedRecipeDetail(recipeId?: string, source?: RecipeSource) {
+  const db = useSQLiteContext();
+
+  return useQuery({
+    queryKey: queryKeys.recipes.detail(recipeId ?? ""),
+    queryFn: () => fetchRecipeDetail(db, recipeId ?? "", source),
+    enabled: Boolean(recipeId),
+    staleTime: Infinity,
+  });
+}
+
+async function fetchRecipeDetail(db: SQLiteDatabase, recipeId: string, source?: RecipeSource) {
+  const recipe = await recipesApi.getRecipeById(recipeId, source);
+
+  void cacheRecipeDetail(db, recipe).catch((error) => {
+    console.error("Failed to cache recipe detail locally", error);
+  });
+
+  return recipe;
 }
 
 export function useRecipeDetailWithLocalFallback(recipeId?: string, source?: RecipeSource) {

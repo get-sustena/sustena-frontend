@@ -303,7 +303,24 @@ export interface Unit {
   sourceId: string | null;
 }
 
+// PRD v6.8 section 15. Carbs already include fibre.
+export interface NutrientValues {
+  kcal: number;
+  proteinG: number;
+  carbsG: number;
+  fatG: number;
+  fibreG: number;
+  saturatedFatG: number;
+  sodiumMg: number;
+  vitaminCMg: number;
+}
+
 export interface RecipeIngredient {
+  // For the line's amount at the recipe's base servings; null when it isn't
+  // counted (salt to taste, or no nutrition data yet). Older APIs send none.
+  nutrition?: NutrientValues | null;
+  // Deep-frying oil, counted as only what the food soaks up.
+  isFryingOil?: boolean;
   id: UUIDString;
   position: number;
   rawText: string;
@@ -423,6 +440,8 @@ export interface RecipeNote {
 }
 
 export interface RecipeDetail extends RecipeListItem {
+  // 1 serving; null for creator recipes and recipes with nothing counted.
+  nutritionPerServing?: NutrientValues | null;
   description: string | null;
   baseServingsSource: MetadataSource | null;
   prepTimeMinutes: number | null;

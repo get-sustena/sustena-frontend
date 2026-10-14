@@ -9,11 +9,14 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  CircleCheck,
   CircleHelp,
   CirclePause,
   CirclePlay,
   CookingPot,
   CreditCard,
+  Droplet,
+  Drumstick,
   Ellipsis,
   Eye,
   EyeOff,
@@ -46,6 +49,7 @@ import {
   Utensils,
   Volume2,
   Wallet,
+  Wheat,
   WifiOff,
   X,
   type LucideIcon,
@@ -103,7 +107,11 @@ export type IconName =
   | "pause"
   | "volume"
   | "maximize"
-  | "minimize";
+  | "minimize"
+  | "protein"
+  | "carbs"
+  | "fat"
+  | "circleCheck";
 
 const ICONS: Record<IconName, LucideIcon> = {
   discover: Search,
@@ -157,6 +165,10 @@ const ICONS: Record<IconName, LucideIcon> = {
   volume: Volume2,
   maximize: Maximize2,
   minimize: Minimize2,
+  protein: Drumstick,
+  carbs: Wheat,
+  fat: Droplet,
+  circleCheck: CircleCheck,
 };
 
 type IconProps = {

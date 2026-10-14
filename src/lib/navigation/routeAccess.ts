@@ -19,6 +19,7 @@ export const PUBLIC_ROUTES = [
 export const SIGNED_IN_ROUTES = [
   "(tabs)",
   "recipes/[id]",
+  "recipe-nutrition/[id]",
   "saved-recipes",
   "shopping/[id]",
   "creators/[handle]",
