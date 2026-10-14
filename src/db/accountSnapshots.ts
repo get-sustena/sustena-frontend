@@ -20,6 +20,7 @@ const ACCOUNT_TABLES = [
   "creator_recipe_drafts",
   "sync_queue",
   "sync_id_mappings",
+  "meal_plans",
 ] as const;
 
 export async function captureAccountTables(tx: SQLiteDatabase) {

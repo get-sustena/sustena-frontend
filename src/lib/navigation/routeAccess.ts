@@ -22,6 +22,8 @@ export const SIGNED_IN_ROUTES = [
   "recipe-nutrition/[id]",
   "saved-recipes",
   "shopping/[id]",
+  "meal-plans/index",
+  "meal-plans/[id]",
   "creators/[handle]",
   "creator/edit-profile",
   "creator/profile-preview",

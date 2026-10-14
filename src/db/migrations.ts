@@ -5,7 +5,7 @@ import {
   runWithSqliteRetry,
 } from "./sqliteGuards.ts";
 
-const DATABASE_VERSION = 17;
+const DATABASE_VERSION = 18;
 let migrationQueue = Promise.resolve();
 
 export async function migrateDbIfNeeded(db: SQLiteDatabase) {
@@ -464,6 +464,24 @@ async function runMigrations(db: SQLiteDatabase) {
       ALTER TABLE shopping_list_items ADD COLUMN recipe_batch_id TEXT;
 
       PRAGMA user_version = 17;
+    `);
+  }
+
+  const versionAfterBatches = versionAfterPhotos < 17 ? 17 : versionAfterPhotos;
+
+  // MP-01: saved meal plans, kept on the phone so they open offline. Each
+  // row holds the whole plan; `id` is temporary until the server has it.
+  if (versionAfterBatches < 18) {
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS meal_plans (
+        id TEXT PRIMARY KEY NOT NULL,
+        name TEXT NOT NULL,
+        plan_json TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      PRAGMA user_version = 18;
     `);
   }
 }

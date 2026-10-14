@@ -23,6 +23,10 @@ export type SyncQueueKind =
   | "shopping_list_create"
   | "shopping_list_rename"
   | "shopping_list_delete"
+  | "meal_plan_create"
+  | "meal_plan_rename"
+  | "meal_plan_swap"
+  | "meal_plan_delete"
   | "recipe_cooked";
 
 export type SyncQueueOperation = {

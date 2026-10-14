@@ -7,6 +7,7 @@ import { useAuthStore } from "../../store/authStore";
 import { ShoppingListItemCreateRequest } from "../../types/api";
 import {
   favoritesApi,
+  mealPlansApi,
   plannerApi,
   preferencesApi,
   profileAnswersApi,
@@ -20,6 +21,7 @@ import { runFavoriteCommand } from "../favorites/favoriteCommands";
 import { queryClient } from "../query/queryClient";
 import { queryKeys } from "../query/queryKeys";
 import { runSettingsCommand } from "../settings/settingsCommands";
+import { runPlanCommand } from "../planner/planCommands";
 import { runListCommand } from "../shopping/listCommands";
 import { runShoppingCommand } from "../shopping/shoppingReplay";
 import { replayOutbox } from "./outboxReplay";
@@ -43,6 +45,16 @@ async function runOperation(db: SQLiteDatabase, operation: SyncQueueOperation) {
     transact: (work) => runWriteTransaction(db, work),
   });
   if (listHandled) return;
+  const planHandled = await runPlanCommand(db, operation, {
+    api: {
+      createMealPlan: mealPlansApi.createMealPlan,
+      swapMealPlanItems: mealPlansApi.swapMealPlanItems,
+      renameMealPlan: mealPlansApi.renameMealPlan,
+      deleteMealPlan: mealPlansApi.deleteMealPlan,
+    },
+    transact: (work) => runWriteTransaction(db, work),
+  });
+  if (planHandled) return;
 
   const handled = await runShoppingCommand(db, operation, {
     api: {

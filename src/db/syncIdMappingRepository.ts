@@ -2,7 +2,7 @@ import type { SQLiteDatabase } from "expo-sqlite";
 
 // What a temporary id made on the phone stands for until the server gives
 // its own.
-type SyncEntityKind = "shopping_list_item" | "shopping_list";
+type SyncEntityKind = "shopping_list_item" | "shopping_list" | "meal_plan" | "meal_plan_item";
 
 export async function saveSyncIdMapping(
   db: SQLiteDatabase,
