@@ -19,13 +19,14 @@ export function getRecipes(params?: RecipeSearchParams) {
   });
 }
 
-// "I cooked it". The backend counts once per person, recipe and Lagos day;
-// `counted` is false when today's cook was already counted.
-export function markRecipeCooked(recipeId: string, source?: RecipeSource) {
+// "I cooked it". The backend counts once per person, recipe and Lagos day
+// of `cookedAt` (the time of the tap, ISO with an offset; today without it);
+// `counted` is false when that day's cook was already counted.
+export function markRecipeCooked(recipeId: string, source?: RecipeSource, cookedAt?: string) {
   return apiRequest<RecipeCookedResponse>({
     url: `/recipes/${recipeId}/cooked`,
     method: "POST",
-    data: source ? { source } : undefined,
+    data: { ...(source ? { source } : {}), ...(cookedAt ? { cookedAt } : {}) },
   });
 }
 

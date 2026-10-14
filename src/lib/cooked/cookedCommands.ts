@@ -43,7 +43,7 @@ export function createCookedCommands({ transact, now, newId, requestSync }: Depe
           [key, today, at.toISOString()]
         );
         // The time of the tap travels with it, so a cook sent after a late
-        // reconnect can count on the day it happened once the API takes it.
+        // reconnect counts on the day it happened.
         await enqueueSyncOperation(
           tx,
           "recipe_cooked",
@@ -59,15 +59,29 @@ export function createCookedCommands({ transact, now, newId, requestSync }: Depe
 }
 
 type CookedApi = {
-  markRecipeCooked: (recipeId: string, source?: RecipeSource) => Promise<unknown>;
+  markRecipeCooked: (recipeId: string, source?: RecipeSource, cookedAt?: string) => Promise<unknown>;
 };
 
+// The server refuses a cook timed more than 5 minutes ahead or more than 30
+// days back. Such a tap can never count, so it's dropped rather than kept
+// for repair.
+const UNCOUNTABLE = new Set(["COOKED_AT_IN_FUTURE", "COOKED_AT_TOO_OLD"]);
+
 // Sends one cook from the outbox. The server counts once per person, recipe
-// and Lagos day, so sending it again can't count it twice. Returns false for
-// commands it doesn't handle.
+// and Lagos day of `cookedAt`, so sending it again can't count it twice.
+// Returns false for commands it doesn't handle.
 export async function runCookedCommand(operation: SyncQueueOperation, api: CookedApi) {
   if (operation.kind !== "recipe_cooked") return false;
-  const { recipeId, source } = operation.payload as { recipeId: string; source?: RecipeSource };
-  await api.markRecipeCooked(recipeId, source);
+  const { recipeId, source, cookedAt } = operation.payload as {
+    recipeId: string;
+    source?: RecipeSource;
+    cookedAt?: string;
+  };
+  try {
+    await api.markRecipeCooked(recipeId, source, cookedAt);
+  } catch (error) {
+    const code = (error as { code?: unknown }).code;
+    if (typeof code !== "string" || !UNCOUNTABLE.has(code)) throw error;
+  }
   return true;
 }

@@ -23,8 +23,8 @@ function fakeServer() {
   return {
     cooks,
     api: {
-      async markRecipeCooked(recipeId, source) {
-        cooks.push({ recipeId, source });
+      async markRecipeCooked(recipeId, source, cookedAt) {
+        cooks.push({ recipeId, source, cookedAt });
         return { recipeId, counted: true };
       },
     },
@@ -70,7 +70,9 @@ test("cooked offline: the tap reaches the server once, after a restart", async (
   const restarted = await openTestDatabase(path);
   await replay(restarted.db, server);
   await replay(restarted.db, server);
-  assert.deepEqual(server.cooks, [{ recipeId: "sustena_pap-ogi", source: "learn_mode" }]);
+  assert.deepEqual(server.cooks, [
+    { recipeId: "sustena_pap-ogi", source: "learn_mode", cookedAt: "2026-10-14T20:30:00.000Z" },
+  ]);
   assert.deepEqual(await outbox(restarted.db), []);
 });
 
@@ -91,4 +93,21 @@ test("cooked offline: the next Lagos day counts again", async () => {
 
   assert.equal((await outbox(database.db)).length, 2);
   assert.equal(await getCookedDay(database.db, "user-1", "sustena_pap-ogi"), "2026-10-15");
+});
+
+test("cooked offline: a tap the server refuses as too old or in the future is dropped, not kept", async () => {
+  for (const code of ["COOKED_AT_TOO_OLD", "COOKED_AT_IN_FUTURE"]) {
+    const database = await openTestDatabase();
+    await commandsFor(database).markCooked({ userId: "user-1", recipeId: "sustena_pap-ogi" });
+    const refusing = {
+      cooks: [],
+      api: {
+        async markRecipeCooked() {
+          throw Object.assign(new Error(code), { status: 422, code });
+        },
+      },
+    };
+    await replay(database.db, refusing);
+    assert.deepEqual(await outbox(database.db), [], code);
+  }
 });
