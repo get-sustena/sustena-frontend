@@ -20,6 +20,7 @@ export const queryKeys = {
   },
   preferences: {
     me: ["preferences", "me"] as const,
+    ingredientCalories: ["preferences", "ingredient-calories"] as const,
   },
   profileAnswers: {
     me: ["profile-answers", "me"] as const,

@@ -9,9 +9,12 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  CircleCheck,
   CircleHelp,
   CookingPot,
   CreditCard,
+  Droplet,
+  Drumstick,
   Ellipsis,
   Eye,
   EyeOff,
@@ -41,6 +44,7 @@ import {
   UsersRound,
   Utensils,
   Wallet,
+  Wheat,
   WifiOff,
   X,
   type LucideIcon,
@@ -93,7 +97,11 @@ export type IconName =
   | "eyeOff"
   | "image"
   | "alertTriangle"
-  | "bulb";
+  | "bulb"
+  | "protein"
+  | "carbs"
+  | "fat"
+  | "circleCheck";
 
 const ICONS: Record<IconName, LucideIcon> = {
   discover: Search,
@@ -142,6 +150,10 @@ const ICONS: Record<IconName, LucideIcon> = {
   image: ImageIcon,
   alertTriangle: TriangleAlert,
   bulb: Lightbulb,
+  protein: Drumstick,
+  carbs: Wheat,
+  fat: Droplet,
+  circleCheck: CircleCheck,
 };
 
 type IconProps = {
