@@ -1,6 +1,5 @@
 
 import * as Haptics from "expo-haptics";
-import { Image } from "expo-image";
 import { Href, router, useLocalSearchParams } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
 import { lazy, Suspense, useMemo, useState, type ReactNode } from "react";
@@ -19,6 +18,7 @@ import { AppText } from "../../src/components/ui/AppText";
 import { Button } from "../../src/components/ui/Button";
 import { Icon } from "../../src/components/ui/Icon";
 import { InlineNotice } from "../../src/components/ui/InlineNotice";
+import { SavedPhoto } from "../../src/components/ui/SavedPhoto";
 import { ProgressLoader } from "../../src/components/ui/ProgressLoader";
 import { Screen } from "../../src/components/ui/Screen";
 import {
@@ -597,6 +597,23 @@ export default function RecipeDetailScreen() {
     );
   }
 
+  if (!recipe && recipeQuery.isWaitingForConnection) {
+    return (
+      <Screen>
+        <View style={styles.center}>
+          <AppText variant="title">{"This recipe isn't on your phone yet"}</AppText>
+          <AppText style={styles.offlineNote}>
+            Connect to the internet to open it.
+          </AppText>
+
+          <Pressable onPress={() => router.back()} style={styles.backButton}>
+            <AppText style={styles.backText}>Go back</AppText>
+          </Pressable>
+        </View>
+      </Screen>
+    );
+  }
+
   if (!recipe) {
     return (
       <Screen>
@@ -685,8 +702,8 @@ export default function RecipeDetailScreen() {
             }
           >
             {recipeDetail?.creator?.avatarUrl ? (
-              <Image
-                source={{ uri: recipeDetail.creator.avatarUrl }}
+              <SavedPhoto
+                url={recipeDetail.creator.avatarUrl}
                 contentFit="cover"
                 style={styles.creatorAvatar}
               />
@@ -1436,6 +1453,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: theme.spacing.lg,
+  },
+  offlineNote: {
+    color: theme.colors.textMedium,
+    textAlign: "center",
+    paddingHorizontal: theme.spacing.xl,
   },
   backButton: {
     paddingHorizontal: theme.spacing.xl,

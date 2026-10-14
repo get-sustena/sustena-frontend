@@ -5,7 +5,7 @@ import {
   runWithSqliteRetry,
 } from "./sqliteGuards.ts";
 
-const DATABASE_VERSION = 15;
+const DATABASE_VERSION = 16;
 let migrationQueue = Promise.resolve();
 
 export async function migrateDbIfNeeded(db: SQLiteDatabase) {
@@ -435,6 +435,23 @@ async function runMigrations(db: SQLiteDatabase) {
       ALTER TABLE sync_queue ADD COLUMN depends_on TEXT;
 
       PRAGMA user_version = 15;
+    `);
+  }
+
+  const versionAfterCommands = versionAfterSyncRetries < 15 ? 15 : versionAfterSyncRetries;
+
+  // OFF-01: recipe photos and creator avatars saved on the phone, by link.
+  // A row is written only once its file is complete. Photos are nobody's
+  // own data, so they stay after sign-out.
+  if (versionAfterCommands < 16) {
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS cached_photos (
+        url TEXT PRIMARY KEY NOT NULL,
+        file_name TEXT NOT NULL,
+        saved_at TEXT NOT NULL
+      );
+
+      PRAGMA user_version = 16;
     `);
   }
 }

@@ -16,6 +16,8 @@ export function useIngredientCatalogQuery() {
   const saved = useQuery({
     queryKey: queryKeys.ingredients.savedCatalog,
     queryFn: () => getSavedIngredientCatalog(db),
+    // Read from the device, so it runs offline too.
+    networkMode: "always",
     staleTime: Infinity,
     gcTime: Infinity,
   });
@@ -36,6 +38,8 @@ export function useIngredientCatalogQuery() {
       }
     },
     placeholderData: saved.data?.ingredients,
+    // Offline, run once so the saved copy stands in, instead of waiting.
+    networkMode: "offlineFirst",
     // Asking costs a few bytes when nothing changed, so it's asked whenever a
     // screen that needs the catalogue opens, at most once a minute (the
     // recipe page needs it too, and opens often).

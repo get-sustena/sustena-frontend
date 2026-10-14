@@ -2,7 +2,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useSQLiteContext } from "expo-sqlite";
 import { deleteFavoriteRecipe } from "../db/favoritesRepository";
-import { getLocalRecipes } from "../db/recipeRepository";
+import { getLocalRecipes } from "../db/recipeRows";
 import { enqueueSyncOperation } from "../db/syncQueueRepository";
 import {
   useFavoritesQuery,
@@ -38,6 +38,7 @@ export function useFavoriteRecipes() {
   const localRecipesQuery = useQuery({
     queryKey: queryKeys.recipes.localFavorites,
     queryFn: () => getLocalRecipes(db, { page: 1, pageSize: 500 }),
+    networkMode: "always",
   });
   const localRecipes =
     localRecipesQuery.data?.items

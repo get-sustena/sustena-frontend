@@ -1,4 +1,3 @@
-import { Image } from "expo-image";
 import { Href, router, useLocalSearchParams } from "expo-router";
 import { useMemo, useState } from "react";
 import { Pressable, ScrollView, Share, StyleSheet, View } from "react-native";
@@ -11,6 +10,7 @@ import { theme } from "../../theme/theme";
 import { AppText } from "../ui/AppText";
 import { Icon } from "../ui/Icon";
 import { ProgressLoader } from "../ui/ProgressLoader";
+import { SavedPhoto } from "../ui/SavedPhoto";
 import { CreatorCollectionsStrip, type CreatorRecipeCollection } from "./CreatorCollectionsStrip";
 import { CreatorRecipeToolbar } from "./CreatorRecipeToolbar";
 import { openRecipe } from "../../lib/navigation/openRecipe";
@@ -85,7 +85,7 @@ export function PublicCreatorProfileScreen() {
         <View style={styles.profile}>
           <View style={styles.identity}>
             <View style={styles.avatar}>
-              {profile.avatarUrl ? <Image source={{ uri: profile.avatarUrl }} contentFit="cover" style={StyleSheet.absoluteFill} /> : <AppText style={styles.initials}>{initials(profile.displayName)}</AppText>}
+              {profile.avatarUrl ? <SavedPhoto url={profile.avatarUrl} contentFit="cover" style={StyleSheet.absoluteFill} /> : <AppText style={styles.initials}>{initials(profile.displayName)}</AppText>}
             </View>
             <View style={styles.identityCopy}>
               <View style={styles.nameRow}>

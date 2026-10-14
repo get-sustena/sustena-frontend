@@ -1,4 +1,3 @@
-import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { Pressable, StyleSheet, View } from "react-native";
 import { theme } from "../../theme/theme";
@@ -6,11 +5,12 @@ import type { RecipeListItem } from "../../types/api";
 import { SCRIM_COMPACT_COLORS, SCRIM_COMPACT_LOCATIONS } from "../recipe/RecipePhoto";
 import { AppText } from "../ui/AppText";
 import { Icon } from "../ui/Icon";
+import { SavedPhoto } from "../ui/SavedPhoto";
 
 export function PublicCreatorRecipeTile({ recipe, onPress }: { recipe: RecipeListItem; onPress: () => void }) {
   return (
     <Pressable onPress={onPress} style={styles.tile}>
-      {recipe.imageUrl ? <Image source={{ uri: recipe.imageUrl }} contentFit="cover" style={StyleSheet.absoluteFill} /> : <View style={styles.fallback}><Icon name="chefHat" size={24} color={theme.colors.textMutedAlt} /></View>}
+      {recipe.imageUrl ? <SavedPhoto url={recipe.imageUrl} contentFit="cover" style={StyleSheet.absoluteFill} /> : <View style={styles.fallback}><Icon name="chefHat" size={24} color={theme.colors.textMutedAlt} /></View>}
       <LinearGradient colors={SCRIM_COMPACT_COLORS} locations={SCRIM_COMPACT_LOCATIONS} style={StyleSheet.absoluteFill} />
       <View style={styles.copy}>
         <AppText numberOfLines={2} style={styles.name}>{recipe.name || "Untitled recipe"}</AppText>

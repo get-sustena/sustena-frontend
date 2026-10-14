@@ -1,4 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSQLiteContext } from "expo-sqlite";
+import { getLocalCreatorProfile, getLocalCreatorRecipes } from "../../db/recipeRows";
 import { creatorsApi } from "../../lib/api";
 import { queryKeys } from "../../lib/query/queryKeys";
 import {
@@ -15,11 +17,30 @@ export function useMyCreatorProfileQuery() {
   });
 }
 
+// Without a connection, a creator's page is built from the recipes kept on
+// the phone (OFF-01). Each query runs once offline instead of waiting, and
+// uses the saved copy when the server can't be reached.
+async function withSavedCopy<T>(request: () => Promise<T>, saved: () => Promise<T | null>) {
+  try {
+    return await request();
+  } catch (error) {
+    const copy = await saved().catch(() => null);
+    if (copy) return copy;
+    throw error;
+  }
+}
+
 export function useCreatorProfileQuery(handle?: string) {
+  const db = useSQLiteContext();
   return useQuery({
     queryKey: queryKeys.creators.handle(handle ?? ""),
-    queryFn: () => creatorsApi.getCreatorByHandle(handle ?? ""),
+    queryFn: () =>
+      withSavedCopy(
+        () => creatorsApi.getCreatorByHandle(handle ?? ""),
+        () => getLocalCreatorProfile(db, handle ?? "")
+      ),
     enabled: Boolean(handle),
+    networkMode: "offlineFirst",
   });
 }
 
@@ -27,10 +48,16 @@ export function useCreatorRecipesQuery(
   handle?: string,
   params?: CreatorRecipeListParams
 ) {
+  const db = useSQLiteContext();
   return useQuery({
     queryKey: queryKeys.creators.recipes(handle ?? "", params),
-    queryFn: () => creatorsApi.getCreatorRecipes(handle ?? "", params),
+    queryFn: () =>
+      withSavedCopy(
+        () => creatorsApi.getCreatorRecipes(handle ?? "", params),
+        () => getLocalCreatorRecipes(db, handle ?? "", params)
+      ),
     enabled: Boolean(handle),
+    networkMode: "offlineFirst",
   });
 }
 

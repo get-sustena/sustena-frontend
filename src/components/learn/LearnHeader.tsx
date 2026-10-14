@@ -1,10 +1,10 @@
 import { BlurView } from "expo-blur";
-import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { Pressable, StyleSheet, View } from "react-native";
 import { theme } from "../../theme/theme";
 import { AppText } from "../ui/AppText";
 import { Icon } from "../ui/Icon";
+import { SavedPhoto } from "../ui/SavedPhoto";
 import { learnColors } from "./learnColors";
 
 type Props = {
@@ -25,7 +25,7 @@ export function LearnPhoto({ imageUrl }: { imageUrl?: string | null }) {
   return (
     <View style={styles.photo} accessible={false}>
       {imageUrl ? (
-        <Image source={{ uri: imageUrl }} contentFit="cover" style={StyleSheet.absoluteFill} />
+        <SavedPhoto url={imageUrl} contentFit="cover" style={StyleSheet.absoluteFill} />
       ) : null}
       <LinearGradient
         colors={["rgba(10,20,14,0.6)", "rgba(10,20,14,0.12)", "rgba(10,20,14,0)", learnColors.background]}

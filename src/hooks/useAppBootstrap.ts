@@ -41,7 +41,9 @@ import { startApi } from "../lib/api";
 import { apiShoppingItemToLocalItem } from "../lib/api/adapters";
 import { getMealTime } from "../lib/mealTime";
 import { queryKeys } from "../lib/query/queryKeys";
-import { seedPublishedRecipesIfNeeded } from "../db/recipeRepository";
+import { applyBundledRecipeSeed } from "../db/recipeRepository";
+import { keepRecipesOffline, showSavedPhotos } from "../lib/catalogue/offlineCatalogue";
+import { saveMealPicks } from "../lib/catalogue/mealPicks";
 import { useFavoritesStore } from "../store/favoritesStore";
 import { useAuthStore } from "../store/authStore";
 import { usePreferencesStore } from "../store/preferencesStore";
@@ -121,6 +123,9 @@ export function useAppBootstrap(enabled = true) {
     }
 
     async function saveStart(start: StartResponse) {
+      if (start.mealPicks) {
+        await saveMealPicks(db, start.user.id, start.mealPicks, new Date().toISOString());
+      }
       const current = usePreferencesStore.getState();
       const mergedPreferences = {
         healthConditions: start.preferences.healthConditions as HealthCondition[],
@@ -185,7 +190,8 @@ export function useAppBootstrap(enabled = true) {
         : null;
 
       try {
-        await seedPublishedRecipesIfNeeded(db);
+        await applyBundledRecipeSeed(db);
+        await showSavedPhotos(db);
 
         const storedPreferencesRow = await getStoredPreferences(db);
         const storedPreferences = mapStoredPreferencesRow(storedPreferencesRow);
@@ -264,6 +270,7 @@ export function useAppBootstrap(enabled = true) {
           await saveStart(started);
         } catch {
         }
+        await keepRecipesOffline(db, queryClient, started.recipeCatalogueVersion ?? null);
       }
     }
 

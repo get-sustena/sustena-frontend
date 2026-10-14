@@ -4,6 +4,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { ReactNode, useState } from "react";
 import { StyleSheet, View, ViewStyle } from "react-native";
 import { AppText } from "../ui/AppText";
+import { useRecipePhotoUri } from "../../lib/catalogue/recipePhotoSource";
 import { theme } from "../../theme/theme";
 
 const STRIPE_COLOR_A = "#ECF3DF";
@@ -45,8 +46,10 @@ export function RecipePhoto({
   children,
   fallbackLabel,
 }: Props) {
+  // The copy saved on the phone when there is one (OFF-01).
+  const photoUri = useRecipePhotoUri(imageUrl);
   const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null);
-  const showImage = Boolean(imageUrl) && failedImageUrl !== imageUrl;
+  const showImage = Boolean(photoUri) && failedImageUrl !== photoUri;
 
   return (
     <View style={[styles.container, style]}>
@@ -54,11 +57,11 @@ export function RecipePhoto({
 
       {showImage ? (
         <Image
-          source={{ uri: imageUrl ?? undefined }}
+          source={{ uri: photoUri ?? undefined }}
           style={[StyleSheet.absoluteFill, styles.imageLayer]}
           contentFit="cover"
           transition={150}
-          onError={() => setFailedImageUrl(imageUrl ?? null)}
+          onError={() => setFailedImageUrl(photoUri ?? null)}
         />
       ) : null}
 

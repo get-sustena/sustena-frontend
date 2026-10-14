@@ -13,6 +13,7 @@ export function useIngredientCaloriesShown() {
   const shown = useQuery({
     queryKey: queryKeys.preferences.ingredientCalories,
     queryFn: () => getIngredientCaloriesShown(db),
+    networkMode: "always",
   });
 
   const isShown = shown.data ?? true;

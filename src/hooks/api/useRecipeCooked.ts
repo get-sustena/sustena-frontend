@@ -21,6 +21,7 @@ export function useRecipeCooked(recipeId: string, source?: RecipeSource) {
     queryKey: cookedDayKey,
     queryFn: () => getCookedDay(db, userId, recipeId),
     enabled: Boolean(userId),
+    networkMode: "always",
   });
 
   const markCooked = useMutation({

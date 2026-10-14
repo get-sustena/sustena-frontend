@@ -1,10 +1,7 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useSQLiteContext, type SQLiteDatabase } from "expo-sqlite";
-import {
-  cacheRecipeDetail,
-  getLocalRecipeById,
-  getLocalRecipes,
-} from "../../db/recipeRepository";
+import { cacheRecipeDetail } from "../../db/recipeRepository";
+import { getLocalRecipeById, getLocalRecipes } from "../../db/recipeRows";
 import { recipesApi } from "../../lib/api";
 import { queryKeys } from "../../lib/query/queryKeys";
 import type { RecipeSource } from "../../lib/recipeSource";
@@ -20,20 +17,24 @@ function useRecipesQuery(params?: RecipeSearchParams) {
 export function useRecipesWithLocalFallback(params?: RecipeSearchParams) {
   const db = useSQLiteContext();
   const apiQuery = useRecipesQuery(params);
+  // Offline the request waits ("paused") rather than failing; the recipes
+  // kept on the phone show meanwhile (OFF-01).
+  const showSavedRecipes = !apiQuery.data && (apiQuery.isError || apiQuery.isPaused);
   const localQuery = useQuery({
     queryKey: queryKeys.recipes.localFallback(params),
     queryFn: () => getLocalRecipes(db, params),
-    enabled: apiQuery.isError,
+    enabled: showSavedRecipes,
+    networkMode: "always",
   });
 
   const data = apiQuery.data ?? localQuery.data;
-  const usingLocalFallback = apiQuery.isError && Boolean(localQuery.data);
+  const usingLocalFallback = showSavedRecipes && Boolean(localQuery.data);
 
   return {
     ...apiQuery,
     data,
     source: usingLocalFallback ? ("local" as const) : ("api" as const),
-    isLoading: apiQuery.isLoading || (apiQuery.isError && localQuery.isLoading),
+    isLoading: apiQuery.isLoading || (showSavedRecipes && localQuery.isLoading),
     isError: apiQuery.isError && localQuery.isError,
     error: localQuery.error ?? apiQuery.error,
     refetch: async () => {
@@ -70,6 +71,8 @@ export function useInfiniteRecipesWithLocalFallback(
         }
       }
     },
+    // Offline, run once so the recipes kept on the phone show (OFF-01).
+    networkMode: "offlineFirst",
     getNextPageParam: (lastPage) => {
       const { page, pageSize, total } = lastPage.data;
       return page * pageSize < total ? page + 1 : undefined;
@@ -120,6 +123,7 @@ export function useRecipeDetailWithLocalFallback(recipeId?: string, source?: Rec
     queryKey: queryKeys.recipes.localFallbackDetail(recipeId ?? ""),
     queryFn: () => getLocalRecipeById(db, recipeId ?? ""),
     enabled: Boolean(recipeId),
+    networkMode: "always",
   });
 
   const data = apiQuery.data ?? localQuery.data ?? undefined;
@@ -129,7 +133,9 @@ export function useRecipeDetailWithLocalFallback(recipeId?: string, source?: Rec
     ...apiQuery,
     data,
     source: usingLocalFallback ? ("local" as const) : ("api" as const),
-    isLoading: !data && apiQuery.isLoading,
+    // Offline the server's copy waits ("paused"), so the saved copy decides.
+    isLoading: !data && (apiQuery.isLoading || localQuery.isLoading),
+    isWaitingForConnection: !data && apiQuery.isPaused && !localQuery.isLoading,
     isError: apiQuery.isError && !localQuery.isLoading && !localQuery.data,
     // While the saved copy shows: whether the server's copy is still on its
     // way, or didn't come. Offline, the request waits ("paused") until the

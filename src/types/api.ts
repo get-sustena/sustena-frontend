@@ -298,6 +298,19 @@ export interface StartResponse {
   recommendations: RecommendationListResponse;
   // The ingredient catalogue's ETag without its quotes.
   ingredientCatalogueVersion: string;
+  // The recipe catalogue's ETag without its quotes (OFF-01). Missing from an
+  // API older than the recipe catalogue.
+  recipeCatalogueVersion?: string;
+  // The recommended recipe for each meal of the next 14 days (Lagos dates),
+  // for Home with no connection.
+  mealPicks?: MealPicksForDay[];
+}
+
+export interface MealPicksForDay {
+  date: string;
+  breakfast: string | null;
+  lunch: string | null;
+  dinner: string | null;
 }
 
 export interface PantryResponse {
