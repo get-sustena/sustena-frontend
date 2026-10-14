@@ -3,7 +3,7 @@ import * as Haptics from "expo-haptics";
 import { Image } from "expo-image";
 import { Href, router, useLocalSearchParams } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
   Pressable,
   ScrollView,
@@ -79,6 +79,14 @@ import type {
 import { createLocalId } from "../../src/lib/id";
 import { readRecipeSource } from "../../src/lib/recipeSource";
 import { CookedButton } from "../../src/components/recipe/CookedButton";
+import {
+  CaloriesEyeButton,
+  IngredientCaloriesLine,
+  OilTip,
+} from "../../src/components/nutrition/IngredientNutrition";
+import { NutritionStrip } from "../../src/components/nutrition/NutritionStrip";
+import { useIngredientCaloriesShown } from "../../src/hooks/useIngredientCaloriesShown";
+import { ingredientCalories, oilTip } from "../../src/lib/nutrition/recipeNutrition";
 
 // --rd-muted in the v6.8 recipe page.
 const INGREDIENT_CHEVRON_COLOR = "#686E66";
@@ -333,6 +341,27 @@ export default function RecipeDetailScreen() {
       }),
     }));
   const displayTags = getRecipeDetailTags(recipeDetail, recipe?.tags ?? []);
+
+  // Nutrition (PRD v6.8 section 15). Creator recipes have none, so they show
+  // no strip, no eye, no calorie lines and no oil tip.
+  const nutritionPerServing = recipeDetail?.nutritionPerServing ?? null;
+  const nutritionBaseServings = recipeDetail?.baseServings ?? 1;
+  const caloriesOnIngredients = useIngredientCaloriesShown();
+  const lighterOilTip =
+    nutritionPerServing && recipeDetail
+      ? oilTip(
+          recipeDetail.ingredients,
+          instructions.map((instruction) => instruction.displayText),
+          nutritionBaseServings
+        )
+      : null;
+
+  function openNutrition() {
+    router.push({
+      pathname: "/recipe-nutrition/[id]",
+      params: { id, ...(source ? { source } : {}) },
+    });
+  }
 
   async function handleFavoritePress() {
     if (!recipe) return;
@@ -738,6 +767,10 @@ export default function RecipeDetailScreen() {
               align="flex-end"
             />
           </View>
+
+          {nutritionPerServing ? (
+            <NutritionStrip perServing={nutritionPerServing} onPress={openNutrition} />
+          ) : null}
         </View>
 
         <View style={styles.body}>
@@ -774,7 +807,14 @@ export default function RecipeDetailScreen() {
           <SectionHeader
             title="Ingredients"
             first={Boolean(recipeDetail && !recipeDetail.baseServings)}
-          />
+          >
+            {nutritionPerServing ? (
+              <CaloriesEyeButton
+                shown={caloriesOnIngredients.isShown}
+                onToggle={caloriesOnIngredients.toggle}
+              />
+            ) : null}
+          </SectionHeader>
           <View style={styles.unitModeRow}>
             {[
               { value: "metric" as const, label: "Metric" },
@@ -848,9 +888,21 @@ export default function RecipeDetailScreen() {
                       name={ingredient.name}
                       size={44}
                     />
-                    <AppText style={styles.ingredientName}>
-                      {capitalizeWords(ingredient.name)}
-                    </AppText>
+                    <View style={styles.ingredientText}>
+                      <AppText style={styles.ingredientName}>
+                        {capitalizeWords(ingredient.name)}
+                      </AppText>
+                      {nutritionPerServing && caloriesOnIngredients.isShown ? (
+                        <IngredientCaloriesLine
+                          calories={ingredientCalories(
+                            apiIngredient,
+                            recipeDetail?.ingredients ?? [],
+                            servings,
+                            nutritionBaseServings
+                          )}
+                        />
+                      ) : null}
+                    </View>
 
                     {unitOptions.length > 0 ? (
                       <Pressable
@@ -1021,7 +1073,7 @@ export default function RecipeDetailScreen() {
           <View style={styles.stepsCard}>
             <View style={styles.stepsLine} />
 
-            {instructions.map((instruction) => (
+            {instructions.map((instruction, index) => (
               <View key={instruction.id} style={styles.stepItem}>
                 <View style={styles.stepNumber}>
                   <AppText style={styles.stepNumberText}>
@@ -1029,9 +1081,14 @@ export default function RecipeDetailScreen() {
                   </AppText>
                 </View>
 
-                <AppText style={styles.stepText}>
-                  {instruction.displayText}
-                </AppText>
+                <View style={styles.stepBody}>
+                  <AppText style={styles.stepText}>
+                    {instruction.displayText}
+                  </AppText>
+                  {lighterOilTip?.step === index ? (
+                    <OilTip saveKcal={lighterOilTip.saveKcal} />
+                  ) : null}
+                </View>
               </View>
             ))}
           </View>
@@ -1303,10 +1360,19 @@ function StatCell({
 }
 
 // The first section after the stats sits 27px below them, the rest 34px apart.
-function SectionHeader({ title, first = false }: { title: string; first?: boolean }) {
+function SectionHeader({
+  title,
+  first = false,
+  children,
+}: {
+  title: string;
+  first?: boolean;
+  children?: ReactNode;
+}) {
   return (
     <View style={[styles.sectionHeader, first && styles.sectionHeaderFirst]}>
       <AppText style={styles.sectionTitle}>{title}</AppText>
+      {children}
     </View>
   );
 }
@@ -1577,8 +1643,10 @@ const styles = StyleSheet.create({
   ingredientItemDivider: {
     borderBottomWidth: 0,
   },
-  ingredientName: {
+  ingredientText: {
     flex: 1,
+  },
+  ingredientName: {
     fontFamily: theme.fontFamily.bodySemiBold,
     fontSize: 15,
     color: theme.colors.text,
@@ -1674,8 +1742,10 @@ const styles = StyleSheet.create({
     letterSpacing: -0.42,
     color: theme.colors.navy,
   },
-  stepText: {
+  stepBody: {
     flex: 1,
+  },
+  stepText: {
     fontFamily: theme.fontFamily.body,
     fontSize: 15,
     lineHeight: 24,
