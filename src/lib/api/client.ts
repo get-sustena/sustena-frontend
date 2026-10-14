@@ -14,6 +14,7 @@ import {
 } from "./config";
 import { notifyAuthFailure } from "./authEvents";
 import { toApiClientError } from "./errors";
+import { createSessionRefresher } from "./sessionRefresh";
 import {
   clearAuthTokens,
   getAccessToken,
@@ -30,14 +31,29 @@ type RetryableAxiosRequestConfig = InternalAxiosRequestConfig & {
   _skipAuthRefresh?: boolean;
 };
 
-let refreshPromise: Promise<RefreshTokenResponse | null> | null = null;
-
 const apiClient: AxiosInstance = createAxiosInstance({
   baseURL: API_BASE_URL,
   timeout: API_TIMEOUT_MS,
   headers: {
     Accept: "application/json",
   },
+});
+
+// Rules for when a failed refresh ends the session: sessionRefresh.ts.
+const sessionRefresher = createSessionRefresher({
+  readRefreshToken: getRefreshToken,
+  requestRefresh: async (refreshToken) => {
+    const response = await apiClient.post<RefreshTokenResponse>(
+      "/auth/refresh",
+      { refreshToken },
+      { _skipAuthRefresh: true } as AxiosRequestConfig
+    );
+    return response.data;
+  },
+  saveTokens: (tokens) =>
+    saveAuthTokens({ accessToken: tokens.accessToken, refreshToken: tokens.refreshToken }),
+  clearTokens: clearAuthTokens,
+  endSession: notifyAuthFailure,
 });
 
 apiClient.interceptors.request.use(async (config) => {
@@ -77,15 +93,20 @@ apiClient.interceptors.response.use(
 
     originalRequest._retry = true;
 
-    const refreshedTokens = await refreshTokens();
+    const outcome = await sessionRefresher.refresh();
 
-    if (!refreshedTokens) {
-      await clearAuthTokens();
-      notifyAuthFailure();
+    // The refresher has already ended the session, once.
+    if (outcome.kind === "rejected") {
       return Promise.reject(toApiClientError(error));
     }
 
-    originalRequest.headers.Authorization = `Bearer ${refreshedTokens.accessToken}`;
+    // Offline, a timeout or a server error: still signed in. The caller gets
+    // the temporary error, so it can try again later.
+    if (outcome.kind === "unavailable") {
+      return Promise.reject(toApiClientError(outcome.error));
+    }
+
+    originalRequest.headers.Authorization = `Bearer ${outcome.tokens.accessToken}`;
 
     try {
       return await apiClient(originalRequest);
@@ -126,43 +147,3 @@ export async function apiConditionalGet<TResponse>(url: string, savedEtag: strin
   }
 }
 
-async function refreshTokens() {
-  if (!refreshPromise) {
-    refreshPromise = performRefresh().finally(() => {
-      refreshPromise = null;
-    });
-  }
-
-  return refreshPromise;
-}
-
-async function performRefresh(): Promise<RefreshTokenResponse | null> {
-  const refreshToken = await getRefreshToken();
-
-  if (!refreshToken) {
-    return null;
-  }
-
-  try {
-    const response = await apiClient.post<RefreshTokenResponse>(
-      "/auth/refresh",
-      {
-        refreshToken,
-      },
-      {
-        _skipAuthRefresh: true,
-      } as AxiosRequestConfig
-    );
-
-    await saveAuthTokens({
-      accessToken: response.data.accessToken,
-      refreshToken: response.data.refreshToken,
-    });
-
-    return response.data;
-  } catch {
-    await clearAuthTokens();
-    notifyAuthFailure();
-    return null;
-  }
-}
