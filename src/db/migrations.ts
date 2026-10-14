@@ -1,11 +1,11 @@
 
-import { type SQLiteDatabase } from "expo-sqlite";
+import type { SQLiteDatabase } from "expo-sqlite";
 import {
   isClosedResourceError,
   runWithSqliteRetry,
-} from "./sqliteGuards";
+} from "./sqliteGuards.ts";
 
-const DATABASE_VERSION = 14;
+const DATABASE_VERSION = 15;
 let migrationQueue = Promise.resolve();
 
 export async function migrateDbIfNeeded(db: SQLiteDatabase) {
@@ -418,6 +418,23 @@ async function runMigrations(db: SQLiteDatabase) {
       ALTER TABLE sync_queue ADD COLUMN last_error TEXT;
 
       PRAGMA user_version = 14;
+    `);
+  }
+
+  const versionAfterSyncRetries = versionAfterSyncIdMappings < 14 ? 14 : versionAfterSyncIdMappings;
+
+  // QAD-02 and F03: each outbox command carries its format version, a mutation
+  // id that stays the same across retries, the entity it creates or changes,
+  // and the entity it waits for (an item created offline whose creation
+  // hasn't reached the server yet).
+  if (versionAfterSyncRetries < 15) {
+    await db.execAsync(`
+      ALTER TABLE sync_queue ADD COLUMN command_version INTEGER NOT NULL DEFAULT 1;
+      ALTER TABLE sync_queue ADD COLUMN mutation_id TEXT;
+      ALTER TABLE sync_queue ADD COLUMN entity_id TEXT;
+      ALTER TABLE sync_queue ADD COLUMN depends_on TEXT;
+
+      PRAGMA user_version = 15;
     `);
   }
 }

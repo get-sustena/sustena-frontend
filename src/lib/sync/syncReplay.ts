@@ -12,6 +12,10 @@ type ReplayableOperation = {
   // Milliseconds since the epoch; null when it can be tried at once.
   nextAttemptAt: number | null;
   needsAttention: boolean;
+  // The entity this edit creates or changes, and an entity created offline
+  // that must reach the server first (F03).
+  entityId?: string | null;
+  dependsOn?: string | null;
 };
 
 type ReplayStore<T extends ReplayableOperation> = {
@@ -57,9 +61,19 @@ export async function replayQueue<T extends ReplayableOperation>(
 ) {
   if (!isOnline()) return;
 
+  // Entities with an earlier edit still in the queue. An edit that depends on
+  // one of them waits: it's neither sent nor discarded (F03).
+  const unfinished = new Set<string>();
+  const holdBack = (operation: T) => {
+    if (operation.entityId) unfinished.add(operation.entityId);
+  };
+
   for (const operation of await store.pending()) {
     if (isStopped()) return;
-    if (operation.needsAttention) continue;
+    if (operation.needsAttention || (operation.dependsOn && unfinished.has(operation.dependsOn))) {
+      holdBack(operation);
+      continue;
+    }
     // Edits are replayed in order, so one still waiting holds the rest back.
     if (!ignoreBackoff && operation.nextAttemptAt !== null && operation.nextAttemptAt > now()) return;
 
@@ -74,6 +88,7 @@ export async function replayQueue<T extends ReplayableOperation>(
           operation.id,
           error instanceof Error ? error.message : "The server didn't accept this change."
         );
+        holdBack(operation);
         continue;
       }
 

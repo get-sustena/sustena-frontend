@@ -90,6 +90,7 @@ import {
   NutritionStripSkeleton,
 } from "../../src/components/nutrition/NutritionStrip";
 import { useIngredientCaloriesShown } from "../../src/hooks/useIngredientCaloriesShown";
+import { useShoppingCommands } from "../../src/hooks/useShoppingCommands";
 import { ingredientCalories, oilTip } from "../../src/lib/nutrition/recipeNutrition";
 
 // Learn mode's code loads the first time it's opened, not with every recipe.
@@ -130,6 +131,7 @@ export default function RecipeDetailScreen() {
   const hapticsEnabled = usePreferencesStore((state) => state.hapticsEnabled);
 
   const addItems = useShoppingListStore((state) => state.addItems);
+  const shoppingCommands = useShoppingCommands();
   const hydrateItems = useShoppingListStore((state) => state.hydrateItems);
   const activeListId = useShoppingListsStore((state) => state.activeListId);
   const shoppingLists = useShoppingListsStore((state) => state.lists);
@@ -564,62 +566,13 @@ export default function RecipeDetailScreen() {
   }
 
   async function addToolToShoppingList(tool: { id: string; name: string }) {
-    const clientMutationId = createLocalId("tool_shopping");
-    const now = new Date().toISOString();
-
-    try {
-      const created = await shoppingListsApi.addShoppingListItemToList(
-        activeListId,
-        {
-          name: tool.name,
-          quantity: "1 item",
-          displayQuantity: "1 item",
-          unit: "item",
-          category: "Tools",
-          estimatedPrice: null,
-          priceStatus: "unknown",
-          clientMutationId,
-        }
-      );
-      const item = {
-        ...apiShoppingItemToLocalItem(created),
-        listId: activeListId,
-      };
-      addItems([item]);
-      await insertShoppingListItems(db, [item]);
-    } catch {
-      const localItem = {
-        id: createLocalId("shopping_item"),
-        name: tool.name,
-        emoji: "",
-        quantity: "1 item",
-        amount: 1,
-        displayQuantity: "1 item",
-        unit: "item",
-        category: "Tools",
-        estimatedPrice: null,
-        priceStatus: "unknown" as const,
-        clientMutationId,
-        checked: false,
-        createdAt: now,
-        updatedAt: now,
-        listId: activeListId,
-      };
-      addItems([localItem]);
-      await insertShoppingListItems(db, [localItem]);
-      await enqueueSyncOperation(db, "shopping_list_item_add", {
-        listId: activeListId,
-        temporaryId: localItem.id,
-        name: tool.name,
-        quantity: "1 item",
-        amount: 1,
-        displayQuantity: "1 item",
-        unit: "item",
-        category: "Tools",
-        clientMutationId,
-      });
-    }
-
+    const item = await shoppingCommands.addItem({
+      listId: activeListId,
+      name: tool.name,
+      quantity: "1 item",
+      category: "Tools",
+    });
+    addItems([item]);
     showToast(`${tool.name} added to your shopping list`, "success");
   }
 

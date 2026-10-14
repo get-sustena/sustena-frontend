@@ -1,14 +1,15 @@
-
 import { onlineManager } from "@tanstack/react-query";
 import { type SQLiteDatabase } from "expo-sqlite";
+import { replaceShoppingListItemsForList } from "../../db/shoppingListRepository";
+import { resolveSyncIdMapping } from "../../db/syncIdMappingRepository";
+import type { SyncQueueOperation } from "../../db/syncQueueRepository";
+import { runWriteTransaction } from "../../db/writeTransaction";
+import { useAuthStore } from "../../store/authStore";
 import {
-  deleteSyncOperation,
-  getPendingSyncOperations,
-  markSyncNeedsAttention,
-  scheduleSyncRetry,
-  SyncQueueOperation,
-} from "../../db/syncQueueRepository";
-import { replayQueue } from "./syncReplay";
+  PlannerSettingsUpdateRequest,
+  ShoppingListItemCreateRequest,
+  UserProfileAnswersUpdateRequest,
+} from "../../types/api";
 import {
   favoritesApi,
   plannerApi,
@@ -17,52 +18,37 @@ import {
   shoppingListsApi,
 } from "../api";
 import { apiShoppingItemToLocalItem } from "../api/adapters";
-import {
-  deleteShoppingListItem,
-  insertShoppingListItem,
-  replaceShoppingListItemsForList,
-} from "../../db/shoppingListRepository";
-import {
-  resolveSyncIdMapping,
-  saveSyncIdMapping,
-} from "../../db/syncIdMappingRepository";
-import {
-  ShoppingListItemCreateRequest,
-  PlannerSettingsUpdateRequest,
-  UserProfileAnswersUpdateRequest,
-} from "../../types/api";
-import { useAuthStore } from "../../store/authStore";
+import { runShoppingCommand } from "../shopping/shoppingReplay";
+import { replayOutbox } from "./outboxReplay";
 
-// Replays queued offline edits (rules in syncReplay.ts). `reconnected` is
-// set when the connection has just come back, so edits waiting out a
-// backoff are tried at once.
 export async function processSyncQueue(db: SQLiteDatabase, { reconnected = false } = {}) {
-  await replayQueue(
-    {
-      pending: () => getPendingSyncOperations(db),
-      run: async (operation) => {
-        const payload = operation.payload as Record<string, unknown>;
-        if (typeof payload.itemId === "string") {
-          payload.itemId =
-            (await resolveSyncIdMapping(db, payload.itemId, "shopping_list_item")) ??
-            payload.itemId;
-        }
-        await runOperation(operation, db);
-      },
-      remove: (id) => deleteSyncOperation(db, id),
-      scheduleRetry: (id, nextAttemptAt) => scheduleSyncRetry(db, id, nextAttemptAt),
-      markNeedsAttention: (id, reason) => markSyncNeedsAttention(db, id, reason),
-    },
-    {
-      isOnline: () => onlineManager.isOnline(),
-      isStopped: () => useAuthStore.getState().isSigningOut,
-      now: () => Date.now(),
-      ignoreBackoff: reconnected,
-    }
-  );
+  await replayOutbox(db, runOperation, {
+    isOnline: () => onlineManager.isOnline(),
+    isStopped: () => useAuthStore.getState().isSigningOut,
+    now: () => Date.now(),
+    ignoreBackoff: reconnected,
+  });
 }
 
-async function runOperation(operation: SyncQueueOperation, db: SQLiteDatabase) {
+async function runOperation(db: SQLiteDatabase, operation: SyncQueueOperation) {
+  const handled = await runShoppingCommand(db, operation, {
+    api: {
+      addShoppingListItemToList: shoppingListsApi.addShoppingListItemToList,
+      updateShoppingListItemInList: shoppingListsApi.updateShoppingListItemInList,
+      setShoppingListItemsChecked: shoppingListsApi.setShoppingListItemsChecked,
+    },
+    toLocalItem: apiShoppingItemToLocalItem,
+    transact: (work) => runWriteTransaction(db, work),
+  });
+  if (handled) return;
+
+  // Older edits may name an item by the temporary id it had when queued.
+  const payload = operation.payload as Record<string, unknown>;
+  if (typeof payload.itemId === "string") {
+    payload.itemId =
+      (await resolveSyncIdMapping(db, payload.itemId, "shopping_list_item")) ?? payload.itemId;
+  }
+
   switch (operation.kind) {
     case "favorite_add": {
       const { recipeId } = operation.payload as { recipeId: string };
@@ -114,40 +100,6 @@ async function runOperation(operation: SyncQueueOperation, db: SQLiteDatabase) {
       await plannerApi.updatePlannerSettings(
         operation.payload as PlannerSettingsUpdateRequest
       );
-      return;
-    }
-
-    case "shopping_list_item_add": {
-      const { listId, temporaryId, ...payload } = operation.payload as {
-        listId: string;
-        temporaryId?: string;
-      } & ShoppingListItemCreateRequest;
-      const created = await shoppingListsApi.addShoppingListItemToList(listId, payload);
-      if (temporaryId) {
-        await saveSyncIdMapping(
-          db,
-          temporaryId,
-          created.id,
-          "shopping_list_item"
-        );
-        await deleteShoppingListItem(db, temporaryId);
-        await insertShoppingListItem(db, {
-          ...apiShoppingItemToLocalItem(created),
-          listId,
-        });
-      }
-      return;
-    }
-
-    case "shopping_list_item_toggle": {
-      const { listId, itemId, checked } = operation.payload as {
-        listId: string;
-        itemId: string;
-        checked: boolean;
-      };
-      await shoppingListsApi.updateShoppingListItemInList(listId, itemId, {
-        checked,
-      });
       return;
     }
 

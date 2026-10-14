@@ -2,6 +2,7 @@ import { type SQLiteDatabase } from "expo-sqlite";
 import { DEFAULT_SHOPPING_LIST_ID, ShoppingListItem } from "../types/shoppingList";
 import { runWithSqliteRetry } from "./sqliteGuards";
 import { runWriteTransaction } from "./writeTransaction";
+import { insertShoppingListItem } from "./shoppingItemRows";
 
 type ShoppingListItemRow = {
   id: string;
@@ -48,55 +49,6 @@ export async function getStoredShoppingListItems(
   );
 }
 
-export async function insertShoppingListItem(
-  db: SQLiteDatabase,
-  item: ShoppingListItem
-) {
-  await db.runAsync(
-    `
-    INSERT OR REPLACE INTO shopping_list_items (
-      id,
-      ingredient_id,
-      name,
-      emoji,
-      quantity,
-      amount,
-      display_quantity,
-      unit,
-      category,
-      estimated_price,
-      price_status,
-      client_mutation_id,
-      checked,
-      source_recipe_id,
-      created_at,
-      updated_at,
-      list_id
-    )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `,
-    [
-      item.id,
-      item.ingredientId ?? null,
-      item.name,
-      item.emoji,
-      item.quantity,
-      item.amount ?? null,
-      item.displayQuantity ?? null,
-      item.unit ?? null,
-      item.category,
-      item.estimatedPrice,
-      item.priceStatus ?? (item.estimatedPrice === null ? "unknown" : "estimated"),
-      item.clientMutationId ?? null,
-      item.checked ? 1 : 0,
-      item.sourceRecipeId ?? null,
-      item.createdAt,
-      item.updatedAt,
-      item.listId ?? DEFAULT_SHOPPING_LIST_ID,
-    ]
-  );
-}
-
 export async function insertShoppingListItems(
   db: SQLiteDatabase,
   items: ShoppingListItem[]
@@ -130,34 +82,6 @@ export async function replaceShoppingListItemsForList(
       }
     });
   });
-}
-
-export async function updateShoppingListItemChecked(
-  db: SQLiteDatabase,
-  itemId: string,
-  checked: boolean
-) {
-  await db.runAsync(
-    `
-    UPDATE shopping_list_items
-    SET checked = ?, updated_at = ?
-    WHERE id = ?
-    `,
-    [checked ? 1 : 0, new Date().toISOString(), itemId]
-  );
-}
-
-export async function deleteShoppingListItem(
-  db: SQLiteDatabase,
-  itemId: string
-) {
-  await db.runAsync(
-    `
-    DELETE FROM shopping_list_items
-    WHERE id = ?
-    `,
-    [itemId]
-  );
 }
 
 export async function deleteCheckedShoppingListItems(

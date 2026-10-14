@@ -21,14 +21,12 @@ import { ShoppingItemsSkeleton } from "../../src/components/shopping/ShoppingIte
 import { AppText } from "../../src/components/ui/AppText";
 import { Icon } from "../../src/components/ui/Icon";
 import { Logo } from "../../src/components/ui/Logo";
+import { deleteShoppingListItem, insertShoppingListItem } from "../../src/db/shoppingItemRows";
 import {
   deleteCheckedShoppingListItems,
-  deleteShoppingListItem,
   getStoredShoppingListItems,
-  insertShoppingListItem,
   mapShoppingListRowToItem,
   replaceShoppingListItemsForList,
-  updateShoppingListItemChecked,
 } from "../../src/db/shoppingListRepository";
 import {
   deleteShoppingList,
@@ -38,20 +36,20 @@ import {
   cancelQueuedShoppingListItemRemoval,
   enqueueSyncOperation,
 } from "../../src/db/syncQueueRepository";
-import { saveSyncIdMapping } from "../../src/db/syncIdMappingRepository";
 import {
   useDeleteShoppingListMutation,
   useRenameShoppingListMutation,
 } from "../../src/hooks/api/useShoppingLists";
 import { useIsOnline } from "../../src/hooks/useIsOnline";
+import { useShoppingCommands } from "../../src/hooks/useShoppingCommands";
 import { shoppingListsApi } from "../../src/lib/api";
 import { apiShoppingItemToLocalItem } from "../../src/lib/api/adapters";
 import { getApiErrorMessage } from "../../src/lib/api/errors";
 import { groupShoppingListItems } from "../../src/lib/groupShoppingListItems";
-import { createLocalId } from "../../src/lib/id";
 import { structureShoppingQuantity } from "../../src/lib/shoppingQuantity";
 import { formatShoppingQuantity } from "../../src/lib/textFormatters";
 import { queryKeys } from "../../src/lib/query/queryKeys";
+import { onSyncFinished } from "../../src/lib/sync/syncEvents";
 import { useShoppingListsStore } from "../../src/store/shoppingListsStore";
 import { closeSheet, openSheet, showToast } from "../../src/store/uiStore";
 import { theme } from "../../src/theme/theme";
@@ -335,6 +333,7 @@ function LocalListDetail({ listId, shareOnOpen }: { listId: string; shareOnOpen:
   const db = useSQLiteContext();
   const isOnline = useIsOnline();
   const queryClient = useQueryClient();
+  const shoppingCommands = useShoppingCommands();
   const shotRef = useRef<ViewShotRef | null>(null);
   const list = useShoppingListsStore((state) =>
     state.lists.find((item) => item.id === listId)
@@ -385,6 +384,17 @@ function LocalListDetail({ listId, shareOnOpen }: { listId: string; shareOnOpen:
     }, [loadItems, refreshFromServer])
   );
 
+  // Sent edits can swap a temporary id for the server's and move checked
+  // items into the pantry.
+  useEffect(
+    () =>
+      onSyncFinished(() => {
+        void loadItems();
+        void queryClient.invalidateQueries({ queryKey: queryKeys.pantry.me });
+      }),
+    [loadItems, queryClient]
+  );
+
   const checkedCount = items.filter((item) => item.checked).length;
   const neededItems = items.filter((item) => !item.checked);
   const pantryItems = items.filter((item) => item.checked);
@@ -400,30 +410,12 @@ function LocalListDetail({ listId, shareOnOpen }: { listId: string; shareOnOpen:
     if (!item) return;
 
     const nextChecked = !item.checked;
-
-    // Persist locally before attempting server sync.
     setItems((current) =>
       current.map((entry) =>
         entry.id === itemId ? { ...entry, checked: nextChecked } : entry
       )
     );
-    await updateShoppingListItemChecked(db, itemId, nextChecked);
-
-    try {
-      await shoppingListsApi.updateShoppingListItemInList(listId, itemId, {
-        checked: nextChecked,
-      });
-      await queryClient.invalidateQueries({ queryKey: queryKeys.pantry.me });
-    } catch (error) {
-      console.error("Failed to sync list item, queuing for retry", error);
-      await enqueueSyncOperation(db, "shopping_list_item_toggle", {
-        listId,
-        itemId,
-        checked: nextChecked,
-      }).catch((queueError) => {
-        console.error("Failed to queue list item sync", queueError);
-      });
-    }
+    await shoppingCommands.setChecked({ listId, itemId, checked: nextChecked });
   }
 
   async function handleToggleSelectAll() {
@@ -437,26 +429,7 @@ function LocalListDetail({ listId, shareOnOpen }: { listId: string; shareOnOpen:
         itemIds.includes(item.id) ? { ...item, checked: nextChecked } : item
       )
     );
-    await Promise.all(
-      itemIds.map((itemId) => updateShoppingListItemChecked(db, itemId, nextChecked))
-    );
-    if (itemIds.length) {
-      try {
-        await shoppingListsApi.setShoppingListItemsChecked(listId, itemIds, nextChecked);
-        await queryClient.invalidateQueries({ queryKey: queryKeys.pantry.me });
-      } catch (error) {
-        console.error("Failed to sync bulk checkbox update", error);
-        await Promise.all(
-          itemIds.map((itemId) =>
-            enqueueSyncOperation(db, "shopping_list_item_toggle", {
-              listId,
-              itemId,
-              checked: nextChecked,
-            })
-          )
-        );
-      }
-    }
+    await shoppingCommands.setManyChecked({ listId, itemIds, checked: nextChecked });
     showToast(allChecked ? "All items deselected" : "All items selected");
   }
 
@@ -482,76 +455,9 @@ function LocalListDetail({ listId, shareOnOpen }: { listId: string; shareOnOpen:
   }
 
   async function handleAddItem(name: string, quantity: string, ingredientId?: string, category = "Pantry") {
-    const now = new Date().toISOString();
-    const trimmedName = name.trim();
-    const trimmedQuantity = quantity.trim() || "1";
-    const structuredQuantity = structureShoppingQuantity(trimmedQuantity);
-    const localId = createLocalId("shopping_item");
-    const clientMutationId = createLocalId("shopping_mutation");
-    const newItem: ShoppingListItem = {
-      id: localId,
-      ingredientId,
-      name: trimmedName,
-      emoji: "🛒",
-      quantity: structuredQuantity.displayQuantity,
-      amount: structuredQuantity.amount ?? undefined,
-      displayQuantity: structuredQuantity.displayQuantity,
-      unit: structuredQuantity.unit ?? undefined,
-      category,
-      estimatedPrice: null,
-      priceStatus: "unknown",
-      clientMutationId,
-      checked: false,
-      createdAt: now,
-      updatedAt: now,
-      listId,
-    };
-    let savedItem = newItem;
-
-    // Use a client ID until the server returns the canonical ID.
-    await insertShoppingListItem(db, newItem);
-    setItems((current) => [...current, newItem]);
-    try {
-      const created = await shoppingListsApi.addShoppingListItemToList(listId, {
-        ingredientId,
-        name: trimmedName,
-        quantity: structuredQuantity.quantity,
-        amount: structuredQuantity.amount,
-        displayQuantity: structuredQuantity.displayQuantity,
-        unit: structuredQuantity.unit,
-        category,
-        clientMutationId,
-      });
-      const reconciled: ShoppingListItem = {
-        ...apiShoppingItemToLocalItem(created),
-        listId,
-      };
-      savedItem = reconciled;
-
-      await saveSyncIdMapping(db, localId, created.id, "shopping_list_item");
-      await deleteShoppingListItem(db, localId);
-      await insertShoppingListItem(db, reconciled);
-      setItems((current) =>
-        current.map((entry) => (entry.id === localId ? reconciled : entry))
-      );
-    } catch (error) {
-      console.error("Failed to sync new item, queuing for retry", error);
-      await enqueueSyncOperation(db, "shopping_list_item_add", {
-        listId,
-        temporaryId: localId,
-        ingredientId,
-        name: trimmedName,
-        quantity: structuredQuantity.quantity,
-        amount: structuredQuantity.amount,
-        displayQuantity: structuredQuantity.displayQuantity,
-        unit: structuredQuantity.unit,
-        category,
-        clientMutationId,
-      }).catch((queueError) => {
-        console.error("Failed to queue new item sync", queueError);
-      });
-    }
-    return savedItem;
+    const item = await shoppingCommands.addItem({ listId, name, quantity, ingredientId, category });
+    setItems((current) => [...current, item]);
+    return item;
   }
 
   async function handleRename(name: string) {
