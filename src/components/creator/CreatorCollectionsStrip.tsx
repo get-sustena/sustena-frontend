@@ -1,7 +1,7 @@
-import { Image } from "expo-image";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { theme } from "../../theme/theme";
 import { AppText } from "../ui/AppText";
+import { SavedPhoto } from "../ui/SavedPhoto";
 
 export type CreatorRecipeCollection = { id: string; label: string; count: number; coverUrl: string | null };
 
@@ -16,7 +16,7 @@ export function CreatorCollectionsStrip({ collections, selected, onSelect }: { c
             <View style={styles.coverWrap}>
               {active ? <View pointerEvents="none" style={styles.activeRing} /> : null}
               <View style={styles.cover}>
-                {collection.coverUrl ? <Image source={{ uri: collection.coverUrl }} contentFit="cover" style={StyleSheet.absoluteFill} /> : <View style={styles.fallback} />}
+                {collection.coverUrl ? <SavedPhoto url={collection.coverUrl} contentFit="cover" style={StyleSheet.absoluteFill} /> : <View style={styles.fallback} />}
                 <View style={[styles.scrim, active && styles.scrimActive]} />
                 {active ? <View pointerEvents="none" style={styles.activeInset} /> : null}
                 <AppText style={styles.count}>{collection.count}</AppText>

@@ -1,3 +1,6 @@
+// Not used since lists are made, renamed and deleted through the outbox
+// (listCommands.ts). Kept by the founder's choice on 14 Oct 2026, so knip.json
+// ignores this file.
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { shoppingListsApi } from "../../lib/api";
 import { queryKeys } from "../../lib/query/queryKeys";

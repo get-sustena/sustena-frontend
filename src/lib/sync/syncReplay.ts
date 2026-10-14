@@ -12,6 +12,10 @@ type ReplayableOperation = {
   // Milliseconds since the epoch; null when it can be tried at once.
   nextAttemptAt: number | null;
   needsAttention: boolean;
+  // The entity this edit creates or changes, and an entity created offline
+  // that must reach the server first (F03).
+  entityId?: string | null;
+  dependsOn?: string | null;
 };
 
 type ReplayStore<T extends ReplayableOperation> = {
@@ -40,10 +44,15 @@ export function retryDelayMs(attempts: number) {
   return Math.min(FIRST_RETRY_MS * 2 ** Math.max(0, attempts - 1), LONGEST_RETRY_MS);
 }
 
+// A change the phone can't send as it stands, such as a check on an item
+// whose row on the server can't be known. Kept for the person to review.
+export class UnsendableChangeError extends Error {}
+
 // A client error the same request will always get again. Offline (0),
 // timeouts (408), rate limits (429), sign-in (401) and server errors (5xx)
 // pass. So do errors that aren't from the API, such as a busy database.
 function isPermanentFailure(error: unknown) {
+  if (error instanceof UnsendableChangeError) return true;
   const status =
     typeof error === "object" && error !== null && "status" in error
       ? Number((error as { status: unknown }).status)
@@ -57,9 +66,19 @@ export async function replayQueue<T extends ReplayableOperation>(
 ) {
   if (!isOnline()) return;
 
+  // Entities with an earlier edit still in the queue. An edit that depends on
+  // one of them waits: it's neither sent nor discarded (F03).
+  const unfinished = new Set<string>();
+  const holdBack = (operation: T) => {
+    if (operation.entityId) unfinished.add(operation.entityId);
+  };
+
   for (const operation of await store.pending()) {
     if (isStopped()) return;
-    if (operation.needsAttention) continue;
+    if (operation.needsAttention || (operation.dependsOn && unfinished.has(operation.dependsOn))) {
+      holdBack(operation);
+      continue;
+    }
     // Edits are replayed in order, so one still waiting holds the rest back.
     if (!ignoreBackoff && operation.nextAttemptAt !== null && operation.nextAttemptAt > now()) return;
 
@@ -74,6 +93,7 @@ export async function replayQueue<T extends ReplayableOperation>(
           operation.id,
           error instanceof Error ? error.message : "The server didn't accept this change."
         );
+        holdBack(operation);
         continue;
       }
 

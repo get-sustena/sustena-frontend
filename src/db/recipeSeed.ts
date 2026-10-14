@@ -1,4 +1,7 @@
-import seedRecipesJson from "../data/mobile_seed_recipes_published.json";
+import catalogueJson from "../data/recipe_catalogue_seed.json";
+import type { RecipeCatalogue } from "./recipeRows";
 
-export const RECIPE_SEED_VERSION = "2026-06-19-published-112";
-export const recipeSeedJson = seedRecipesJson as unknown[];
+// Every public recipe as live had it when this build was made (Backend's
+// export of GET /recipes/catalogue), so a first start with no connection
+// still has them all under their live ids.
+export const bundledRecipeCatalogue = catalogueJson as unknown as RecipeCatalogue;

@@ -6,6 +6,7 @@ import {
   ShoppingListItemCreateRequest,
   ShoppingListItemUpdateRequest,
   ShoppingListRecipeBatchRequest,
+  ShoppingListRecipeBatchResponse,
   ShoppingListUpdateRequest,
 } from "../../types/api";
 import { apiRequest } from "./client";
@@ -97,7 +98,7 @@ export function addRecipesToShoppingList(
   shoppingListId: string,
   payload: ShoppingListRecipeBatchRequest
 ) {
-  return apiRequest<ShoppingList>({
+  return apiRequest<ShoppingListRecipeBatchResponse>({
     url: `/shopping-lists/${shoppingListId}/items/actions/add-recipes`,
     method: "POST",
     data: payload,

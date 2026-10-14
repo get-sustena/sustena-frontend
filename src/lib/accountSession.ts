@@ -16,10 +16,8 @@ import {
   getStoredPreferences,
   mapStoredPreferencesRow,
 } from "../db/preferencesRepository";
-import {
-  getStoredShoppingListItems,
-  mapShoppingListRowToItem,
-} from "../db/shoppingListRepository";
+import { mapShoppingListRowToItem } from "../db/shoppingItemRows";
+import { getStoredShoppingListItems } from "../db/shoppingListRepository";
 import {
   getStoredShoppingLists,
   mapShoppingListRowToMeta,

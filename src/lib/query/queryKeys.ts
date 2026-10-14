@@ -78,4 +78,6 @@ export const queryKeys = {
   planner: {
     settings: ["planner", "settings"] as const,
   },
+  // Edits the server refused, kept on the phone (F02).
+  unsavedChanges: ["outbox", "unsaved-changes"] as const,
 };

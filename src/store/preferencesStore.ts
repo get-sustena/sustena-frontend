@@ -1,12 +1,13 @@
 
 import { create } from "zustand";
-import { UnitMode } from "../data/recipes";
-import { StoredPreferences } from "../db/preferencesRepository";
-import {
+import type { UnitMode } from "../data/recipes.ts";
+import type { StoredPreferences } from "../db/preferencesRepository.ts";
+import { clampServings } from "../lib/servings.ts";
+import type {
   DietaryPreference,
   HealthCondition,
   UserPreferences,
-} from "../types/preferences";
+} from "../types/preferences.ts";
 
 type PreferencesState = UserPreferences & {
   hasCompletedOnboarding: boolean;
@@ -97,7 +98,7 @@ export const usePreferencesStore = create<PreferencesState>((set, get) => ({
 
   setDefaultServingSize: (servingSize) => {
     set({
-      defaultServingSize: Math.max(1, Math.min(25, servingSize)),
+      defaultServingSize: clampServings(servingSize),
     });
   },
 

@@ -44,7 +44,7 @@ export function QuickPlanSetupModal({
   visible,
   isFirstPlan = true,
   initialValue,
-  actionLabel = "Create My Meal Plan",
+  actionLabel = "Create meal plan",
   onClose,
   onComplete,
 }: Props) {

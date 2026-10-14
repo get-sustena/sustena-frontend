@@ -27,6 +27,8 @@ export type RecipeIngredient = {
   id: string;
   emoji: string;
   name: string;
+  // The catalogue ingredient, when the recipe line is matched to one.
+  ingredientId?: string | null;
   canonicalIngredientName?: string | null;
   rawText?: string | null;
   category: string;

@@ -1,5 +1,5 @@
-import { type SQLiteDatabase } from "expo-sqlite";
-import type { PlannerSettings } from "../types/api";
+import type { SQLiteDatabase } from "expo-sqlite";
+import type { PlannerSettings } from "../types/api.ts";
 
 const SETTINGS_ID = "current_user_planner_settings";
 

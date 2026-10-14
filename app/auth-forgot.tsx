@@ -21,7 +21,7 @@ import {
   useResetPasswordMutation,
   useVerifyResetCodeMutation,
 } from "../src/hooks/api/useAuth";
-import { getApiErrorMessage } from "../src/lib/api/errors";
+import { getApiErrorMessage, getApiValidationFieldErrors } from "../src/lib/api/errors";
 import { getPasswordScore } from "../src/lib/passwordStrength";
 import { theme } from "../src/theme/theme";
 
@@ -38,6 +38,7 @@ export default function AuthForgotScreen() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [newPasswordError, setNewPasswordError] = useState<string | null>(null);
   const [resendSecondsLeft, setResendSecondsLeft] = useState(0);
 
   const forgotPasswordMutation = useForgotPasswordMutation();
@@ -147,7 +148,11 @@ export default function AuthForgotScreen() {
       await resetPasswordMutation.mutateAsync({ resetToken, newPassword });
       setStep("done");
     } catch (resetError) {
-      setError(getApiErrorMessage(resetError));
+      // A message about the new password, such as "This password is too
+      // long. Use a shorter password." (B05), shows under that field.
+      const fieldError = getApiValidationFieldErrors(resetError).newPassword;
+      setNewPasswordError(fieldError ?? null);
+      setError(fieldError ? null : getApiErrorMessage(resetError));
     }
   }
 
@@ -200,12 +205,14 @@ export default function AuthForgotScreen() {
             onChangeNewPassword={(value) => {
               setNewPassword(value);
               setError(null);
+              setNewPasswordError(null);
             }}
             onChangeConfirmPassword={(value) => {
               setConfirmPassword(value);
               setError(null);
             }}
             error={error}
+            newPasswordError={newPasswordError}
             isSubmitting={resetPasswordMutation.isPending}
             onSubmit={handleResetPassword}
           />
@@ -395,6 +402,7 @@ function PasswordStep({
   onChangeNewPassword,
   onChangeConfirmPassword,
   error,
+  newPasswordError,
   isSubmitting,
   onSubmit,
 }: {
@@ -403,6 +411,7 @@ function PasswordStep({
   onChangeNewPassword: (value: string) => void;
   onChangeConfirmPassword: (value: string) => void;
   error: string | null;
+  newPasswordError: string | null;
   isSubmitting: boolean;
   onSubmit: () => void;
 }) {
@@ -420,6 +429,7 @@ function PasswordStep({
         value={newPassword}
         onChangeText={onChangeNewPassword}
         secureTextEntry
+        error={newPasswordError ?? undefined}
       />
       <PasswordStrengthMeter password={newPassword} />
 

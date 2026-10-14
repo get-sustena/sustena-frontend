@@ -211,12 +211,22 @@ export default function HomeScreen() {
               pressed && styles.pressed,
             ]}
             accessibilityRole="button"
-            accessibilityLabel="Plan a day of meals on a budget"
           >
             <Icon name="budget" size={18} color={theme.colors.navy} />
-            <AppText style={styles.budgetButtonText}>
-              Plan a day of meals on a budget
-            </AppText>
+            <AppText style={styles.budgetButtonText}>Plan meals on a budget</AppText>
+          </Pressable>
+
+          <Pressable
+            onPress={() => router.push("/meal-plans")}
+            style={({ pressed }) => [
+              styles.budgetButton,
+              styles.savedPlansButton,
+              pressed && styles.pressed,
+            ]}
+            accessibilityRole="button"
+          >
+            <Icon name="bookmark" size={18} color={theme.colors.navy} />
+            <AppText style={styles.budgetButtonText}>Saved meal plans</AppText>
           </Pressable>
         </View>
 
@@ -587,6 +597,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
+  },
+  savedPlansButton: {
+    marginTop: 10,
   },
   budgetButtonText: {
     fontFamily: theme.fontFamily.bodySemiBold,

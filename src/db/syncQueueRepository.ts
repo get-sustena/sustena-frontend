@@ -1,6 +1,6 @@
 
-import { type SQLiteDatabase } from "expo-sqlite";
-import { createLocalId } from "../lib/id";
+import type { SQLiteDatabase } from "expo-sqlite";
+import { createLocalId } from "../lib/id.ts";
 
 export type SyncQueueKind =
   | "favorite_add"
@@ -11,10 +11,23 @@ export type SyncQueueKind =
   | "shopping_remove"
   | "profile_answers_update"
   | "planner_settings_update"
+  | "preferences_update"
   | "shopping_list_item_add"
   | "shopping_list_item_toggle"
+  | "shopping_list_item_update"
+  | "shopping_list_items_set_checked"
   | "shopping_list_item_remove"
-  | "shopping_list_recipe_batch";
+  | "shopping_list_item_restore"
+  | "shopping_list_clear_checked"
+  | "shopping_list_recipe_batch"
+  | "shopping_list_create"
+  | "shopping_list_rename"
+  | "shopping_list_delete"
+  | "meal_plan_create"
+  | "meal_plan_rename"
+  | "meal_plan_swap"
+  | "meal_plan_delete"
+  | "recipe_cooked";
 
 export type SyncQueueOperation = {
   id: string;
@@ -24,6 +37,14 @@ export type SyncQueueOperation = {
   attempts: number;
   nextAttemptAt: number | null;
   needsAttention: boolean;
+  version: number;
+  // Stays the same across retries, so the server can tell a retry from a
+  // new change.
+  mutationId: string | null;
+  // The entity this command creates or changes.
+  entityId: string | null;
+  // An entity created offline that must reach the server first.
+  dependsOn: string | null;
 };
 
 type SyncQueueRow = {
@@ -34,19 +55,46 @@ type SyncQueueRow = {
   attempts: number;
   next_attempt_at: number | null;
   needs_attention: number;
+  command_version: number;
+  mutation_id: string | null;
+  entity_id: string | null;
+  depends_on: string | null;
+};
+
+// The outbox command format. Bump when a payload's shape changes, and teach
+// replay to read the older version.
+const COMMAND_VERSION = 1;
+
+type CommandOptions = {
+  mutationId?: string;
+  entityId?: string;
+  dependsOn?: string | null;
 };
 
 export async function enqueueSyncOperation(
   db: SQLiteDatabase,
   kind: SyncQueueKind,
-  payload: unknown
+  payload: unknown,
+  { mutationId, entityId, dependsOn }: CommandOptions = {}
 ) {
   await db.runAsync(
     `
-    INSERT INTO sync_queue (id, kind, payload_json, created_at, attempts)
-    VALUES (?, ?, ?, ?, 0)
+    INSERT INTO sync_queue (
+      id, kind, payload_json, created_at, attempts,
+      command_version, mutation_id, entity_id, depends_on
+    )
+    VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?)
     `,
-    [createLocalId("sync"), kind, JSON.stringify(payload), new Date().toISOString()]
+    [
+      createLocalId("sync"),
+      kind,
+      JSON.stringify(payload),
+      new Date().toISOString(),
+      COMMAND_VERSION,
+      mutationId ?? null,
+      entityId ?? null,
+      dependsOn ?? null,
+    ]
   );
 }
 
@@ -57,7 +105,7 @@ export async function getPendingSyncOperations(
     `
     SELECT *
     FROM sync_queue
-    ORDER BY created_at ASC
+    ORDER BY created_at ASC, rowid ASC
     `
   );
 
@@ -69,6 +117,10 @@ export async function getPendingSyncOperations(
     attempts: row.attempts,
     nextAttemptAt: row.next_attempt_at,
     needsAttention: row.needs_attention === 1,
+    version: row.command_version,
+    mutationId: row.mutation_id,
+    entityId: row.entity_id,
+    dependsOn: row.depends_on,
   }));
 }
 
@@ -89,22 +141,5 @@ export async function markSyncNeedsAttention(db: SQLiteDatabase, id: string, rea
   await db.runAsync(
     `UPDATE sync_queue SET needs_attention = 1, last_error = ? WHERE id = ?`,
     [reason, id]
-  );
-}
-
-export async function cancelQueuedShoppingListItemRemoval(
-  db: SQLiteDatabase,
-  listId: string,
-  itemId: string
-) {
-  const operations = await getPendingSyncOperations(db);
-  await Promise.all(
-    operations
-      .filter((operation) => {
-        if (operation.kind !== "shopping_list_item_remove") return false;
-        const payload = operation.payload as { listId?: string; itemId?: string };
-        return payload.listId === listId && payload.itemId === itemId;
-      })
-      .map((operation) => deleteSyncOperation(db, operation.id))
   );
 }

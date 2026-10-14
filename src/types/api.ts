@@ -298,6 +298,19 @@ export interface StartResponse {
   recommendations: RecommendationListResponse;
   // The ingredient catalogue's ETag without its quotes.
   ingredientCatalogueVersion: string;
+  // The recipe catalogue's ETag without its quotes (OFF-01). Missing from an
+  // API older than the recipe catalogue.
+  recipeCatalogueVersion?: string;
+  // The recommended recipe for each meal of the next 14 days (Lagos dates),
+  // for Home with no connection.
+  mealPicks?: MealPicksForDay[];
+}
+
+export interface MealPicksForDay {
+  date: string;
+  breakfast: string | null;
+  lunch: string | null;
+  dinner: string | null;
 }
 
 export interface PantryResponse {
@@ -952,6 +965,16 @@ export interface ShoppingListRecipeBatchRequest {
     servings: number;
     unitOverrides?: { ingredientId: string; unit: string }[];
   }[];
+  // The lines the phone showed for these recipes, so the reply can say
+  // which row each one landed in (F03).
+  lines?: { clientLineId: string; recipeId: string; recipeIngredientId: string }[];
+}
+
+// POST .../add-recipes: the list, and where each line sent in `lines` went:
+// its row, or null when it added nothing or its row can't be known for
+// certain. The same on a replay of the same clientMutationId.
+export interface ShoppingListRecipeBatchResponse extends ShoppingList {
+  lineItems?: { clientLineId: string; itemId: UUIDString | null }[];
 }
 
 export type ShoppingListItemUpdate = ShoppingListItemUpdateRequest;
@@ -979,6 +1002,8 @@ export interface RecipeCookedResponse {
 export interface ShoppingListCreateRequest {
   name: string;
   isActive?: boolean;
+  // Makes a retry after a lost reply return the list already made.
+  clientMutationId?: string;
 }
 
 export interface ShoppingListUpdateRequest {

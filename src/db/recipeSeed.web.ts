@@ -1,3 +1,4 @@
-// Web omits the bundled mobile seed to avoid shipping stale catalogue data.
-export const RECIPE_SEED_VERSION = "web-api-cache-v1";
-export const recipeSeedJson: unknown[] = [];
+import type { RecipeCatalogue } from "./recipeRows";
+
+// The web loads recipes from the server; it doesn't ship the catalogue.
+export const bundledRecipeCatalogue: RecipeCatalogue | null = null;

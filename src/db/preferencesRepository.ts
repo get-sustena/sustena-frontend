@@ -1,6 +1,6 @@
 
-import { type SQLiteDatabase } from "expo-sqlite";
-import { HealthCondition, UserPreferences } from "../types/preferences";
+import type { SQLiteDatabase } from "expo-sqlite";
+import type { HealthCondition, UserPreferences } from "../types/preferences.ts";
 
 export type StoredPreferences = UserPreferences & {
   hasCompletedOnboarding: boolean;

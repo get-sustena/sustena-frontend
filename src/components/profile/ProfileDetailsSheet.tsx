@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Pressable, StyleSheet, TextInput, View } from "react-native";
 import { useUpdateMeMutation } from "../../hooks/api/useAuth";
-import { useUpdateProfileAnswersMutation } from "../../hooks/api/useProfileAnswers";
+import { useSettingsCommands } from "../../hooks/useSettingsCommands";
 import { getApiErrorMessage } from "../../lib/api/errors";
 import { useAuthStore } from "../../store/authStore";
 import { useProfileAnswersStore } from "../../store/profileAnswersStore";
@@ -16,9 +16,8 @@ const MONTHS = ["January", "February", "March", "April", "May", "June", "July", 
 export function ProfileDetailsSheet() {
   const user = useAuthStore((state) => state.user);
   const answers = useProfileAnswersStore();
-  const setProfileAnswers = useProfileAnswersStore((state) => state.setProfileAnswers);
   const updateMe = useUpdateMeMutation();
-  const updateAnswers = useUpdateProfileAnswersMutation();
+  const settings = useSettingsCommands();
   const [fullName, setFullName] = useState(user?.fullName ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
   const [month, setMonth] = useState(answers.birthdayMonth ?? 1);
@@ -34,11 +33,8 @@ export function ProfileDetailsSheet() {
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
     try {
-      await Promise.all([
-        updateMe.mutateAsync({ fullName: fullName.trim(), email: email.trim() }),
-        updateAnswers.mutateAsync({ nickname: answers.nickname, gender: answers.gender, birthdayMonth: month, birthdayDay: day, lifestyle: answers.lifestyle, remoteFlex: answers.remoteFlex, experience: answers.experience, goals: answers.goals, challenges: answers.challenges, habitWho: answers.habitWho, habitFreq: answers.habitFreq, habitTime: answers.habitTime, heard: answers.heard, heardOther: answers.heardOther }),
-      ]);
-      setProfileAnswers({ birthdayMonth: month, birthdayDay: day });
+      await updateMe.mutateAsync({ fullName: fullName.trim(), email: email.trim() });
+      await settings.saveProfileAnswers({ birthdayMonth: month, birthdayDay: day });
       showToast("Profile details updated", "success");
       closeSheet();
     } catch (error) {
@@ -46,7 +42,7 @@ export function ProfileDetailsSheet() {
     }
   }
 
-  const pending = updateMe.isPending || updateAnswers.isPending;
+  const pending = updateMe.isPending;
   return (
     <View style={styles.content}>
       <AppText style={styles.title}>Profile Details</AppText>

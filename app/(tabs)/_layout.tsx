@@ -15,6 +15,7 @@ import Animated, {
   useAnimatedStyle,
   withTiming,
 } from "react-native-reanimated";
+import { UnsavedChangesNotice } from "../../src/components/sync/UnsavedChangesNotice";
 import { AppText } from "../../src/components/ui/AppText";
 import { Icon, IconName } from "../../src/components/ui/Icon";
 import { useShoppingListStore } from "../../src/store/shoppingListStore";
@@ -69,6 +70,7 @@ function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
 
   return (
     <View style={styles.wrapper} pointerEvents="box-none">
+      <UnsavedChangesNotice />
       <View style={styles.barShadow}>
         <View style={styles.bar} onLayout={handleLayout}>
           {/* v6.8: an 86% navy layer over a 20px blur (intensity 100 on web). */}

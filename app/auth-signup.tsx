@@ -98,8 +98,10 @@ export default function AuthSignupScreen() {
       );
       continueAfterAuth();
     } catch (error) {
-      setFormError(getApiErrorMessage(error));
-      setFieldErrors(getApiValidationFieldErrors(error));
+      // A message about one field shows under it, not again at the top.
+      const fieldErrors = getApiValidationFieldErrors(error);
+      setFieldErrors(fieldErrors);
+      setFormError(Object.keys(fieldErrors).length ? null : getApiErrorMessage(error));
     }
   }
 

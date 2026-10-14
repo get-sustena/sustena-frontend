@@ -1,11 +1,11 @@
 
-import { type SQLiteDatabase } from "expo-sqlite";
+import type { SQLiteDatabase } from "expo-sqlite";
 import {
   isClosedResourceError,
   runWithSqliteRetry,
-} from "./sqliteGuards";
+} from "./sqliteGuards.ts";
 
-const DATABASE_VERSION = 14;
+const DATABASE_VERSION = 18;
 let migrationQueue = Promise.resolve();
 
 export async function migrateDbIfNeeded(db: SQLiteDatabase) {
@@ -418,6 +418,70 @@ async function runMigrations(db: SQLiteDatabase) {
       ALTER TABLE sync_queue ADD COLUMN last_error TEXT;
 
       PRAGMA user_version = 14;
+    `);
+  }
+
+  const versionAfterSyncRetries = versionAfterSyncIdMappings < 14 ? 14 : versionAfterSyncIdMappings;
+
+  // QAD-02 and F03: each outbox command carries its format version, a mutation
+  // id that stays the same across retries, the entity it creates or changes,
+  // and the entity it waits for (an item created offline whose creation
+  // hasn't reached the server yet).
+  if (versionAfterSyncRetries < 15) {
+    await db.execAsync(`
+      ALTER TABLE sync_queue ADD COLUMN command_version INTEGER NOT NULL DEFAULT 1;
+      ALTER TABLE sync_queue ADD COLUMN mutation_id TEXT;
+      ALTER TABLE sync_queue ADD COLUMN entity_id TEXT;
+      ALTER TABLE sync_queue ADD COLUMN depends_on TEXT;
+
+      PRAGMA user_version = 15;
+    `);
+  }
+
+  const versionAfterCommands = versionAfterSyncRetries < 15 ? 15 : versionAfterSyncRetries;
+
+  // OFF-01: recipe photos and creator avatars saved on the phone, by link.
+  // A row is written only once its file is complete. Photos are nobody's
+  // own data, so they stay after sign-out.
+  if (versionAfterCommands < 16) {
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS cached_photos (
+        url TEXT PRIMARY KEY NOT NULL,
+        file_name TEXT NOT NULL,
+        saved_at TEXT NOT NULL
+      );
+
+      PRAGMA user_version = 16;
+    `);
+  }
+
+  const versionAfterPhotos = versionAfterCommands < 16 ? 16 : versionAfterCommands;
+
+  // QAD-02 and F03: the recipe batch an item came with, while the batch is
+  // on its way to the server, so a check on the item waits for it.
+  if (versionAfterPhotos < 17) {
+    await db.execAsync(`
+      ALTER TABLE shopping_list_items ADD COLUMN recipe_batch_id TEXT;
+
+      PRAGMA user_version = 17;
+    `);
+  }
+
+  const versionAfterBatches = versionAfterPhotos < 17 ? 17 : versionAfterPhotos;
+
+  // MP-01: saved meal plans, kept on the phone so they open offline. Each
+  // row holds the whole plan; `id` is temporary until the server has it.
+  if (versionAfterBatches < 18) {
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS meal_plans (
+        id TEXT PRIMARY KEY NOT NULL,
+        name TEXT NOT NULL,
+        plan_json TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      PRAGMA user_version = 18;
     `);
   }
 }

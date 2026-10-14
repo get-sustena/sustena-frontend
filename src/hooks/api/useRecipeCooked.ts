@@ -1,50 +1,60 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSQLiteContext } from "expo-sqlite";
-import { getCookedDay, saveCookedDay } from "../../db/cookedRecipesRepository";
-import { recipesApi } from "../../lib/api";
+import { useMemo, useState } from "react";
+import { getCookedDay } from "../../db/cookedRecipesRepository";
+import { runWriteTransaction } from "../../db/writeTransaction";
+import { createCookedCommands } from "../../lib/cooked/cookedCommands";
+import { createLocalId } from "../../lib/id";
 import { getLagosDay } from "../../lib/lagosDay";
 import { queryKeys } from "../../lib/query/queryKeys";
 import type { RecipeSource } from "../../lib/recipeSource";
+import { requestSync } from "../../lib/sync/syncEvents";
 import { useAuthStore } from "../../store/authStore";
-import { showToast } from "../../store/uiStore";
 
-// "I cooked it" (PRD v6.8 section 16): one POST /recipes/{id}/cooked per
-// person, recipe and Lagos day. After it, the button reads "Cooked today"
-// until the Lagos day changes, including after leaving and coming back.
+// "I cooked it" (PRD v6.8 section 16): counted once per person, recipe and
+// Lagos day. The tap is saved on the phone and sent through the outbox, so
+// it works offline; the button reads "Cooked today" until the Lagos day
+// changes, including after leaving and coming back.
 export function useRecipeCooked(recipeId: string, source?: RecipeSource) {
   const db = useSQLiteContext();
   const queryClient = useQueryClient();
   const userId = useAuthStore((state) => state.user?.id ?? "");
   const cookedDayKey = queryKeys.recipes.cookedDay(userId, recipeId);
+  const [isSaving, setIsSaving] = useState(false);
 
   const cookedDay = useQuery({
     queryKey: cookedDayKey,
     queryFn: () => getCookedDay(db, userId, recipeId),
     enabled: Boolean(userId),
+    networkMode: "always",
   });
 
-  const markCooked = useMutation({
-    mutationFn: () => recipesApi.markRecipeCooked(recipeId, source),
-    // counted: false only means today's cook was already counted, so the
-    // button shows "Cooked today" either way.
-    onSuccess: async () => {
-      const today = getLagosDay();
-      queryClient.setQueryData(cookedDayKey, today);
-      await saveCookedDay(db, userId, recipeId, today).catch(() => undefined);
-    },
-    onError: () => {
-      showToast("That didn't save. Check your connection and try again.", "danger");
-    },
-  });
+  const commands = useMemo(
+    () =>
+      createCookedCommands({
+        db,
+        transact: (work) => runWriteTransaction(db, work),
+        now: () => new Date(),
+        newId: createLocalId,
+        requestSync,
+      }),
+    [db]
+  );
 
   const cookedToday = cookedDay.data === getLagosDay();
 
   return {
     cookedToday,
-    isSaving: markCooked.isPending,
-    markCooked: () => {
-      if (cookedToday || markCooked.isPending) return;
-      markCooked.mutate();
+    isSaving,
+    markCooked: async () => {
+      if (!userId || cookedToday || isSaving) return;
+      setIsSaving(true);
+      try {
+        const day = await commands.markCooked({ userId, recipeId, source });
+        queryClient.setQueryData(cookedDayKey, day);
+      } finally {
+        setIsSaving(false);
+      }
     },
   };
 }

@@ -2,7 +2,7 @@
 import {
   NUMERIC_TOKEN_PATTERN_GLOBAL,
   parseQuantityToken,
-} from "./quantityParsing";
+} from "./quantityParsing.ts";
 
 export function scaleCost({
   baseCost,

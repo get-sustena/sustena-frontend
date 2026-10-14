@@ -1,14 +1,12 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useSQLiteContext } from "expo-sqlite";
 import { useEffect } from "react";
 import { saveStoredPlannerSettings } from "../../db/plannerSettingsRepository";
-import { enqueueSyncOperation } from "../../db/syncQueueRepository";
 import { plannerApi } from "../../lib/api";
-import { toApiClientError } from "../../lib/api/errors";
 import { queryKeys } from "../../lib/query/queryKeys";
+import { withPendingSettings } from "../../lib/settings/settingsCommands";
 import { useAuthStore } from "../../store/authStore";
 import { usePlannerStore } from "../../store/plannerStore";
-import type { PlannerSettingsUpdateRequest } from "../../types/api";
 import { useStartLoading } from "./useStartLoading";
 
 export function useBudgetPlannerMutation() {
@@ -24,7 +22,9 @@ export function usePlannerSettingsQuery() {
   const startLoading = useStartLoading();
   const query = useQuery({
     queryKey: queryKeys.planner.settings,
-    queryFn: plannerApi.getPlannerSettings,
+    // A change not sent yet stays on top of the server's copy (QAD-01).
+    queryFn: async () =>
+      withPendingSettings(db, "planner_settings_update", await plannerApi.getPlannerSettings()),
     enabled: isAuthenticated && !startLoading,
   });
 
@@ -40,44 +40,6 @@ export function usePlannerSettingsQuery() {
   }, [db, hydratePlanSetup, query.data]);
 
   return query;
-}
-
-export function useUpdatePlannerSettingsMutation() {
-  const db = useSQLiteContext();
-  const queryClient = useQueryClient();
-  const setPlanSetup = usePlannerStore((state) => state.setPlanSetup);
-
-  return useMutation({
-    mutationFn: plannerApi.updatePlannerSettings,
-    onMutate: async (payload: PlannerSettingsUpdateRequest) => {
-      const settings = {
-        ...payload,
-        mealsPerDay: payload.mealSlots.length,
-      };
-
-      setPlanSetup(settings);
-      await saveStoredPlannerSettings(db, settings).catch((error) => {
-        console.error("Failed to cache planner settings locally", error);
-      });
-    },
-    onSuccess: async (settings) => {
-      setPlanSetup(settings);
-      queryClient.setQueryData(queryKeys.planner.settings, settings);
-      await saveStoredPlannerSettings(db, settings).catch((error) => {
-        console.error("Failed to cache planner settings locally", error);
-      });
-    },
-    onError: async (error, payload) => {
-      if (toApiClientError(error).status !== 0) {
-        return;
-      }
-
-      await enqueueSyncOperation(db, "planner_settings_update", {
-        ...payload,
-        mealsPerDay: payload.mealSlots.length,
-      });
-    },
-  });
 }
 
 export function useKitchenPlannerMutation() {

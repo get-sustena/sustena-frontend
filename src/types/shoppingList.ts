@@ -13,6 +13,10 @@ export type ShoppingListItem = {
   clientMutationId?: string;
   checked: boolean;
   sourceRecipeId?: string;
+  // The recipe batch the item came with, until the server has it.
+  recipeBatchId?: string;
+  // The recipe line a generated item comes from; not stored.
+  recipeIngredientId?: string;
   ingredientId?: string;
   createdAt: string;
   updatedAt: string;

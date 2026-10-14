@@ -1,10 +1,14 @@
 import type { SQLiteDatabase } from "expo-sqlite";
 
+// What a temporary id made on the phone stands for until the server gives
+// its own.
+type SyncEntityKind = "shopping_list_item" | "shopping_list" | "meal_plan" | "meal_plan_item";
+
 export async function saveSyncIdMapping(
   db: SQLiteDatabase,
   temporaryId: string,
   serverId: string,
-  entityKind: "shopping_list_item"
+  entityKind: SyncEntityKind
 ) {
   await db.runAsync(
     `
@@ -25,7 +29,7 @@ export async function saveSyncIdMapping(
 export async function resolveSyncIdMapping(
   db: SQLiteDatabase,
   temporaryId: string,
-  entityKind: "shopping_list_item"
+  entityKind: SyncEntityKind
 ) {
   const mapping = await db.getFirstAsync<{ server_id: string }>(
     `

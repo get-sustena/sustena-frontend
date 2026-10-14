@@ -118,7 +118,7 @@ screen  →  hooks/api/useX.ts  →  lib/api/x.ts  →  lib/api/client.ts (axios
 
 The app keeps working without a connection. Three mechanisms do this.
 
-**Local database.** `src/db/migrations.ts` creates 19 tables: recipes and their ingredients, instructions, tags, allergens and notes; favourites; pantry; shopping lists and items; preferences; profile answers; planner settings; creator drafts; the sync queue and ID mappings; metadata; and account snapshots. Each area has a repository file (`recipeRepository.ts`, `pantryRepository.ts`, ...). Writes to one database run one at a time through `writeQueue.ts`. Phones ship with 112 published recipes bundled in `src/data/mobile_seed_recipes_published.json` (1.4 MB). Web ships none (`recipeSeed.web.ts`).
+**Local database.** `src/db/migrations.ts` creates 19 tables: recipes and their ingredients, instructions, tags, allergens and notes; favourites; pantry; shopping lists and items; preferences; profile answers; planner settings; creator drafts; the sync queue and ID mappings; metadata; and account snapshots. Each area has a repository file (`recipeRepository.ts`, `pantryRepository.ts`, ...). Writes to one database run one at a time through `writeQueue.ts`. Phones ship with every public recipe (114, live IDs) in `src/data/recipe_catalogue_seed.json` (1.7 MB, Backend's export of `GET /recipes/catalogue`). After sign-in, the phone downloads the catalogue again whenever `recipeCatalogueVersion` on `/me/start` changes, and saves every recipe photo to `documents/recipe-photos` (`src/lib/catalogue/`). Web ships none (`recipeSeed.web.ts`).
 
 **Reads fall back to SQLite.** Recipe lists and recipe details try the API first and read SQLite if it fails (`useInfiniteRecipesWithLocalFallback`, `useRecipeDetailWithLocalFallback`). Opening a recipe also caches it locally.
 
@@ -200,7 +200,6 @@ Found while reading the code against the frontend skills. None of these is fixed
 | Gap | Where | Why it matters |
 | --- | --- | --- |
 | The offline cache needs `qualityScore`, `qualityWarnings` and `source*` | `src/db/recipeRepository.ts` (`quality_warnings_json` is NOT NULL) | The backend keeps the fields. If it ever empties them, `qualityWarnings` must stay `[]`, never null or missing. |
-| The bundled recipe seed is out of date | `src/data/mobile_seed_recipes_published.json` (June 2026, 112 recipes, no meal tags or categories) | Offline phones relying on the seed can't filter recommendations by meal and get the unfiltered list. |
 | A second tab of the web app stays blank | `SQLiteProvider` in `app/_layout.tsx`; expo-sqlite's web storage lets one tab hold the database file | The second tab can't open the database, nothing catches the error, and the page renders nothing. Quick reloads can do the same while the previous page still holds the file, and browser panes that share storage block each other. The founder wants both tabs usable, with a standard fix. Fix in progress. |
 | Rating a recipe leaves the Recipes grid showing the old rating | The infinite list key `["recipes", "infinite-list", ...]` isn't invalidated after rating | Tiles show the average rating. It updates only when the query goes stale. |
 | No error boundary anywhere | `app/` | One crashing screen takes down the whole app. |

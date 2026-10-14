@@ -1,45 +1,33 @@
+import { useQuery } from "@tanstack/react-query";
+import { useSQLiteContext } from "expo-sqlite";
 import {
-  QueryClient,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+  getStoredFavorites,
+  mapFavoriteRowToFavorite,
+  replaceFavoritesKeepingPendingEdits,
+} from "../../db/favoritesRepository";
+import { runWriteTransaction } from "../../db/writeTransaction";
 import { favoritesApi } from "../../lib/api";
 import { queryKeys } from "../../lib/query/queryKeys";
+import { useFavoritesStore } from "../../store/favoritesStore";
 
+// The server's saved recipes. Each reply is saved on the phone merged with
+// saves and unsaves not sent yet (QAD-01), and the phone's list follows it.
 export function useFavoritesQuery() {
+  const db = useSQLiteContext();
   return useQuery({
     queryKey: queryKeys.favorites.all,
-    queryFn: favoritesApi.getFavorites,
+    queryFn: async () => {
+      const favorites = await favoritesApi.getFavorites();
+      await runWriteTransaction(db, (tx) =>
+        replaceFavoritesKeepingPendingEdits(
+          tx,
+          favorites.map((favorite) => favorite.recipeId),
+          new Date().toISOString()
+        )
+      );
+      const rows = await getStoredFavorites(db);
+      useFavoritesStore.getState().hydrateFavorites(rows.map(mapFavoriteRowToFavorite));
+      return favorites;
+    },
   });
-}
-
-export function useAddFavoriteMutation() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: favoritesApi.addFavorite,
-    onSuccess: invalidateFavoriteBackedQueries(queryClient),
-  });
-}
-
-export function useRemoveFavoriteMutation() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: favoritesApi.removeFavorite,
-    onSuccess: invalidateFavoriteBackedQueries(queryClient),
-  });
-}
-
-function invalidateFavoriteBackedQueries(queryClient: QueryClient) {
-  return async () => {
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: queryKeys.favorites.all }),
-      queryClient.invalidateQueries({
-        predicate: (query) =>
-          query.queryKey[0] === "recipes" && query.queryKey[1] === "list",
-      }),
-    ]);
-  };
 }

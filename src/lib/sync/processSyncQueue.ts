@@ -1,81 +1,105 @@
-
 import { onlineManager } from "@tanstack/react-query";
 import { type SQLiteDatabase } from "expo-sqlite";
-import {
-  deleteSyncOperation,
-  getPendingSyncOperations,
-  markSyncNeedsAttention,
-  scheduleSyncRetry,
-  SyncQueueOperation,
-} from "../../db/syncQueueRepository";
-import { replayQueue } from "./syncReplay";
+import { resolveSyncIdMapping } from "../../db/syncIdMappingRepository";
+import type { SyncQueueOperation } from "../../db/syncQueueRepository";
+import { runWriteTransaction } from "../../db/writeTransaction";
+import { useAuthStore } from "../../store/authStore";
+import { ShoppingListItemCreateRequest } from "../../types/api";
 import {
   favoritesApi,
+  mealPlansApi,
   plannerApi,
+  preferencesApi,
   profileAnswersApi,
+  recipesApi,
   shoppingListApi,
   shoppingListsApi,
 } from "../api";
 import { apiShoppingItemToLocalItem } from "../api/adapters";
-import {
-  deleteShoppingListItem,
-  insertShoppingListItem,
-  replaceShoppingListItemsForList,
-} from "../../db/shoppingListRepository";
-import {
-  resolveSyncIdMapping,
-  saveSyncIdMapping,
-} from "../../db/syncIdMappingRepository";
-import {
-  ShoppingListItemCreateRequest,
-  PlannerSettingsUpdateRequest,
-  UserProfileAnswersUpdateRequest,
-} from "../../types/api";
-import { useAuthStore } from "../../store/authStore";
+import { runCookedCommand } from "../cooked/cookedCommands";
+import { runFavoriteCommand } from "../favorites/favoriteCommands";
+import { queryClient } from "../query/queryClient";
+import { queryKeys } from "../query/queryKeys";
+import { runSettingsCommand } from "../settings/settingsCommands";
+import { runPlanCommand } from "../planner/planCommands";
+import { runListCommand } from "../shopping/listCommands";
+import { runShoppingCommand } from "../shopping/shoppingReplay";
+import { replayOutbox } from "./outboxReplay";
 
-// Replays queued offline edits (rules in syncReplay.ts). `reconnected` is
-// set when the connection has just come back, so edits waiting out a
-// backoff are tried at once.
 export async function processSyncQueue(db: SQLiteDatabase, { reconnected = false } = {}) {
-  await replayQueue(
-    {
-      pending: () => getPendingSyncOperations(db),
-      run: async (operation) => {
-        const payload = operation.payload as Record<string, unknown>;
-        if (typeof payload.itemId === "string") {
-          payload.itemId =
-            (await resolveSyncIdMapping(db, payload.itemId, "shopping_list_item")) ??
-            payload.itemId;
-        }
-        await runOperation(operation, db);
-      },
-      remove: (id) => deleteSyncOperation(db, id),
-      scheduleRetry: (id, nextAttemptAt) => scheduleSyncRetry(db, id, nextAttemptAt),
-      markNeedsAttention: (id, reason) => markSyncNeedsAttention(db, id, reason),
-    },
-    {
-      isOnline: () => onlineManager.isOnline(),
-      isStopped: () => useAuthStore.getState().isSigningOut,
-      now: () => Date.now(),
-      ignoreBackoff: reconnected,
-    }
-  );
+  await replayOutbox(db, runOperation, {
+    isOnline: () => onlineManager.isOnline(),
+    isStopped: () => useAuthStore.getState().isSigningOut,
+    now: () => Date.now(),
+    ignoreBackoff: reconnected,
+  });
 }
 
-async function runOperation(operation: SyncQueueOperation, db: SQLiteDatabase) {
+async function runOperation(db: SQLiteDatabase, operation: SyncQueueOperation) {
+  const listHandled = await runListCommand(db, operation, {
+    api: {
+      createShoppingList: shoppingListsApi.createShoppingList,
+      updateShoppingListById: shoppingListsApi.updateShoppingListById,
+      deleteShoppingListById: shoppingListsApi.deleteShoppingListById,
+    },
+    transact: (work) => runWriteTransaction(db, work),
+  });
+  if (listHandled) return;
+  const planHandled = await runPlanCommand(db, operation, {
+    api: {
+      createMealPlan: mealPlansApi.createMealPlan,
+      swapMealPlanItems: mealPlansApi.swapMealPlanItems,
+      renameMealPlan: mealPlansApi.renameMealPlan,
+      deleteMealPlan: mealPlansApi.deleteMealPlan,
+    },
+    transact: (work) => runWriteTransaction(db, work),
+  });
+  if (planHandled) return;
+
+  const handled = await runShoppingCommand(db, operation, {
+    api: {
+      addShoppingListItemToList: shoppingListsApi.addShoppingListItemToList,
+      updateShoppingListItemInList: shoppingListsApi.updateShoppingListItemInList,
+      setShoppingListItemsChecked: shoppingListsApi.setShoppingListItemsChecked,
+      deleteShoppingListItemFromList: shoppingListsApi.deleteShoppingListItemFromList,
+      restoreShoppingListItemInList: shoppingListsApi.restoreShoppingListItemInList,
+      clearCheckedShoppingListItems: shoppingListsApi.clearCheckedShoppingListItems,
+      addRecipesToShoppingList: shoppingListsApi.addRecipesToShoppingList,
+    },
+    toLocalItem: apiShoppingItemToLocalItem,
+    transact: (work) => runWriteTransaction(db, work),
+    now: () => Date.now(),
+  });
+  if (handled) return;
+  if (
+    await runFavoriteCommand(operation, {
+      addFavorite: favoritesApi.addFavorite,
+      removeFavorite: favoritesApi.removeFavorite,
+    })
+  ) {
+    return;
+  }
+  if (await runCookedCommand(operation, { markRecipeCooked: recipesApi.markRecipeCooked })) return;
+  if (
+    await runSettingsCommand(operation, {
+      updatePreferences: preferencesApi.updatePreferences,
+      updateProfileAnswers: profileAnswersApi.updateProfileAnswers,
+      updatePlannerSettings: plannerApi.updatePlannerSettings,
+    })
+  ) {
+    // Recommendations follow preferences and profile answers.
+    await queryClient.invalidateQueries({ queryKey: queryKeys.recommendations.home });
+    return;
+  }
+
+  // Older edits may name an item by the temporary id it had when queued.
+  const payload = operation.payload as Record<string, unknown>;
+  if (typeof payload.itemId === "string") {
+    payload.itemId =
+      (await resolveSyncIdMapping(db, payload.itemId, "shopping_list_item")) ?? payload.itemId;
+  }
+
   switch (operation.kind) {
-    case "favorite_add": {
-      const { recipeId } = operation.payload as { recipeId: string };
-      await favoritesApi.addFavorite(recipeId);
-      return;
-    }
-
-    case "favorite_remove": {
-      const { recipeId } = operation.payload as { recipeId: string };
-      await favoritesApi.removeFavorite(recipeId);
-      return;
-    }
-
     case "shopping_toggle": {
       const { itemId, checked } = operation.payload as {
         itemId: string;
@@ -100,81 +124,6 @@ async function runOperation(operation: SyncQueueOperation, db: SQLiteDatabase) {
     case "shopping_remove": {
       const { itemId } = operation.payload as { itemId: string };
       await shoppingListApi.deleteShoppingListItem(itemId);
-      return;
-    }
-
-    case "profile_answers_update": {
-      await profileAnswersApi.updateProfileAnswers(
-        operation.payload as UserProfileAnswersUpdateRequest
-      );
-      return;
-    }
-
-    case "planner_settings_update": {
-      await plannerApi.updatePlannerSettings(
-        operation.payload as PlannerSettingsUpdateRequest
-      );
-      return;
-    }
-
-    case "shopping_list_item_add": {
-      const { listId, temporaryId, ...payload } = operation.payload as {
-        listId: string;
-        temporaryId?: string;
-      } & ShoppingListItemCreateRequest;
-      const created = await shoppingListsApi.addShoppingListItemToList(listId, payload);
-      if (temporaryId) {
-        await saveSyncIdMapping(
-          db,
-          temporaryId,
-          created.id,
-          "shopping_list_item"
-        );
-        await deleteShoppingListItem(db, temporaryId);
-        await insertShoppingListItem(db, {
-          ...apiShoppingItemToLocalItem(created),
-          listId,
-        });
-      }
-      return;
-    }
-
-    case "shopping_list_item_toggle": {
-      const { listId, itemId, checked } = operation.payload as {
-        listId: string;
-        itemId: string;
-        checked: boolean;
-      };
-      await shoppingListsApi.updateShoppingListItemInList(listId, itemId, {
-        checked,
-      });
-      return;
-    }
-
-    case "shopping_list_item_remove": {
-      const { listId, itemId } = operation.payload as {
-        listId: string;
-        itemId: string;
-      };
-      await shoppingListsApi.deleteShoppingListItemFromList(listId, itemId);
-      return;
-    }
-
-    case "shopping_list_recipe_batch": {
-      const { listId, ...payload } = operation.payload as {
-        listId: string;
-        clientMutationId: string;
-        recipes: { recipeId: string; servings: number }[];
-      };
-      const updatedList = await shoppingListsApi.addRecipesToShoppingList(
-        listId,
-        payload
-      );
-      const items = updatedList.items.map((item) => ({
-        ...apiShoppingItemToLocalItem(item),
-        listId,
-      }));
-      await replaceShoppingListItemsForList(db, listId, items);
       return;
     }
 

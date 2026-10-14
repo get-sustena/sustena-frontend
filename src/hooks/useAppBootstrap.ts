@@ -26,22 +26,23 @@ import {
   getStoredPantryIngredientIds,
   replaceStoredPantry,
 } from "../db/pantryRepository";
+import { mapShoppingListRowToItem } from "../db/shoppingItemRows";
 import {
   getStoredShoppingListItems,
-  mapShoppingListRowToItem,
   replaceShoppingListItemsForList,
 } from "../db/shoppingListRepository";
-import {
-  getStoredShoppingLists,
-  mapShoppingListRowToMeta,
-  upsertShoppingList,
-} from "../db/shoppingListsRepository";
+import { replaceListsKeepingPendingEdits } from "../db/shoppingListRows";
+import { getStoredShoppingLists, mapShoppingListRowToMeta } from "../db/shoppingListsRepository";
+import { runWriteTransaction } from "../db/writeTransaction";
 import { getSavedIngredientCatalog } from "../db/ingredientCatalogRepository";
 import { startApi } from "../lib/api";
 import { apiShoppingItemToLocalItem } from "../lib/api/adapters";
 import { getMealTime } from "../lib/mealTime";
 import { queryKeys } from "../lib/query/queryKeys";
-import { seedPublishedRecipesIfNeeded } from "../db/recipeRepository";
+import { applyBundledRecipeSeed } from "../db/recipeRepository";
+import { keepRecipesOffline, showSavedPhotos } from "../lib/catalogue/offlineCatalogue";
+import { saveMealPicks } from "../lib/catalogue/mealPicks";
+import { withPendingSettings } from "../lib/settings/settingsCommands";
 import { useFavoritesStore } from "../store/favoritesStore";
 import { useAuthStore } from "../store/authStore";
 import { usePreferencesStore } from "../store/preferencesStore";
@@ -99,7 +100,14 @@ export function useAppBootstrap(enabled = true) {
     // saved on the device as before.
     async function loadStart() {
       const mealTime = getMealTime(new Date());
-      const start = await startApi.getStart(mealTime);
+      const reply = await startApi.getStart(mealTime);
+      // Settings changed on the phone and not sent yet stay (QAD-01).
+      const start: StartResponse = {
+        ...reply,
+        preferences: await withPendingSettings(db, "preferences_update", reply.preferences),
+        profileAnswers: await withPendingSettings(db, "profile_answers_update", reply.profileAnswers),
+        plannerSettings: await withPendingSettings(db, "planner_settings_update", reply.plannerSettings),
+      };
 
       queryClient.setQueryData(queryKeys.preferences.me, start.preferences);
       queryClient.setQueryData(queryKeys.profileAnswers.me, start.profileAnswers);
@@ -120,7 +128,10 @@ export function useAppBootstrap(enabled = true) {
       return start;
     }
 
-    async function saveStart(start: StartResponse) {
+    async function saveStart(start: StartResponse, requestedAt: number) {
+      if (start.mealPicks) {
+        await saveMealPicks(db, start.user.id, start.mealPicks, new Date().toISOString());
+      }
       const current = usePreferencesStore.getState();
       const mergedPreferences = {
         healthConditions: start.preferences.healthConditions as HealthCondition[],
@@ -145,40 +156,43 @@ export function useAppBootstrap(enabled = true) {
       hydratePantry(pantryIngredientIds);
       await replaceStoredPantry(db, pantryIngredientIds);
 
-      const listMetadata = start.shoppingLists.map((list) => ({
-        id: list.id,
-        name: list.name,
-        isDefaultSyncedList: list.isActive,
-        createdAt: list.createdAt,
-        updatedAt: list.updatedAt,
-      }));
-      for (const [index, list] of start.shoppingLists.entries()) {
-        await upsertShoppingList(db, listMetadata[index]);
-        await replaceShoppingListItemsForList(
+      // Lists made, renamed or deleted on the phone and not sent yet stay
+      // as the phone has them (QAD-01).
+      const shownLists = await runWriteTransaction(db, (tx) =>
+        replaceListsKeepingPendingEdits(
+          tx,
+          start.shoppingLists.map((list) => ({
+            id: list.id,
+            name: list.name,
+            isDefaultSyncedList: list.isActive,
+            createdAt: list.createdAt,
+            updatedAt: list.updatedAt,
+          }))
+        )
+      );
+      for (const list of start.shoppingLists) {
+        if (!shownLists.some((shown) => shown.id === list.id)) continue;
+        const saved = await replaceShoppingListItemsForList(
           db,
           list.id,
           list.items.map((item) => ({
             ...apiShoppingItemToLocalItem(item),
             listId: list.id,
-          }))
+          })),
+          { requestedAt }
         );
+        if (list.isActive) {
+          hydrateShoppingItems(saved);
+        }
       }
-      hydrateShoppingLists(listMetadata);
-      const active = start.shoppingLists.find((list) => list.isActive);
-      if (active) {
-        hydrateShoppingItems(
-          active.items.map((item) => ({
-            ...apiShoppingItemToLocalItem(item),
-            listId: active.id,
-          }))
-        );
-      }
+      hydrateShoppingLists(shownLists);
     }
 
     async function bootstrap() {
       // Asked for first, so the server's answer is on its way while the
       // copy saved on the device loads. The app opens on the saved copy and
       // doesn't wait for the server.
+      const startRequestedAt = Date.now();
       const start = currentUserId
         ? queryClient
             .fetchQuery({
@@ -191,7 +205,8 @@ export function useAppBootstrap(enabled = true) {
         : null;
 
       try {
-        await seedPublishedRecipesIfNeeded(db);
+        await applyBundledRecipeSeed(db);
+        await showSavedPhotos(db);
 
         const storedPreferencesRow = await getStoredPreferences(db);
         const storedPreferences = mapStoredPreferencesRow(storedPreferencesRow);
@@ -267,9 +282,10 @@ export function useAppBootstrap(enabled = true) {
       const started = await start;
       if (started && isMounted) {
         try {
-          await saveStart(started);
+          await saveStart(started, startRequestedAt);
         } catch {
         }
+        await keepRecipesOffline(db, queryClient, started.recipeCatalogueVersion ?? null);
       }
     }
 

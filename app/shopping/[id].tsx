@@ -21,37 +21,22 @@ import { ShoppingItemsSkeleton } from "../../src/components/shopping/ShoppingIte
 import { AppText } from "../../src/components/ui/AppText";
 import { Icon } from "../../src/components/ui/Icon";
 import { Logo } from "../../src/components/ui/Logo";
+import { mapShoppingListRowToItem } from "../../src/db/shoppingItemRows";
 import {
-  deleteCheckedShoppingListItems,
-  deleteShoppingListItem,
   getStoredShoppingListItems,
-  insertShoppingListItem,
-  mapShoppingListRowToItem,
   replaceShoppingListItemsForList,
-  updateShoppingListItemChecked,
 } from "../../src/db/shoppingListRepository";
-import {
-  deleteShoppingList,
-  renameShoppingList as renameShoppingListLocal,
-} from "../../src/db/shoppingListsRepository";
-import {
-  cancelQueuedShoppingListItemRemoval,
-  enqueueSyncOperation,
-} from "../../src/db/syncQueueRepository";
-import { saveSyncIdMapping } from "../../src/db/syncIdMappingRepository";
-import {
-  useDeleteShoppingListMutation,
-  useRenameShoppingListMutation,
-} from "../../src/hooks/api/useShoppingLists";
+import { resolveSyncIdMapping } from "../../src/db/syncIdMappingRepository";
+import { useListCommands } from "../../src/hooks/useListCommands";
+import { pendingListCreation } from "../../src/lib/shopping/listCommands";
 import { useIsOnline } from "../../src/hooks/useIsOnline";
+import { useShoppingCommands } from "../../src/hooks/useShoppingCommands";
 import { shoppingListsApi } from "../../src/lib/api";
 import { apiShoppingItemToLocalItem } from "../../src/lib/api/adapters";
-import { getApiErrorMessage } from "../../src/lib/api/errors";
 import { groupShoppingListItems } from "../../src/lib/groupShoppingListItems";
-import { createLocalId } from "../../src/lib/id";
-import { structureShoppingQuantity } from "../../src/lib/shoppingQuantity";
 import { formatShoppingQuantity } from "../../src/lib/textFormatters";
 import { queryKeys } from "../../src/lib/query/queryKeys";
+import { onSyncFinished } from "../../src/lib/sync/syncEvents";
 import { useShoppingListsStore } from "../../src/store/shoppingListsStore";
 import { closeSheet, openSheet, showToast } from "../../src/store/uiStore";
 import { theme } from "../../src/theme/theme";
@@ -335,14 +320,14 @@ function LocalListDetail({ listId, shareOnOpen }: { listId: string; shareOnOpen:
   const db = useSQLiteContext();
   const isOnline = useIsOnline();
   const queryClient = useQueryClient();
+  const shoppingCommands = useShoppingCommands();
   const shotRef = useRef<ViewShotRef | null>(null);
   const list = useShoppingListsStore((state) =>
     state.lists.find((item) => item.id === listId)
   );
   const removeListInStore = useShoppingListsStore((state) => state.removeList);
   const renameListInStore = useShoppingListsStore((state) => state.renameList);
-  const renameShoppingListMutation = useRenameShoppingListMutation();
-  const deleteShoppingListMutation = useDeleteShoppingListMutation();
+  const listCommands = useListCommands();
   const [items, setItems] = useState<ShoppingListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [pantryExpanded, setPantryExpanded] = useState(false);
@@ -364,16 +349,17 @@ function LocalListDetail({ listId, shareOnOpen }: { listId: string; shareOnOpen:
 
   const refreshFromServer = useCallback(async () => {
     if (!isOnline) return;
+    // A list made on the phone isn't on the server until its creation is sent.
+    if (await pendingListCreation(db, listId)) return;
 
     try {
+      const requestedAt = Date.now();
       const serverList = await shoppingListsApi.getShoppingListById(listId);
       const serverItems = serverList.items
         .filter((item) => !item.deletedAt)
         .map((item) => ({ ...apiShoppingItemToLocalItem(item), listId }));
 
-      await replaceShoppingListItemsForList(db, listId, serverItems);
-
-      setItems(serverItems);
+      setItems(await replaceShoppingListItemsForList(db, listId, serverItems, { requestedAt }));
     } catch (error) {
       console.error("Failed to refresh shopping list from server", error);
     }
@@ -383,6 +369,21 @@ function LocalListDetail({ listId, shareOnOpen }: { listId: string; shareOnOpen:
     useCallback(() => {
       loadItems().then(refreshFromServer);
     }, [loadItems, refreshFromServer])
+  );
+
+  // Sent edits can swap a temporary id for the server's and move checked
+  // items into the pantry.
+  useEffect(
+    () =>
+      onSyncFinished(() => {
+        // A list made on the phone moves to the server's id once it's there.
+        void resolveSyncIdMapping(db, listId, "shopping_list").then((serverId) => {
+          if (serverId) router.setParams({ id: serverId });
+          else void loadItems();
+        });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.pantry.me });
+      }),
+    [db, listId, loadItems, queryClient]
   );
 
   const checkedCount = items.filter((item) => item.checked).length;
@@ -400,30 +401,12 @@ function LocalListDetail({ listId, shareOnOpen }: { listId: string; shareOnOpen:
     if (!item) return;
 
     const nextChecked = !item.checked;
-
-    // Persist locally before attempting server sync.
     setItems((current) =>
       current.map((entry) =>
         entry.id === itemId ? { ...entry, checked: nextChecked } : entry
       )
     );
-    await updateShoppingListItemChecked(db, itemId, nextChecked);
-
-    try {
-      await shoppingListsApi.updateShoppingListItemInList(listId, itemId, {
-        checked: nextChecked,
-      });
-      await queryClient.invalidateQueries({ queryKey: queryKeys.pantry.me });
-    } catch (error) {
-      console.error("Failed to sync list item, queuing for retry", error);
-      await enqueueSyncOperation(db, "shopping_list_item_toggle", {
-        listId,
-        itemId,
-        checked: nextChecked,
-      }).catch((queueError) => {
-        console.error("Failed to queue list item sync", queueError);
-      });
-    }
+    await shoppingCommands.setChecked({ listId, itemId, checked: nextChecked });
   }
 
   async function handleToggleSelectAll() {
@@ -437,146 +420,32 @@ function LocalListDetail({ listId, shareOnOpen }: { listId: string; shareOnOpen:
         itemIds.includes(item.id) ? { ...item, checked: nextChecked } : item
       )
     );
-    await Promise.all(
-      itemIds.map((itemId) => updateShoppingListItemChecked(db, itemId, nextChecked))
-    );
-    if (itemIds.length) {
-      try {
-        await shoppingListsApi.setShoppingListItemsChecked(listId, itemIds, nextChecked);
-        await queryClient.invalidateQueries({ queryKey: queryKeys.pantry.me });
-      } catch (error) {
-        console.error("Failed to sync bulk checkbox update", error);
-        await Promise.all(
-          itemIds.map((itemId) =>
-            enqueueSyncOperation(db, "shopping_list_item_toggle", {
-              listId,
-              itemId,
-              checked: nextChecked,
-            })
-          )
-        );
-      }
-    }
+    await shoppingCommands.setManyChecked({ listId, itemIds, checked: nextChecked });
     showToast(allChecked ? "All items deselected" : "All items selected");
   }
 
   async function handleClearChecked() {
     closeSheet();
-    const checkedIds = items
-      .filter((item) => item.checked)
-      .map((item) => item.id);
     setItems((current) => current.filter((item) => !item.checked));
-
-    await deleteCheckedShoppingListItems(db, listId);
-    try {
-      await shoppingListsApi.clearCheckedShoppingListItems(listId);
-    } catch (error) {
-      console.error("Failed to sync checked item removal", error);
-      await Promise.all(
-        checkedIds.map((itemId) =>
-          enqueueSyncOperation(db, "shopping_list_item_remove", { listId, itemId })
-        )
-      );
-    }
+    await shoppingCommands.clearChecked({ listId });
     showToast("Checked items removed", "success");
   }
 
   async function handleAddItem(name: string, quantity: string, ingredientId?: string, category = "Pantry") {
-    const now = new Date().toISOString();
-    const trimmedName = name.trim();
-    const trimmedQuantity = quantity.trim() || "1";
-    const structuredQuantity = structureShoppingQuantity(trimmedQuantity);
-    const localId = createLocalId("shopping_item");
-    const clientMutationId = createLocalId("shopping_mutation");
-    const newItem: ShoppingListItem = {
-      id: localId,
-      ingredientId,
-      name: trimmedName,
-      emoji: "🛒",
-      quantity: structuredQuantity.displayQuantity,
-      amount: structuredQuantity.amount ?? undefined,
-      displayQuantity: structuredQuantity.displayQuantity,
-      unit: structuredQuantity.unit ?? undefined,
-      category,
-      estimatedPrice: null,
-      priceStatus: "unknown",
-      clientMutationId,
-      checked: false,
-      createdAt: now,
-      updatedAt: now,
-      listId,
-    };
-    let savedItem = newItem;
-
-    // Use a client ID until the server returns the canonical ID.
-    await insertShoppingListItem(db, newItem);
-    setItems((current) => [...current, newItem]);
-    try {
-      const created = await shoppingListsApi.addShoppingListItemToList(listId, {
-        ingredientId,
-        name: trimmedName,
-        quantity: structuredQuantity.quantity,
-        amount: structuredQuantity.amount,
-        displayQuantity: structuredQuantity.displayQuantity,
-        unit: structuredQuantity.unit,
-        category,
-        clientMutationId,
-      });
-      const reconciled: ShoppingListItem = {
-        ...apiShoppingItemToLocalItem(created),
-        listId,
-      };
-      savedItem = reconciled;
-
-      await saveSyncIdMapping(db, localId, created.id, "shopping_list_item");
-      await deleteShoppingListItem(db, localId);
-      await insertShoppingListItem(db, reconciled);
-      setItems((current) =>
-        current.map((entry) => (entry.id === localId ? reconciled : entry))
-      );
-    } catch (error) {
-      console.error("Failed to sync new item, queuing for retry", error);
-      await enqueueSyncOperation(db, "shopping_list_item_add", {
-        listId,
-        temporaryId: localId,
-        ingredientId,
-        name: trimmedName,
-        quantity: structuredQuantity.quantity,
-        amount: structuredQuantity.amount,
-        displayQuantity: structuredQuantity.displayQuantity,
-        unit: structuredQuantity.unit,
-        category,
-        clientMutationId,
-      }).catch((queueError) => {
-        console.error("Failed to queue new item sync", queueError);
-      });
-    }
-    return savedItem;
+    const item = await shoppingCommands.addItem({ listId, name, quantity, ingredientId, category });
+    setItems((current) => [...current, item]);
+    return item;
   }
 
   async function handleRename(name: string) {
     const trimmed = name.trim();
     if (!trimmed) return;
 
-    if (!isOnline) {
-      closeSheet();
-      showToast("You're offline. Connect to rename this list", "danger");
-      return;
-    }
-
-    try {
-      await renameShoppingListMutation.mutateAsync({
-        shoppingListId: listId,
-        payload: { name: trimmed },
-      });
-      await renameShoppingListLocal(db, listId, trimmed);
-      renameListInStore(listId, trimmed);
-      closeSheet();
-      showToast("List renamed", "success");
-    } catch (error) {
-      closeSheet();
-      showToast(getApiErrorMessage(error), "danger");
-    }
+    // Saved on the phone at once, and sent when there's a connection.
+    await listCommands.renameList({ listId, name: trimmed });
+    renameListInStore(listId, trimmed);
+    closeSheet();
+    showToast("List renamed", "success");
   }
 
   function openItemMenu(item: ShoppingListItem) {
@@ -584,53 +453,28 @@ function LocalListDetail({ listId, shareOnOpen }: { listId: string; shareOnOpen:
       <ShoppingListItemEditSheet
         item={item}
         onSave={async (update) => {
-          try {
-            const structuredQuantity = structureShoppingQuantity(update.quantity, update.unit);
-            const updated = await shoppingListsApi.updateShoppingListItemInList(listId, item.id, {
-              name: update.name,
-              quantity: structuredQuantity.quantity,
-              amount: structuredQuantity.amount,
-              displayQuantity: structuredQuantity.displayQuantity,
-              unit: structuredQuantity.unit,
-              category: update.category,
-            });
-            const local = { ...apiShoppingItemToLocalItem(updated), listId };
-            await insertShoppingListItem(db, local);
-            setItems((current) => current.map((entry) => entry.id === item.id ? local : entry));
-            closeSheet();
-            showToast("Item updated", "success");
-          } catch (error) {
-            showToast(getApiErrorMessage(error), "danger");
-          }
+          // Saved on the phone at once, and sent when there's a connection.
+          await shoppingCommands.editItem({
+            listId,
+            itemId: item.id,
+            name: update.name,
+            quantity: update.quantity,
+            unit: update.unit,
+            category: update.category,
+          });
+          await loadItems();
+          closeSheet();
+          showToast("Item updated", "success");
         }}
         onRemove={async () => {
           closeSheet();
           setItems((current) => current.filter((entry) => entry.id !== item.id));
-          await deleteShoppingListItem(db, item.id);
-          try {
-            await shoppingListsApi.deleteShoppingListItemFromList(listId, item.id);
-          } catch {
-            await enqueueSyncOperation(db, "shopping_list_item_remove", {
-              listId,
-              itemId: item.id,
-            });
-          }
+          const removed = await shoppingCommands.removeItem({ listId, itemId: item.id });
           showToast("Item removed", "default", {
             label: "Undo",
             onPress: async () => {
-              await cancelQueuedShoppingListItemRemoval(db, listId, item.id);
-              let restored = item;
-              try {
-                const response = await shoppingListsApi.restoreShoppingListItemInList(
-                  listId,
-                  item.id
-                );
-                restored = { ...apiShoppingItemToLocalItem(response), listId };
-              } catch {
-                // A failed deletion may leave the original server row intact.
-              }
-              await insertShoppingListItem(db, restored);
-              setItems((current) => [...current, restored]);
+              await shoppingCommands.undoRemove({ listId, item: removed });
+              await loadItems();
             },
           });
         }}
@@ -639,23 +483,11 @@ function LocalListDetail({ listId, shareOnOpen }: { listId: string; shareOnOpen:
   }
 
   async function handleDelete() {
-    if (!isOnline) {
-      closeSheet();
-      showToast("You're offline. Connect to delete this list", "danger");
-      return;
-    }
-
-    try {
-      await deleteShoppingListMutation.mutateAsync(listId);
-      await deleteShoppingList(db, listId);
-      removeListInStore(listId);
-      closeSheet();
-      router.back();
-      showToast("Shopping list deleted", "success");
-    } catch (error) {
-      closeSheet();
-      showToast(getApiErrorMessage(error), "danger");
-    }
+    await listCommands.deleteList({ listId });
+    removeListInStore(listId);
+    closeSheet();
+    router.back();
+    showToast("Shopping list deleted", "success");
   }
 
   function openAddItemSheet() {

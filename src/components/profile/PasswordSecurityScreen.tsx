@@ -3,7 +3,7 @@ import { useState } from "react";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useChangePasswordMutation } from "../../hooks/api/useAuth";
-import { getApiErrorMessage } from "../../lib/api/errors";
+import { getApiErrorMessage, getApiValidationFieldErrors } from "../../lib/api/errors";
 import { showToast } from "../../store/uiStore";
 import { theme } from "../../theme/theme";
 import { AppText } from "../ui/AppText";
@@ -32,6 +32,13 @@ export function PasswordSecurityScreen() {
       showToast("Password updated", "success");
       router.back();
     } catch (error) {
+      // A message about the new password, such as "This password is too
+      // long. Use a shorter password." (B05), shows under it.
+      const fieldErrors = getApiValidationFieldErrors(error);
+      if (fieldErrors.newPassword || fieldErrors.currentPassword) {
+        setErrors({ next: fieldErrors.newPassword, current: fieldErrors.currentPassword });
+        return;
+      }
       showToast(getApiErrorMessage(error), "danger");
     }
   }

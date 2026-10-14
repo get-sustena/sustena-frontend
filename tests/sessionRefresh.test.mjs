@@ -29,8 +29,12 @@ function session(answers) {
 
 const failure = (status, message = `status ${status}`) => Object.assign(new Error(message), { status });
 
-test("F01: a refresh that times out, then gets a 5xx, keeps the person signed in with their tokens", async () => {
-  const { state, refresher } = session([failure(0, "timeout of 15000ms exceeded"), failure(503)]);
+test("F01: a temporary refresh outage preserves the session and a later retry recovers", async () => {
+  const { state, refresher } = session([
+    failure(0, "timeout of 15000ms exceeded"),
+    failure(503),
+    { accessToken: "recovered-access", refreshToken: "refresh-2" },
+  ]);
 
   const first = await refresher.refresh();
   const second = await refresher.refresh();
@@ -38,6 +42,16 @@ test("F01: a refresh that times out, then gets a 5xx, keeps the person signed in
   assert.equal(first.kind, "unavailable");
   assert.equal(second.kind, "unavailable");
   assert.deepEqual(state.tokens, { accessToken: "old-access", refreshToken: "refresh-1" });
+  assert.equal(state.cleared, 0);
+  assert.equal(state.ended, 0);
+
+  const recovered = await refresher.refresh();
+  assert.deepEqual(recovered, {
+    kind: "refreshed",
+    tokens: { accessToken: "recovered-access", refreshToken: "refresh-2" },
+  });
+  assert.deepEqual(state.tokens, { accessToken: "recovered-access", refreshToken: "refresh-2" });
+  assert.equal(state.asked, 3);
   assert.equal(state.cleared, 0);
   assert.equal(state.ended, 0);
 });

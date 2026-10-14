@@ -5,7 +5,7 @@ import { openSheet } from "../../../store/uiStore";
 import { theme } from "../../../theme/theme";
 import { RecipeAuthoringVocabulary } from "../../../types/api";
 import { AppText } from "../../ui/AppText";
-import { Icon } from "../../ui/Icon";
+import { ServingsStepper } from "../../ui/ServingsStepper";
 import { ChoiceRow, EditorSection, EditorStageIntro, formatVocabularyValues, openVocabularyPicker, SelectionField } from "./EditorCommon";
 import { RecipeComparisonBasisSheet } from "./RecipeComparisonBasisSheet";
 
@@ -47,23 +47,12 @@ export function StageDetails({ state, setState, vocabulary }: Props) {
         onChange={(difficulty) => setState((current) => ({ ...current, difficulty }))} />
       <View style={styles.metrics}>
         <View style={styles.servingRow}>
-          <View style={styles.servingCopy}>
-            <AppText style={styles.metricLabel}>Serves</AppText>
-            <AppText style={styles.servingValue}>{state.baseServings ?? 1}</AppText>
-            <AppText style={styles.people}>people</AppText>
-          </View>
-          <View style={styles.stepper}>
-            <Pressable accessibilityLabel="Decrease servings" disabled={(state.baseServings ?? 1) <= 1}
-              onPress={() => setState((current) => ({ ...current, baseServings: Math.max(1, (current.baseServings ?? 1) - 1) }))}
-              style={({ pressed }) => [styles.stepButton, pressed && styles.pressed]}>
-              <Icon name="minus" size={17} color={theme.colors.text} />
-            </Pressable>
-            <Pressable accessibilityLabel="Increase servings" disabled={(state.baseServings ?? 1) >= 25}
-              onPress={() => setState((current) => ({ ...current, baseServings: Math.min(25, (current.baseServings ?? 1) + 1) }))}
-              style={({ pressed }) => [styles.stepButton, pressed && styles.pressed]}>
-              <Icon name="plus" size={17} color={theme.colors.text} />
-            </Pressable>
-          </View>
+          <AppText style={styles.metricLabel}>Serves</AppText>
+          <ServingsStepper
+            value={state.baseServings ?? 1}
+            onChange={(baseServings) => setState((current) => ({ ...current, baseServings }))}
+            unit={(servings) => (servings === 1 ? "person" : "people")}
+          />
         </View>
         <View style={styles.timeGrid}>
           <TimeInput label="Preparation" value={state.prepTimeMinutes}
@@ -128,12 +117,7 @@ const styles = StyleSheet.create({
   pickerList: { overflow: "hidden", borderWidth: 1, borderColor: "#D9D9D9", borderRadius: 16, backgroundColor: "#FFFFFF" },
   metrics: { overflow: "hidden", borderWidth: 1, borderColor: "#D9D9D9", borderRadius: 18, backgroundColor: "#FFFFFF" },
   servingRow: { paddingHorizontal: 16, paddingVertical: 17, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomWidth: 1, borderBottomColor: "#D9D9D9" },
-  servingCopy: { flexDirection: "row", alignItems: "baseline", gap: 7 },
   metricLabel: { fontSize: 13, color: theme.colors.textMuted },
-  servingValue: { fontFamily: theme.fontFamily.display, fontSize: 27, color: theme.colors.navy },
-  people: { fontSize: 13, color: theme.colors.textMuted },
-  stepper: { flexDirection: "row", gap: 8 },
-  stepButton: { width: 42, height: 42, alignItems: "center", justifyContent: "center", borderRadius: 21, backgroundColor: "#F2F2F2" },
   timeGrid: { flexDirection: "row" },
   timeCell: { flex: 1, paddingHorizontal: 16, paddingVertical: 15 },
   timeCellDivided: { borderLeftWidth: 1, borderLeftColor: "#D9D9D9" },

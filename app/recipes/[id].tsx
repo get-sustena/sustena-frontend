@@ -1,8 +1,6 @@
 
 import * as Haptics from "expo-haptics";
-import { Image } from "expo-image";
 import { Href, router, useLocalSearchParams } from "expo-router";
-import { useSQLiteContext } from "expo-sqlite";
 import { lazy, Suspense, useMemo, useState, type ReactNode } from "react";
 import {
   Pressable,
@@ -19,32 +17,18 @@ import { AppText } from "../../src/components/ui/AppText";
 import { Button } from "../../src/components/ui/Button";
 import { Icon } from "../../src/components/ui/Icon";
 import { InlineNotice } from "../../src/components/ui/InlineNotice";
+import { SavedPhoto } from "../../src/components/ui/SavedPhoto";
+import { ServingsStepper } from "../../src/components/ui/ServingsStepper";
 import { ProgressLoader } from "../../src/components/ui/ProgressLoader";
 import { Screen } from "../../src/components/ui/Screen";
-import {
-  deleteFavoriteRecipe,
-  insertFavoriteRecipe,
-} from "../../src/db/favoritesRepository";
-import {
-  insertShoppingListItems,
-  replaceShoppingListItemsForList,
-} from "../../src/db/shoppingListRepository";
-import { enqueueSyncOperation } from "../../src/db/syncQueueRepository";
-import {
-  useAddFavoriteMutation,
-  useRemoveFavoriteMutation,
-} from "../../src/hooks/api/useFavorites";
 import { useIngredientCatalogQuery } from "../../src/hooks/api/useIngredients";
+import { useFavoriteCommands } from "../../src/hooks/useFavoriteCommands";
 import {
   useRecipeDetailWithLocalFallback,
 } from "../../src/hooks/api/useRecipes";
 import { useUnitsQuery } from "../../src/hooks/api/useUnits";
-import {
-  apiRecipeToLocalRecipe,
-  apiShoppingItemToLocalItem,
-} from "../../src/lib/api/adapters";
+import { apiRecipeToLocalRecipe } from "../../src/lib/api/adapters";
 import { getApiErrorMessage } from "../../src/lib/api/errors";
-import { shoppingListsApi } from "../../src/lib/api";
 import { formatNaira } from "../../src/lib/formatters";
 import {
   createInitialIngredientUnitSelections,
@@ -76,7 +60,6 @@ import type {
   RecipeDetail as ApiRecipeDetail,
   RecipeIngredient as ApiRecipeIngredient,
 } from "../../src/types/api";
-import { createLocalId } from "../../src/lib/id";
 import { readRecipeSource } from "../../src/lib/recipeSource";
 import { CookedButton } from "../../src/components/recipe/CookedButton";
 import {
@@ -90,6 +73,7 @@ import {
   NutritionStripSkeleton,
 } from "../../src/components/nutrition/NutritionStrip";
 import { useIngredientCaloriesShown } from "../../src/hooks/useIngredientCaloriesShown";
+import { useShoppingCommands } from "../../src/hooks/useShoppingCommands";
 import { ingredientCalories, oilTip } from "../../src/lib/nutrition/recipeNutrition";
 
 // Learn mode's code loads the first time it's opened, not with every recipe.
@@ -103,7 +87,6 @@ const LearnMode = lazy(() =>
 const INGREDIENT_CHEVRON_COLOR = "#686E66";
 
 export default function RecipeDetailScreen() {
-  const db = useSQLiteContext();
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
   // v6.8: font-size clamp(27px, 8vw, 34px), line-height 1.04, tracking -0.035em.
@@ -120,8 +103,6 @@ export default function RecipeDetailScreen() {
   const recipe = recipeDetail
     ? apiRecipeToLocalRecipe(recipeDetail)
     : undefined;
-  const addFavoriteMutation = useAddFavoriteMutation();
-  const removeFavoriteMutation = useRemoveFavoriteMutation();
 
   const defaultServingSize = usePreferencesStore(
     (state) => state.defaultServingSize
@@ -130,7 +111,7 @@ export default function RecipeDetailScreen() {
   const hapticsEnabled = usePreferencesStore((state) => state.hapticsEnabled);
 
   const addItems = useShoppingListStore((state) => state.addItems);
-  const hydrateItems = useShoppingListStore((state) => state.hydrateItems);
+  const shoppingCommands = useShoppingCommands();
   const activeListId = useShoppingListsStore((state) => state.activeListId);
   const shoppingLists = useShoppingListsStore((state) => state.lists);
 
@@ -142,12 +123,12 @@ export default function RecipeDetailScreen() {
     recipe ? state.isFavorite(recipe.id) : false
   );
   const [favoriteOverride, setFavoriteOverride] = useState<boolean | null>(null);
+  // The phone's copy of a recipe says "not saved" for everyone, so without
+  // the server's copy, the saved recipes kept on the phone decide.
   const isFavorite =
-    favoriteOverride ?? recipeDetail?.isFavorited ?? localIsFavorite;
-  const addFavoriteLocal = useFavoritesStore((state) => state.addFavorite);
-  const removeFavoriteLocal = useFavoritesStore(
-    (state) => state.removeFavorite
-  );
+    favoriteOverride ??
+    (shouldSyncApi && recipeDetail ? recipeDetail.isFavorited : localIsFavorite);
+  const favoriteCommands = useFavoriteCommands();
 
   const [ingredientUnitSelections, setIngredientUnitSelections] = useState(
     () => {
@@ -385,42 +366,7 @@ export default function RecipeDetailScreen() {
 
     const nextIsFavorite = !isFavorite;
     setFavoriteOverride(nextIsFavorite);
-
-    if (nextIsFavorite) {
-      addFavoriteLocal(recipe.id);
-    } else {
-      removeFavoriteLocal(recipe.id);
-    }
-
-    // Persist favorites locally before attempting server sync.
-    const localWrite = nextIsFavorite
-      ? insertFavoriteRecipe(db, recipe.id)
-      : deleteFavoriteRecipe(db, recipe.id);
-
-    await localWrite.catch((error) => {
-      console.error("Failed to persist favorite locally", error);
-    });
-
-    if (!shouldSyncApi || !recipeDetail) {
-      return;
-    }
-
-    try {
-      if (nextIsFavorite) {
-        await addFavoriteMutation.mutateAsync(recipeDetail.id);
-      } else {
-        await removeFavoriteMutation.mutateAsync(recipeDetail.id);
-      }
-    } catch (error) {
-      console.error("Failed to sync favorite, queuing for retry", error);
-      await enqueueSyncOperation(
-        db,
-        nextIsFavorite ? "favorite_add" : "favorite_remove",
-        { recipeId: recipeDetail.id }
-      ).catch((queueError) => {
-        console.error("Failed to queue favorite sync", queueError);
-      });
-    }
+    await favoriteCommands.setFavorite(recipe.id, nextIsFavorite);
   }
 
   function selectGlobalUnitMode(mode: UnitMode) {
@@ -494,46 +440,21 @@ export default function RecipeDetailScreen() {
       ingredientAmountOverrides,
     });
 
-    const batchPayload = {
-      clientMutationId: createLocalId("recipe_shopping"),
-      recipes: [
-        {
-          recipeId: recipe.id,
-          servings,
-          unitOverrides: (recipeDetail?.ingredients ?? []).flatMap(
-            (ingredient) => {
-              const unit = getSelectedApiIngredientOption(ingredient)
-                .selectedOption?.unit;
-              return unit ? [{ ingredientId: ingredient.id, unit }] : [];
-            }
-          ),
-        },
-      ],
-    };
-    try {
-      if (!shouldSyncApi) throw new Error("Recipe is only available offline");
-      const updatedList = await shoppingListsApi.addRecipesToShoppingList(
-        destinationListId,
-        batchPayload
-      );
-      const authoritativeItems = updatedList.items.map((item) => ({
-        ...apiShoppingItemToLocalItem(item),
-        listId: destinationListId,
-      }));
-      if (destinationListId === activeListId) {
-        hydrateItems(authoritativeItems);
-      }
-      await replaceShoppingListItemsForList(db, destinationListId, authoritativeItems);
-    } catch {
-      const localItems = items.map((item) => ({ ...item, listId: destinationListId }));
-      if (destinationListId === activeListId) {
-        addItems(localItems);
-      }
-      await insertShoppingListItems(db, localItems);
-      await enqueueSyncOperation(db, "shopping_list_recipe_batch", {
-        listId: destinationListId,
-        ...batchPayload,
-      });
+    const recipes = [
+      {
+        recipeId: recipe.id,
+        servings,
+        unitOverrides: (recipeDetail?.ingredients ?? []).flatMap((ingredient) => {
+          const unit = getSelectedApiIngredientOption(ingredient).selectedOption?.unit;
+          return unit ? [{ ingredientId: ingredient.id, unit }] : [];
+        }),
+      },
+    ];
+    // Shown at once and sent through the outbox, online or not; the
+    // server's merged list replaces these lines when it arrives.
+    const saved = await shoppingCommands.addRecipes({ listId: destinationListId, recipes, items });
+    if (destinationListId === activeListId) {
+      addItems(saved);
     }
 
     if (hapticsEnabled) {
@@ -564,62 +485,13 @@ export default function RecipeDetailScreen() {
   }
 
   async function addToolToShoppingList(tool: { id: string; name: string }) {
-    const clientMutationId = createLocalId("tool_shopping");
-    const now = new Date().toISOString();
-
-    try {
-      const created = await shoppingListsApi.addShoppingListItemToList(
-        activeListId,
-        {
-          name: tool.name,
-          quantity: "1 item",
-          displayQuantity: "1 item",
-          unit: "item",
-          category: "Tools",
-          estimatedPrice: null,
-          priceStatus: "unknown",
-          clientMutationId,
-        }
-      );
-      const item = {
-        ...apiShoppingItemToLocalItem(created),
-        listId: activeListId,
-      };
-      addItems([item]);
-      await insertShoppingListItems(db, [item]);
-    } catch {
-      const localItem = {
-        id: createLocalId("shopping_item"),
-        name: tool.name,
-        emoji: "",
-        quantity: "1 item",
-        amount: 1,
-        displayQuantity: "1 item",
-        unit: "item",
-        category: "Tools",
-        estimatedPrice: null,
-        priceStatus: "unknown" as const,
-        clientMutationId,
-        checked: false,
-        createdAt: now,
-        updatedAt: now,
-        listId: activeListId,
-      };
-      addItems([localItem]);
-      await insertShoppingListItems(db, [localItem]);
-      await enqueueSyncOperation(db, "shopping_list_item_add", {
-        listId: activeListId,
-        temporaryId: localItem.id,
-        name: tool.name,
-        quantity: "1 item",
-        amount: 1,
-        displayQuantity: "1 item",
-        unit: "item",
-        category: "Tools",
-        clientMutationId,
-      });
-    }
-
+    const item = await shoppingCommands.addItem({
+      listId: activeListId,
+      name: tool.name,
+      quantity: "1 item",
+      category: "Tools",
+    });
+    addItems([item]);
     showToast(`${tool.name} added to your shopping list`, "success");
   }
 
@@ -639,6 +511,23 @@ export default function RecipeDetailScreen() {
             />
           </View>
           <Button title="Try again" onPress={() => recipeQuery.refetch()} />
+        </View>
+      </Screen>
+    );
+  }
+
+  if (!recipe && recipeQuery.isWaitingForConnection) {
+    return (
+      <Screen>
+        <View style={styles.center}>
+          <AppText variant="title">{"This recipe isn't on your phone yet"}</AppText>
+          <AppText style={styles.offlineNote}>
+            Connect to the internet to open it.
+          </AppText>
+
+          <Pressable onPress={() => router.back()} style={styles.backButton}>
+            <AppText style={styles.backText}>Go back</AppText>
+          </Pressable>
         </View>
       </Screen>
     );
@@ -732,8 +621,8 @@ export default function RecipeDetailScreen() {
             }
           >
             {recipeDetail?.creator?.avatarUrl ? (
-              <Image
-                source={{ uri: recipeDetail.creator.avatarUrl }}
+              <SavedPhoto
+                url={recipeDetail.creator.avatarUrl}
                 contentFit="cover"
                 style={styles.creatorAvatar}
               />
@@ -797,30 +686,7 @@ export default function RecipeDetailScreen() {
           {recipeDetail && !recipeDetail.baseServings ? null : (
             <>
               <SectionHeader title="Adjust recipe" first />
-              <View style={styles.servingCard}>
-                <Pressable
-                  onPress={() => setServings((current) => Math.max(1, current - 1))}
-                  style={styles.servingButton}
-                >
-                  <Icon name="minus" size={20} color={theme.colors.text} />
-                </Pressable>
-
-                <View style={styles.servingValueWrap}>
-                  <AppText style={styles.servingValue}>{servings}</AppText>
-                  <AppText style={styles.servingLabel}>
-                    servings
-                  </AppText>
-                </View>
-
-                <Pressable
-                  onPress={() =>
-                    setServings((current) => Math.min(25, current + 1))
-                  }
-                  style={styles.servingButton}
-                >
-                  <Icon name="plus" size={20} color={theme.colors.text} />
-                </Pressable>
-              </View>
+              <ServingsStepper value={servings} onChange={setServings} />
             </>
           )}
 
@@ -1484,6 +1350,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: theme.spacing.lg,
   },
+  offlineNote: {
+    color: theme.colors.textMedium,
+    textAlign: "center",
+    paddingHorizontal: theme.spacing.xl,
+  },
   backButton: {
     paddingHorizontal: theme.spacing.xl,
     paddingVertical: theme.spacing.md,
@@ -1624,45 +1495,6 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     color: theme.colors.navy,
     letterSpacing: -0.4,
-  },
-  servingCard: {
-    width: 210,
-    alignSelf: "center",
-    backgroundColor: theme.colors.white,
-    borderWidth: 0.5,
-    borderColor: "#E2E2E0",
-    borderRadius: 999,
-    paddingVertical: 3,
-    paddingHorizontal: 4,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
-  },
-  servingButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 999,
-    backgroundColor: theme.colors.card2,
-    borderWidth: 0,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  servingValueWrap: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "baseline",
-    justifyContent: "center",
-    gap: 6,
-  },
-  servingValue: {
-    fontFamily: theme.fontFamily.display,
-    fontSize: 22,
-    color: theme.colors.navy,
-  },
-  servingLabel: {
-    fontFamily: theme.fontFamily.bodyMedium,
-    fontSize: 13,
-    color: "#545B53",
   },
   unitModeRow: {
     flexDirection: "row",

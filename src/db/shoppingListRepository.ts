@@ -1,27 +1,8 @@
 import { type SQLiteDatabase } from "expo-sqlite";
-import { DEFAULT_SHOPPING_LIST_ID, ShoppingListItem } from "../types/shoppingList";
+import { ShoppingListItem } from "../types/shoppingList";
 import { runWithSqliteRetry } from "./sqliteGuards";
 import { runWriteTransaction } from "./writeTransaction";
-
-type ShoppingListItemRow = {
-  id: string;
-  ingredient_id: string | null;
-  name: string;
-  emoji: string;
-  quantity: string;
-  amount: number | null;
-  display_quantity: string | null;
-  unit: string | null;
-  category: string;
-  estimated_price: number | null;
-  price_status: "unknown" | "estimated" | "confirmed";
-  client_mutation_id: string | null;
-  checked: number;
-  source_recipe_id: string | null;
-  created_at: string;
-  updated_at: string;
-  list_id: string | null;
-};
+import { replaceListItemsKeepingPendingEdits, type ShoppingListItemRow } from "./shoppingItemRows";
 
 export async function getStoredShoppingListItems(
   db: SQLiteDatabase,
@@ -48,141 +29,19 @@ export async function getStoredShoppingListItems(
   );
 }
 
-export async function insertShoppingListItem(
-  db: SQLiteDatabase,
-  item: ShoppingListItem
-) {
-  await db.runAsync(
-    `
-    INSERT OR REPLACE INTO shopping_list_items (
-      id,
-      ingredient_id,
-      name,
-      emoji,
-      quantity,
-      amount,
-      display_quantity,
-      unit,
-      category,
-      estimated_price,
-      price_status,
-      client_mutation_id,
-      checked,
-      source_recipe_id,
-      created_at,
-      updated_at,
-      list_id
-    )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `,
-    [
-      item.id,
-      item.ingredientId ?? null,
-      item.name,
-      item.emoji,
-      item.quantity,
-      item.amount ?? null,
-      item.displayQuantity ?? null,
-      item.unit ?? null,
-      item.category,
-      item.estimatedPrice,
-      item.priceStatus ?? (item.estimatedPrice === null ? "unknown" : "estimated"),
-      item.clientMutationId ?? null,
-      item.checked ? 1 : 0,
-      item.sourceRecipeId ?? null,
-      item.createdAt,
-      item.updatedAt,
-      item.listId ?? DEFAULT_SHOPPING_LIST_ID,
-    ]
-  );
-}
-
-export async function insertShoppingListItems(
-  db: SQLiteDatabase,
-  items: ShoppingListItem[]
-) {
-  await runWithSqliteRetry(async () => {
-    await runWriteTransaction(db, async (transactionDb) => {
-      for (const item of items) {
-        await insertShoppingListItem(transactionDb, item);
-      }
-    });
-  });
-}
-
-export async function replaceShoppingListItemsForList(
+// Saves a server reply for one list, keeping edits not yet sent. Returns
+// the list as saved. Pass `requestedAt` (when the reply was asked for) for a
+// read, so a reply older than an edit the server has accepted is ignored.
+export function replaceShoppingListItemsForList(
   db: SQLiteDatabase,
   listId: string,
-  items: ShoppingListItem[]
+  items: ShoppingListItem[],
+  options: { requestedAt?: number } = {}
 ) {
-  await runWithSqliteRetry(async () => {
-    await runWriteTransaction(db, async (transactionDb) => {
-      await transactionDb.runAsync(
-        "DELETE FROM shopping_list_items WHERE list_id = ?",
-        [listId]
-      );
-
-      for (const item of items) {
-        await insertShoppingListItem(transactionDb, {
-          ...item,
-          listId,
-        });
-      }
-    });
-  });
-}
-
-export async function updateShoppingListItemChecked(
-  db: SQLiteDatabase,
-  itemId: string,
-  checked: boolean
-) {
-  await db.runAsync(
-    `
-    UPDATE shopping_list_items
-    SET checked = ?, updated_at = ?
-    WHERE id = ?
-    `,
-    [checked ? 1 : 0, new Date().toISOString(), itemId]
-  );
-}
-
-export async function deleteShoppingListItem(
-  db: SQLiteDatabase,
-  itemId: string
-) {
-  await db.runAsync(
-    `
-    DELETE FROM shopping_list_items
-    WHERE id = ?
-    `,
-    [itemId]
-  );
-}
-
-export async function deleteCheckedShoppingListItems(
-  db: SQLiteDatabase,
-  listId: string
-) {
-  await db.runAsync(
-    `
-    DELETE FROM shopping_list_items
-    WHERE checked = 1 AND list_id = ?
-    `,
-    [listId]
-  );
-}
-
-export async function deleteShoppingListItemsForList(
-  db: SQLiteDatabase,
-  listId: string
-) {
-  await db.runAsync(
-    `
-    DELETE FROM shopping_list_items
-    WHERE list_id = ?
-    `,
-    [listId]
+  return runWithSqliteRetry(() =>
+    runWriteTransaction(db, (transactionDb) =>
+      replaceListItemsKeepingPendingEdits(transactionDb, listId, items, options)
+    )
   );
 }
 
@@ -203,28 +62,4 @@ export async function getShoppingListItemSummaries(db: SQLiteDatabase) {
     GROUP BY list_id
     `
   );
-}
-
-export function mapShoppingListRowToItem(
-  row: ShoppingListItemRow
-): ShoppingListItem {
-  return {
-    id: row.id,
-    ingredientId: row.ingredient_id ?? undefined,
-    name: row.name,
-    emoji: row.emoji,
-    quantity: row.quantity,
-    amount: row.amount ?? undefined,
-    displayQuantity: row.display_quantity ?? undefined,
-    unit: row.unit ?? undefined,
-    category: row.category,
-    estimatedPrice: row.estimated_price,
-    priceStatus: row.price_status,
-    clientMutationId: row.client_mutation_id ?? undefined,
-    checked: Boolean(row.checked),
-    sourceRecipeId: row.source_recipe_id ?? undefined,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-    listId: row.list_id ?? DEFAULT_SHOPPING_LIST_ID,
-  };
 }
