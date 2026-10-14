@@ -21,7 +21,14 @@ export const DAILY_VALUES: NutrientValues = {
 
 export type NutritionIngredient = Pick<
   RecipeIngredient,
-  "id" | "ingredientId" | "ingredientName" | "canonicalIngredientName" | "rawText" | "nutrition" | "isFryingOil"
+  | "id"
+  | "ingredientId"
+  | "ingredientName"
+  | "canonicalIngredientName"
+  | "rawText"
+  | "nutrition"
+  | "isFryingOil"
+  | "quantityMode"
 >;
 
 const wholeNumber = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 0 });
@@ -55,24 +62,25 @@ const SHARE_WORDS: [NutrientKey, string][] = [
   ["sodiumMg", "salt"],
 ];
 
-export type IngredientCalories =
-  | { counted: false }
-  | { counted: true; kcal: number; share: string | null };
+export type IngredientCalories = { kcal: number; share: string | null };
 
 // The line under an ingredient: the calories in the amount on its pill, so
 // it follows the serving picker, and its biggest share of something when
-// that's 40% or more ("most of the carbs", "about half the fat").
+// that's 40% or more ("most of the carbs", "about half the fat"). An
+// ingredient with nothing to count, such as salt to taste or water, gets no
+// line (founder, 14 October 2026).
 export function ingredientCalories(
   ingredient: NutritionIngredient,
   ingredients: NutritionIngredient[],
   servings: number,
   baseServings: number
-): IngredientCalories {
+): IngredientCalories | null {
   const values = ingredient.nutrition;
-  if (!values) return { counted: false };
+  if (!values) return null;
 
   const kcal = (values.kcal * servings) / baseServings;
-  if (ingredient.isFryingOil) return { counted: true, kcal, share: "only what soaks in" };
+  if (ingredient.isFryingOil) return { kcal, share: "only what soaks in" };
+  if (Math.round(kcal) === 0) return null;
 
   let best: { word: string; share: number } | null = null;
   for (const [key, word] of SHARE_WORDS) {
@@ -81,7 +89,7 @@ export function ingredientCalories(
     if (share >= 0.4 && (!best || share > best.share)) best = { word, share };
   }
   const share = best ? `${best.share >= 0.5 ? "most of the" : "about half the"} ${best.word}` : null;
-  return { counted: true, kcal, share };
+  return { kcal, share };
 }
 
 // "Lighter: using half the oil cuts about 100 kcal from each serving." on the
@@ -184,10 +192,13 @@ export function otherNutrients(perServing: NutrientValues, plates: number): Othe
 }
 
 // "Estimates." with what isn't counted, and a note when the recipe deep-fries.
+// "To taste" lines, such as salt, add nothing to count, so they aren't named.
 export function nutritionFootnote(ingredients: NutritionIngredient[]) {
   const skipped = [
     ...new Set(
-      ingredients.filter((ingredient) => !ingredient.nutrition).map((ingredient) => ingredientName(ingredient).toLowerCase())
+      ingredients
+        .filter((ingredient) => !ingredient.nutrition && ingredient.quantityMode !== "to_taste")
+        .map((ingredient) => ingredientName(ingredient).toLowerCase())
     ),
   ];
   return (

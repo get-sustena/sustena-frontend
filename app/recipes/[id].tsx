@@ -882,6 +882,12 @@ export default function RecipeDetailScreen() {
                   selectedOption,
                   selectedValue,
                 } = getSelectedApiIngredientOption(apiIngredient);
+                const ingredientCaloriesLine = ingredientCalories(
+                  apiIngredient,
+                  recipeDetail?.ingredients ?? [],
+                  servings,
+                  nutritionBaseServings
+                );
                 const displayAmount =
                   selectedOption?.preview ??
                   scaleAmountText({
@@ -912,15 +918,8 @@ export default function RecipeDetailScreen() {
                       <AppText style={styles.ingredientName}>
                         {capitalizeWords(ingredient.name)}
                       </AppText>
-                      {nutritionPerServing && caloriesOnIngredients.isShown ? (
-                        <IngredientCaloriesLine
-                          calories={ingredientCalories(
-                            apiIngredient,
-                            recipeDetail?.ingredients ?? [],
-                            servings,
-                            nutritionBaseServings
-                          )}
-                        />
+                      {nutritionPerServing && caloriesOnIngredients.isShown && ingredientCaloriesLine ? (
+                        <IngredientCaloriesLine calories={ingredientCaloriesLine} />
                       ) : null}
                     </View>
 
