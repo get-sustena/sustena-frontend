@@ -11,18 +11,22 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 // Each recipe's shopping lines, as the server generates them.
 const RECIPE_LINES = {
   jollof: [
-    { ingredientId: "ing-rice", name: "Long grain rice" },
-    { ingredientId: "ing-tomato", name: "Tomatoes" },
+    { recipeIngredientId: "ri-jollof-rice", ingredientId: "ing-rice", name: "Long grain rice" },
+    { recipeIngredientId: "ri-jollof-tomato", ingredientId: "ing-tomato", name: "Tomatoes" },
   ],
-  stew: [{ ingredientId: "ing-tomato", name: "Tomatoes" }],
+  stew: [{ recipeIngredientId: "ri-stew-tomato", ingredientId: "ing-tomato", name: "Tomatoes" }],
+  // A line the catalogue doesn't know: it never merges, and its name is
+  // the same as a manual item's (SOL-03).
+  porridge: [{ recipeIngredientId: "ri-porridge-rice", ingredientId: null, name: "Rice" }],
 };
 
 // Like the real server: a recipe line for an ingredient already on the list
 // merges into that row; the same clientMutationId again changes nothing; ids
 // that aren't its own are refused.
-function fakeServer() {
+// `lineItems: false` is a server from before the line mapping.
+function fakeServer({ lineItems: answersLineItems = true } = {}) {
   const items = new Map();
-  const batches = new Set();
+  const batches = new Map();
   const calls = [];
   let next = 1;
   const failNext = [];
@@ -46,21 +50,30 @@ function fakeServer() {
       failNext.push(...failures);
     },
     api: {
-      async addRecipesToShoppingList(listId, { clientMutationId, recipes }) {
+      async addRecipesToShoppingList(listId, { clientMutationId, recipes, lines = [] }) {
         calls.push(["batch", clientMutationId]);
         maybeFail("before");
         if (!batches.has(clientMutationId)) {
-          batches.add(clientMutationId);
+          // Where each recipe line landed, kept with the batch for replays.
+          const landed = new Map();
           for (const { recipeId } of recipes) {
-            for (const line of RECIPE_LINES[recipeId]) {
-              if (live().some((item) => item.ingredientId === line.ingredientId)) continue;
-              const id = `00000000-0000-4000-8000-${String(next++).padStart(12, "0")}`;
-              items.set(id, { id, shoppingListId: listId, recipeId, ...line, checked: false, deletedAt: null });
+            for (const { recipeIngredientId, ingredientId, name } of RECIPE_LINES[recipeId]) {
+              const existing = ingredientId ? live().find((item) => item.ingredientId === ingredientId) : undefined;
+              let id = existing?.id;
+              if (!id) {
+                id = `00000000-0000-4000-8000-${String(next++).padStart(12, "0")}`;
+                items.set(id, { id, shoppingListId: listId, recipeId, ingredientId, name, checked: false, deletedAt: null });
+              }
+              landed.set(recipeIngredientId, id);
             }
           }
+          batches.set(
+            clientMutationId,
+            lines.map((line) => ({ clientLineId: line.clientLineId, itemId: landed.get(line.recipeIngredientId) ?? null }))
+          );
         }
         maybeFail("after");
-        return list();
+        return answersLineItems ? { ...list(), lineItems: batches.get(clientMutationId) } : list();
       },
       async addShoppingListItemToList(listId, payload) {
         calls.push(["add", payload.clientMutationId]);
@@ -137,7 +150,8 @@ const commandsFor = ({ db, transact }) =>
 const generated = (recipeId) =>
   RECIPE_LINES[recipeId].map((line) => ({
     id: `shopping_item_${++idCounter}`,
-    ingredientId: line.ingredientId,
+    recipeIngredientId: line.recipeIngredientId,
+    ingredientId: line.ingredientId ?? undefined,
     name: line.name,
     emoji: "🛒",
     quantity: "1 cup",
@@ -355,5 +369,79 @@ test("QAD-02: clearing checked items removes them on the phone and queues one co
 
   await replay(database, server);
   assert.deepEqual(server.live().map((item) => item.name), ["Rice"]);
+  assert.deepEqual(await outbox(database.db), []);
+});
+
+// SOL-03: a manual "Rice: a bunch" and a recipe's "Rice 100 g", both
+// without a catalogue ingredient, are two rows with the same name.
+async function twoRice(server) {
+  const database = await openTestDatabase();
+  const commands = commandsFor(database);
+  await commands.addItem({ listId: LIST, name: "Rice", quantity: "a bunch" });
+  await replay(database, server);
+  const [recipeRice] = await commands.addRecipes({
+    listId: LIST,
+    recipes: [{ recipeId: "porridge", servings: 1 }],
+    items: generated("porridge"),
+  });
+  await commands.setChecked({ listId: LIST, itemId: recipeRice.id, checked: true });
+  await replay(database, server);
+  const manual = server.live().find((item) => item.quantity === "a bunch");
+  const fromRecipe = server.live().find((item) => item.recipeId === "porridge");
+  return { database, manual, fromRecipe };
+}
+
+test("F03: checking a recipe's Rice ticks that row, not a manual Rice with the same name", async () => {
+  const server = fakeServer();
+  const { database, manual, fromRecipe } = await twoRice(server);
+
+  assert.equal(fromRecipe.checked, true);
+  assert.equal(manual.checked, false);
+  assert.deepEqual(await outbox(database.db), []);
+});
+
+test("F03: the batch sends an id for each line it shows", async () => {
+  const server = fakeServer();
+  const database = await openTestDatabase();
+  const items = await addJollof(database);
+  const sent = [];
+  const recording = {
+    ...server,
+    api: {
+      ...server.api,
+      async addRecipesToShoppingList(listId, body) {
+        sent.push(body.lines);
+        return server.api.addRecipesToShoppingList(listId, body);
+      },
+    },
+  };
+  await replay(database, recording);
+
+  assert.deepEqual(sent, [
+    items.map((item) => ({ clientLineId: item.id, recipeId: "jollof", recipeIngredientId: item.recipeIngredientId })),
+  ]);
+});
+
+test("F03: with a server that can't say where a line went, a same-name match is never guessed; the check waits for review", async () => {
+  const server = fakeServer({ lineItems: false });
+  const { database, manual, fromRecipe } = await twoRice(server);
+
+  assert.equal(manual.checked, false);
+  assert.equal(fromRecipe.checked, false);
+  assert.deepEqual(await outbox(database.db), [
+    { kind: "shopping_list_item_toggle", depends_on: (await outbox(database.db))[0].depends_on, needs_attention: 1 },
+  ]);
+  const { listUnsavedChanges } = await import("../src/lib/sync/outboxRepair.ts");
+  assert.equal((await listUnsavedChanges(database.db)).length, 1);
+});
+
+test("F03: with a server that can't say where a line went, a catalogue ingredient on exactly one row is still matched", async () => {
+  const server = fakeServer({ lineItems: false });
+  const database = await openTestDatabase();
+  const items = await addJollof(database);
+  await commandsFor(database).setChecked({ listId: LIST, itemId: items[0].id, checked: true });
+  await replay(database, server);
+
+  assert.equal(server.live().find((item) => item.ingredientId === "ing-rice").checked, true);
   assert.deepEqual(await outbox(database.db), []);
 });

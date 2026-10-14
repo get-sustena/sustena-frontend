@@ -8,6 +8,7 @@ import {
 } from "../../db/shoppingItemRows.ts";
 import { resolveSyncIdMapping, saveSyncIdMapping } from "../../db/syncIdMappingRepository.ts";
 import type { SyncQueueOperation } from "../../db/syncQueueRepository.ts";
+import { UnsendableChangeError } from "../sync/syncReplay.ts";
 import type {
   ShoppingList,
   ShoppingListItem as ApiShoppingListItem,
@@ -35,8 +36,12 @@ type ShoppingApi = {
   clearCheckedShoppingListItems: (listId: string) => Promise<unknown>;
   addRecipesToShoppingList: (
     listId: string,
-    payload: { clientMutationId: string; recipes: RecipeBatch["recipes"] }
-  ) => Promise<Pick<ShoppingList, "items">>;
+    payload: {
+      clientMutationId: string;
+      recipes: RecipeBatch["recipes"];
+      lines?: { clientLineId: string; recipeId: string; recipeIngredientId: string }[];
+    }
+  ) => Promise<Pick<ShoppingList, "items"> & { lineItems?: { clientLineId: string; itemId: string | null }[] }>;
 };
 
 type Dependencies = {
@@ -54,20 +59,36 @@ type RecipeBatch = {
   recipes: { recipeId: string; servings: number; unitOverrides?: { ingredientId: string; unit: string }[] }[];
   // The items the phone showed for the batch. Missing from batches queued by
   // an older version of the app.
-  lines?: { id: string; ingredientId: string | null; name: string }[];
+  lines?: BatchLine[];
 };
 
-const sameName = (a: string | null | undefined, b: string | null | undefined) =>
-  Boolean(a && b && a.trim().toLowerCase() === b.trim().toLowerCase());
+type BatchLine = {
+  id: string;
+  recipeId?: string | null;
+  recipeIngredientId?: string | null;
+  ingredientId: string | null;
+};
 
-// The server's row for a line the phone made for a recipe: the same
-// ingredient, or failing that the same name. The server merges a line into
-// a row it already has, so several lines can point at one row (F03).
-function serverRowFor(line: NonNullable<RecipeBatch["lines"]>[number], items: ApiShoppingListItem[]) {
-  return (
-    (line.ingredientId ? items.find((item) => item.ingredientId === line.ingredientId) : undefined) ??
-    items.find((item) => sameName(item.name, line.name) || sameName(item.canonicalIngredientName, line.name))
-  );
+// The server's row for each line the phone showed (F03). The server says
+// where each line landed; several lines can share a row it merged them
+// into. A server from before that answer leaves only one safe match: the
+// line's catalogue ingredient on exactly one row. Nothing is matched by
+// name: two rows can share a name.
+function serverRowsFor(
+  lines: BatchLine[],
+  items: ApiShoppingListItem[],
+  lineItems: { clientLineId: string; itemId: string | null }[] | undefined
+) {
+  const rows = new Map<string, string>();
+  if (lineItems?.length) {
+    for (const { clientLineId, itemId } of lineItems) if (itemId) rows.set(clientLineId, itemId);
+    return rows;
+  }
+  for (const line of lines) {
+    const matches = line.ingredientId ? items.filter((item) => item.ingredientId === line.ingredientId) : [];
+    if (matches.length === 1) rows.set(line.id, matches[0].id);
+  }
+  return rows;
 }
 
 // Sends one shopping command from the outbox (shoppingCommands.ts).
@@ -78,7 +99,15 @@ export async function runShoppingCommand(
   { api, toLocalItem, transact, now }: Dependencies
 ) {
   const payload = operation.payload as { listId: string; itemId?: string };
-  const resolve = async (id: string) => (await resolveSyncIdMapping(db, id, "shopping_list_item")) ?? id;
+  // An edit that waited for its item to be created goes to the server's row
+  // for it. With no row known, it's kept for review rather than sent to a
+  // guess (F03).
+  const resolve = async (id: string) => {
+    const serverId = await resolveSyncIdMapping(db, id, "shopping_list_item");
+    if (serverId) return serverId;
+    if (operation.dependsOn) throw new UnsendableChangeError("This item's row on your list can't be found.");
+    return id;
+  };
   const acknowledge = (tx: SQLiteDatabase) => markListEditAcknowledged(tx, payload.listId, now());
 
   switch (operation.kind) {
@@ -110,15 +139,23 @@ export async function runShoppingCommand(
 
     case "shopping_list_recipe_batch": {
       const { listId, clientMutationId, recipes, lines = [] } = operation.payload as RecipeBatch;
-      const updated = await api.addRecipesToShoppingList(listId, { clientMutationId, recipes });
+      const sentLines = lines.flatMap((line) =>
+        line.recipeId && line.recipeIngredientId
+          ? [{ clientLineId: line.id, recipeId: line.recipeId, recipeIngredientId: line.recipeIngredientId }]
+          : []
+      );
+      const updated = await api.addRecipesToShoppingList(listId, {
+        clientMutationId,
+        recipes,
+        ...(sentLines.length ? { lines: sentLines } : {}),
+      });
       const serverItems = updated.items.filter((item) => !item.deletedAt);
       // Each line the phone showed now points at the server's row, so
       // checks and removals queued for it reach that row; the server's rows
       // replace the phone's.
       await transact(async (tx) => {
-        for (const line of lines) {
-          const row = serverRowFor(line, serverItems);
-          if (row) await saveSyncIdMapping(tx, line.id, row.id, "shopping_list_item");
+        for (const [lineId, itemId] of serverRowsFor(lines, serverItems, updated.lineItems)) {
+          await saveSyncIdMapping(tx, lineId, itemId, "shopping_list_item");
         }
         await tx.runAsync(
           "DELETE FROM shopping_list_items WHERE list_id = ? AND recipe_batch_id = ?",

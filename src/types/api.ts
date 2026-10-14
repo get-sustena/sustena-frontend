@@ -965,6 +965,16 @@ export interface ShoppingListRecipeBatchRequest {
     servings: number;
     unitOverrides?: { ingredientId: string; unit: string }[];
   }[];
+  // The lines the phone showed for these recipes, so the reply can say
+  // which row each one landed in (F03).
+  lines?: { clientLineId: string; recipeId: string; recipeIngredientId: string }[];
+}
+
+// POST .../add-recipes: the list, and where each line sent in `lines` went:
+// its row, or null when it added nothing or its row can't be known for
+// certain. The same on a replay of the same clientMutationId.
+export interface ShoppingListRecipeBatchResponse extends ShoppingList {
+  lineItems?: { clientLineId: string; itemId: UUIDString | null }[];
 }
 
 export type ShoppingListItemUpdate = ShoppingListItemUpdateRequest;

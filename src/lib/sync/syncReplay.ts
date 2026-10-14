@@ -44,10 +44,15 @@ export function retryDelayMs(attempts: number) {
   return Math.min(FIRST_RETRY_MS * 2 ** Math.max(0, attempts - 1), LONGEST_RETRY_MS);
 }
 
+// A change the phone can't send as it stands, such as a check on an item
+// whose row on the server can't be known. Kept for the person to review.
+export class UnsendableChangeError extends Error {}
+
 // A client error the same request will always get again. Offline (0),
 // timeouts (408), rate limits (429), sign-in (401) and server errors (5xx)
 // pass. So do errors that aren't from the API, such as a busy database.
 function isPermanentFailure(error: unknown) {
+  if (error instanceof UnsendableChangeError) return true;
   const status =
     typeof error === "object" && error !== null && "status" in error
       ? Number((error as { status: unknown }).status)

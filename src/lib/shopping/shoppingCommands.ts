@@ -139,7 +139,12 @@ export function createShoppingCommands({ db, transact, now, newId, requestSync }
             listId,
             clientMutationId: batchId,
             recipes,
-            lines: saved.map(({ id, ingredientId, name }) => ({ id, ingredientId: ingredientId ?? null, name })),
+            lines: saved.map((item) => ({
+              id: item.id,
+              recipeId: item.sourceRecipeId ?? null,
+              recipeIngredientId: item.recipeIngredientId ?? null,
+              ingredientId: item.ingredientId ?? null,
+            })),
           },
           { mutationId: batchId, entityId: recipeBatchEntity(batchId) }
         );
