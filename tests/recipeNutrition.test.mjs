@@ -40,21 +40,24 @@ const line = (name, nutrition, extra = {}) => ({
 const rice = line("Rice", values(700, 14, 150, 2));
 const oil = line("Vegetable oil", values(360, 0, 0, 40));
 const chicken = line("Chicken", values(400, 60, 0, 16));
-const salt = line("Salt", null);
+const salt = line("Salt", null, { quantityMode: "to_taste" });
 const ingredients = [rice, oil, chicken, salt];
 
 test("an ingredient's calories follow the servings and name its biggest share", () => {
   assert.deepEqual(ingredientCalories(rice, ingredients, 4, 2), {
-    counted: true,
     kcal: 1400,
     share: "most of the carbs",
   });
   assert.deepEqual(ingredientCalories(oil, ingredients, 2, 2), {
-    counted: true,
     kcal: 360,
     share: "most of the fat",
   });
-  assert.deepEqual(ingredientCalories(salt, ingredients, 2, 2), { counted: false });
+});
+
+test("an ingredient with nothing to count gets no line", () => {
+  const water = line("Water", values(0));
+  assert.equal(ingredientCalories(salt, ingredients, 2, 2), null);
+  assert.equal(ingredientCalories(water, [...ingredients, water], 2, 2), null);
 });
 
 test("a share between 40% and half reads 'about half the'", () => {
@@ -126,8 +129,12 @@ test("vitamin C and fibre are Good from 15%; saturated fat and sodium Go easy ab
   );
 });
 
-test("the footnote lists what isn't counted and the frying-oil rule", () => {
-  assert.equal(nutritionFootnote([rice, salt]), "Estimates. Not counted: salt.");
+test("the footnote lists what isn't counted, but not salt to taste, and the frying-oil rule", () => {
+  assert.equal(nutritionFootnote([rice, salt]), "Estimates.");
+  assert.equal(
+    nutritionFootnote([rice, salt, line("My spice mix", null, { quantityMode: "exact" })]),
+    "Estimates. Not counted: my spice mix."
+  );
   assert.equal(
     nutritionFootnote([rice, line("Oil", values(10), { isFryingOil: true })]),
     "Estimates. Frying oil counts only what the food soaks up."

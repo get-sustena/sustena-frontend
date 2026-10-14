@@ -15,8 +15,6 @@ import { recipeColors } from "./nutritionColors";
 
 // v6.8 .nu-ing-sub: the line under an ingredient's name.
 export function IngredientCaloriesLine({ calories }: { calories: IngredientCalories }) {
-  if (!calories.counted) return <AppText style={styles.line}>Not counted</AppText>;
-
   return (
     <AppText style={styles.line}>
       {`${formatWhole(calories.kcal)} kcal`}
