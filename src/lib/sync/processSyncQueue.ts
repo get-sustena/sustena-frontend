@@ -1,6 +1,5 @@
 import { onlineManager } from "@tanstack/react-query";
 import { type SQLiteDatabase } from "expo-sqlite";
-import { replaceShoppingListItemsForList } from "../../db/shoppingListRepository";
 import { resolveSyncIdMapping } from "../../db/syncIdMappingRepository";
 import type { SyncQueueOperation } from "../../db/syncQueueRepository";
 import { runWriteTransaction } from "../../db/writeTransaction";
@@ -39,9 +38,14 @@ async function runOperation(db: SQLiteDatabase, operation: SyncQueueOperation) {
       addShoppingListItemToList: shoppingListsApi.addShoppingListItemToList,
       updateShoppingListItemInList: shoppingListsApi.updateShoppingListItemInList,
       setShoppingListItemsChecked: shoppingListsApi.setShoppingListItemsChecked,
+      deleteShoppingListItemFromList: shoppingListsApi.deleteShoppingListItemFromList,
+      restoreShoppingListItemInList: shoppingListsApi.restoreShoppingListItemInList,
+      clearCheckedShoppingListItems: shoppingListsApi.clearCheckedShoppingListItems,
+      addRecipesToShoppingList: shoppingListsApi.addRecipesToShoppingList,
     },
     toLocalItem: apiShoppingItemToLocalItem,
     transact: (work) => runWriteTransaction(db, work),
+    now: () => Date.now(),
   });
   if (handled) return;
   if (
@@ -100,33 +104,6 @@ async function runOperation(db: SQLiteDatabase, operation: SyncQueueOperation) {
       await plannerApi.updatePlannerSettings(
         operation.payload as PlannerSettingsUpdateRequest
       );
-      return;
-    }
-
-    case "shopping_list_item_remove": {
-      const { listId, itemId } = operation.payload as {
-        listId: string;
-        itemId: string;
-      };
-      await shoppingListsApi.deleteShoppingListItemFromList(listId, itemId);
-      return;
-    }
-
-    case "shopping_list_recipe_batch": {
-      const { listId, ...payload } = operation.payload as {
-        listId: string;
-        clientMutationId: string;
-        recipes: { recipeId: string; servings: number }[];
-      };
-      const updatedList = await shoppingListsApi.addRecipesToShoppingList(
-        listId,
-        payload
-      );
-      const items = updatedList.items.map((item) => ({
-        ...apiShoppingItemToLocalItem(item),
-        listId,
-      }));
-      await replaceShoppingListItemsForList(db, listId, items);
       return;
     }
 

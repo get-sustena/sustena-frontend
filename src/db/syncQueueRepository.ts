@@ -15,6 +15,8 @@ export type SyncQueueKind =
   | "shopping_list_item_toggle"
   | "shopping_list_items_set_checked"
   | "shopping_list_item_remove"
+  | "shopping_list_item_restore"
+  | "shopping_list_clear_checked"
   | "shopping_list_recipe_batch"
   | "recipe_cooked";
 
@@ -130,22 +132,5 @@ export async function markSyncNeedsAttention(db: SQLiteDatabase, id: string, rea
   await db.runAsync(
     `UPDATE sync_queue SET needs_attention = 1, last_error = ? WHERE id = ?`,
     [reason, id]
-  );
-}
-
-export async function cancelQueuedShoppingListItemRemoval(
-  db: SQLiteDatabase,
-  listId: string,
-  itemId: string
-) {
-  const operations = await getPendingSyncOperations(db);
-  await Promise.all(
-    operations
-      .filter((operation) => {
-        if (operation.kind !== "shopping_list_item_remove") return false;
-        const payload = operation.payload as { listId?: string; itemId?: string };
-        return payload.listId === listId && payload.itemId === itemId;
-      })
-      .map((operation) => deleteSyncOperation(db, operation.id))
   );
 }

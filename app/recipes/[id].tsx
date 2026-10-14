@@ -1,7 +1,6 @@
 
 import * as Haptics from "expo-haptics";
 import { Href, router, useLocalSearchParams } from "expo-router";
-import { useSQLiteContext } from "expo-sqlite";
 import { lazy, Suspense, useMemo, useState, type ReactNode } from "react";
 import {
   Pressable,
@@ -21,23 +20,14 @@ import { InlineNotice } from "../../src/components/ui/InlineNotice";
 import { SavedPhoto } from "../../src/components/ui/SavedPhoto";
 import { ProgressLoader } from "../../src/components/ui/ProgressLoader";
 import { Screen } from "../../src/components/ui/Screen";
-import {
-  insertShoppingListItems,
-  replaceShoppingListItemsForList,
-} from "../../src/db/shoppingListRepository";
-import { enqueueSyncOperation } from "../../src/db/syncQueueRepository";
 import { useIngredientCatalogQuery } from "../../src/hooks/api/useIngredients";
 import { useFavoriteCommands } from "../../src/hooks/useFavoriteCommands";
 import {
   useRecipeDetailWithLocalFallback,
 } from "../../src/hooks/api/useRecipes";
 import { useUnitsQuery } from "../../src/hooks/api/useUnits";
-import {
-  apiRecipeToLocalRecipe,
-  apiShoppingItemToLocalItem,
-} from "../../src/lib/api/adapters";
+import { apiRecipeToLocalRecipe } from "../../src/lib/api/adapters";
 import { getApiErrorMessage } from "../../src/lib/api/errors";
-import { shoppingListsApi } from "../../src/lib/api";
 import { formatNaira } from "../../src/lib/formatters";
 import {
   createInitialIngredientUnitSelections,
@@ -69,7 +59,6 @@ import type {
   RecipeDetail as ApiRecipeDetail,
   RecipeIngredient as ApiRecipeIngredient,
 } from "../../src/types/api";
-import { createLocalId } from "../../src/lib/id";
 import { readRecipeSource } from "../../src/lib/recipeSource";
 import { CookedButton } from "../../src/components/recipe/CookedButton";
 import {
@@ -97,7 +86,6 @@ const LearnMode = lazy(() =>
 const INGREDIENT_CHEVRON_COLOR = "#686E66";
 
 export default function RecipeDetailScreen() {
-  const db = useSQLiteContext();
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
   // v6.8: font-size clamp(27px, 8vw, 34px), line-height 1.04, tracking -0.035em.
@@ -123,7 +111,6 @@ export default function RecipeDetailScreen() {
 
   const addItems = useShoppingListStore((state) => state.addItems);
   const shoppingCommands = useShoppingCommands();
-  const hydrateItems = useShoppingListStore((state) => state.hydrateItems);
   const activeListId = useShoppingListsStore((state) => state.activeListId);
   const shoppingLists = useShoppingListsStore((state) => state.lists);
 
@@ -452,46 +439,21 @@ export default function RecipeDetailScreen() {
       ingredientAmountOverrides,
     });
 
-    const batchPayload = {
-      clientMutationId: createLocalId("recipe_shopping"),
-      recipes: [
-        {
-          recipeId: recipe.id,
-          servings,
-          unitOverrides: (recipeDetail?.ingredients ?? []).flatMap(
-            (ingredient) => {
-              const unit = getSelectedApiIngredientOption(ingredient)
-                .selectedOption?.unit;
-              return unit ? [{ ingredientId: ingredient.id, unit }] : [];
-            }
-          ),
-        },
-      ],
-    };
-    try {
-      if (!shouldSyncApi) throw new Error("Recipe is only available offline");
-      const updatedList = await shoppingListsApi.addRecipesToShoppingList(
-        destinationListId,
-        batchPayload
-      );
-      const authoritativeItems = updatedList.items.map((item) => ({
-        ...apiShoppingItemToLocalItem(item),
-        listId: destinationListId,
-      }));
-      const saved = await replaceShoppingListItemsForList(db, destinationListId, authoritativeItems);
-      if (destinationListId === activeListId) {
-        hydrateItems(saved);
-      }
-    } catch {
-      const localItems = items.map((item) => ({ ...item, listId: destinationListId }));
-      if (destinationListId === activeListId) {
-        addItems(localItems);
-      }
-      await insertShoppingListItems(db, localItems);
-      await enqueueSyncOperation(db, "shopping_list_recipe_batch", {
-        listId: destinationListId,
-        ...batchPayload,
-      });
+    const recipes = [
+      {
+        recipeId: recipe.id,
+        servings,
+        unitOverrides: (recipeDetail?.ingredients ?? []).flatMap((ingredient) => {
+          const unit = getSelectedApiIngredientOption(ingredient).selectedOption?.unit;
+          return unit ? [{ ingredientId: ingredient.id, unit }] : [];
+        }),
+      },
+    ];
+    // Shown at once and sent through the outbox, online or not; the
+    // server's merged list replaces these lines when it arrives.
+    const saved = await shoppingCommands.addRecipes({ listId: destinationListId, recipes, items });
+    if (destinationListId === activeListId) {
+      addItems(saved);
     }
 
     if (hapticsEnabled) {

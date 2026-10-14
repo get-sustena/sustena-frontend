@@ -2,11 +2,7 @@ import { type SQLiteDatabase } from "expo-sqlite";
 import { ShoppingListItem } from "../types/shoppingList";
 import { runWithSqliteRetry } from "./sqliteGuards";
 import { runWriteTransaction } from "./writeTransaction";
-import {
-  insertShoppingListItem,
-  replaceListItemsKeepingPendingEdits,
-  type ShoppingListItemRow,
-} from "./shoppingItemRows";
+import { replaceListItemsKeepingPendingEdits, type ShoppingListItemRow } from "./shoppingItemRows";
 
 export async function getStoredShoppingListItems(
   db: SQLiteDatabase,
@@ -33,43 +29,19 @@ export async function getStoredShoppingListItems(
   );
 }
 
-export async function insertShoppingListItems(
-  db: SQLiteDatabase,
-  items: ShoppingListItem[]
-) {
-  await runWithSqliteRetry(async () => {
-    await runWriteTransaction(db, async (transactionDb) => {
-      for (const item of items) {
-        await insertShoppingListItem(transactionDb, item);
-      }
-    });
-  });
-}
-
 // Saves a server reply for one list, keeping edits not yet sent. Returns
-// the list as saved.
+// the list as saved. Pass `requestedAt` (when the reply was asked for) for a
+// read, so a reply older than an edit the server has accepted is ignored.
 export function replaceShoppingListItemsForList(
   db: SQLiteDatabase,
   listId: string,
-  items: ShoppingListItem[]
+  items: ShoppingListItem[],
+  options: { requestedAt?: number } = {}
 ) {
   return runWithSqliteRetry(() =>
     runWriteTransaction(db, (transactionDb) =>
-      replaceListItemsKeepingPendingEdits(transactionDb, listId, items)
+      replaceListItemsKeepingPendingEdits(transactionDb, listId, items, options)
     )
-  );
-}
-
-export async function deleteCheckedShoppingListItems(
-  db: SQLiteDatabase,
-  listId: string
-) {
-  await db.runAsync(
-    `
-    DELETE FROM shopping_list_items
-    WHERE checked = 1 AND list_id = ?
-    `,
-    [listId]
   );
 }
 

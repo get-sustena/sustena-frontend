@@ -5,7 +5,7 @@ import {
   runWithSqliteRetry,
 } from "./sqliteGuards.ts";
 
-const DATABASE_VERSION = 16;
+const DATABASE_VERSION = 17;
 let migrationQueue = Promise.resolve();
 
 export async function migrateDbIfNeeded(db: SQLiteDatabase) {
@@ -452,6 +452,18 @@ async function runMigrations(db: SQLiteDatabase) {
       );
 
       PRAGMA user_version = 16;
+    `);
+  }
+
+  const versionAfterPhotos = versionAfterCommands < 16 ? 16 : versionAfterCommands;
+
+  // QAD-02 and F03: the recipe batch an item came with, while the batch is
+  // on its way to the server, so a check on the item waits for it.
+  if (versionAfterPhotos < 17) {
+    await db.execAsync(`
+      ALTER TABLE shopping_list_items ADD COLUMN recipe_batch_id TEXT;
+
+      PRAGMA user_version = 17;
     `);
   }
 }

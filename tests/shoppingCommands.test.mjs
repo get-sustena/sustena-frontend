@@ -98,7 +98,7 @@ function replay({ db, transact }, server) {
   clock.now += 60 * 60_000;
   return replayOutbox(
     db,
-    (database, operation) => runShoppingCommand(database, operation, { api: server.api, toLocalItem, transact }),
+    (database, operation) => runShoppingCommand(database, operation, { api: server.api, toLocalItem, transact, now: () => clock.now }),
     { isOnline: () => true, isStopped: () => false, now: () => clock.now }
   );
 }

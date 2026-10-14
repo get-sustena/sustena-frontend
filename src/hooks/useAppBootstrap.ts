@@ -122,7 +122,7 @@ export function useAppBootstrap(enabled = true) {
       return start;
     }
 
-    async function saveStart(start: StartResponse) {
+    async function saveStart(start: StartResponse, requestedAt: number) {
       if (start.mealPicks) {
         await saveMealPicks(db, start.user.id, start.mealPicks, new Date().toISOString());
       }
@@ -165,7 +165,8 @@ export function useAppBootstrap(enabled = true) {
           list.items.map((item) => ({
             ...apiShoppingItemToLocalItem(item),
             listId: list.id,
-          }))
+          })),
+          { requestedAt }
         );
         if (list.isActive) {
           hydrateShoppingItems(saved);
@@ -178,6 +179,7 @@ export function useAppBootstrap(enabled = true) {
       // Asked for first, so the server's answer is on its way while the
       // copy saved on the device loads. The app opens on the saved copy and
       // doesn't wait for the server.
+      const startRequestedAt = Date.now();
       const start = currentUserId
         ? queryClient
             .fetchQuery({
@@ -267,7 +269,7 @@ export function useAppBootstrap(enabled = true) {
       const started = await start;
       if (started && isMounted) {
         try {
-          await saveStart(started);
+          await saveStart(started, startRequestedAt);
         } catch {
         }
         await keepRecipesOffline(db, queryClient, started.recipeCatalogueVersion ?? null);

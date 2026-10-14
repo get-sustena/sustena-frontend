@@ -76,6 +76,7 @@ export default function ShoppingListsScreen() {
     if (!isOnline) return;
 
     try {
+      const requestedAt = Date.now();
       const serverLists = await shoppingListsApi.getShoppingLists();
       const currentLists = useShoppingListsStore.getState().lists;
       const serverIds = new Set(serverLists.map((list) => list.id));
@@ -109,7 +110,8 @@ export default function ShoppingListsScreen() {
             .items.map((item) => ({
               ...apiShoppingItemToLocalItem(item),
               listId: list.id,
-            }))
+            })),
+          { requestedAt }
         );
       }
 

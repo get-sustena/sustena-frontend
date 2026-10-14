@@ -48,6 +48,8 @@ export function generateShoppingListItemsFromRecipe({
 
     return {
       id: createLocalId("shopping_item"),
+      // How the outbox finds the server's row for this line (F03).
+      ingredientId: ingredient.ingredientId ?? undefined,
       name: ingredient.name,
       emoji: ingredient.emoji,
       quantity: scaledAmount,

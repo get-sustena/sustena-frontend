@@ -137,3 +137,76 @@ test("QAD-01: edits waiting for another list don't change this one", async () =>
   ]);
   assert.deepEqual((await rows(database.db, OTHER_LIST)).map((row) => row.name), ["Yam"]);
 });
+
+// SOL-01: an item created offline and checked; its creation reaches the
+// server, its check times out; then an empty reply asked for before any of
+// it arrives.
+async function staleSnapshotRepro({ passRequestedAt }) {
+  const { runShoppingCommand } = await import("../src/lib/shopping/shoppingReplay.ts");
+  const { replayOutbox } = await import("../src/lib/sync/outboxReplay.ts");
+  const database = await openTestDatabase();
+  const serverItems = new Map();
+  let checkTimesOut = true;
+  const api = {
+    async addShoppingListItemToList(listId, payload) {
+      const id = "00000000-0000-4000-8000-000000000001";
+      serverItems.set(id, { ...payload, id, shoppingListId: listId, checked: false });
+      return { ...serverItems.get(id) };
+    },
+    async updateShoppingListItemInList(listId, itemId, { checked }) {
+      if (checkTimesOut) throw Object.assign(new Error("timeout"), { status: 408 });
+      serverItems.get(itemId).checked = checked;
+    },
+  };
+  const toLocalItem = (item) => serverItem(item.id, item.name, item.checked, item.shoppingListId);
+  let clock = 1_000;
+  const replay = () =>
+    replayOutbox(
+      database.db,
+      (db, operation) => runShoppingCommand(db, operation, { api, toLocalItem, transact: database.transact, now: () => clock }),
+      { isOnline: () => true, isStopped: () => false, now: () => clock, ignoreBackoff: true }
+    );
+
+  const requestedAt = clock; // the empty list is asked for, and its reply is slow
+  clock += 10;
+  const commands = commandsFor(database);
+  const rice = await commands.addItem({ listId: LIST, name: "Rice", quantity: "1" });
+  await commands.setChecked({ listId: LIST, itemId: rice.id, checked: true });
+  clock += 10;
+  await replay(); // creation accepted; the check times out
+  clock += 10;
+
+  await database.transact((tx) =>
+    replaceListItemsKeepingPendingEdits(tx, LIST, [], passRequestedAt ? { requestedAt } : {})
+  );
+  const afterReply = await rows(database.db);
+
+  checkTimesOut = false;
+  await replay();
+  return { afterReply, serverItems, outbox: await database.db.getAllAsync("SELECT kind FROM sync_queue") };
+}
+
+test("QAD-01: a stale empty reply keeps an item whose check is still waiting, after its creation was accepted", async () => {
+  const { afterReply, serverItems, outbox } = await staleSnapshotRepro({ passRequestedAt: false });
+  const [serverRice] = serverItems.values();
+  assert.deepEqual(afterReply, [{ id: serverRice.id, name: "Rice", checked: 1 }]);
+  assert.equal(serverRice.checked, true);
+  assert.deepEqual(outbox, []);
+});
+
+test("QAD-01: a reply asked for before the server accepted an edit to the list is ignored", async () => {
+  const { afterReply, serverItems } = await staleSnapshotRepro({ passRequestedAt: true });
+  const [serverRice] = serverItems.values();
+  assert.deepEqual(afterReply, [{ id: serverRice.id, name: "Rice", checked: 1 }]);
+});
+
+test("QAD-01: a reply asked for after the last accepted edit is saved", async () => {
+  const database = await openSyncedList();
+  const { markListEditAcknowledged } = await import("../src/db/shoppingItemRows.ts");
+  await database.transact((tx) => markListEditAcknowledged(tx, LIST, 1_000));
+
+  await database.transact((tx) =>
+    replaceListItemsKeepingPendingEdits(tx, LIST, [serverItem("srv-1", "Rice")], { requestedAt: 2_000 })
+  );
+  assert.deepEqual(await rows(database.db), [{ id: "srv-1", name: "Rice", checked: 0 }]);
+});

@@ -118,6 +118,7 @@ function apiIngredientToLocalIngredient(ingredient: RecipeIngredient) {
       ingredient.canonicalIngredientName ??
       ingredient.rawText,
     canonicalIngredientName: ingredient.canonicalIngredientName,
+    ingredientId: ingredient.ingredientId,
     rawText: formatQuantityText(ingredient.rawText),
     emoji: "🛒",
     amount,

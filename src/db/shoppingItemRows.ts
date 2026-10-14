@@ -20,6 +20,7 @@ export type ShoppingListItemRow = {
   client_mutation_id: string | null;
   checked: number;
   source_recipe_id: string | null;
+  recipe_batch_id: string | null;
   created_at: string;
   updated_at: string;
   list_id: string | null;
@@ -41,102 +42,126 @@ export function mapShoppingListRowToItem(row: ShoppingListItemRow): ShoppingList
     clientMutationId: row.client_mutation_id ?? undefined,
     checked: Boolean(row.checked),
     sourceRecipeId: row.source_recipe_id ?? undefined,
+    recipeBatchId: row.recipe_batch_id ?? undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     listId: row.list_id ?? DEFAULT_SHOPPING_LIST_ID,
   };
 }
 
-// The edits to one list still waiting in the outbox.
-async function pendingListEdits(tx: SQLiteDatabase, listId: string) {
-  const operations = await tx.getAllAsync<{ kind: string; payload_json: string }>(
+// When the outbox last had an edit to this list accepted by the server
+// (milliseconds). A reply asked for before then can't show that edit.
+const acknowledgedKey = (listId: string) => `shopping_list_acknowledged:${listId}`;
+
+export async function markListEditAcknowledged(tx: SQLiteDatabase, listId: string, at: number) {
+  await tx.runAsync(
     `
-    SELECT kind, payload_json
-    FROM sync_queue
-    WHERE kind IN (
-      'shopping_list_item_add',
-      'shopping_list_item_toggle',
-      'shopping_list_items_set_checked',
-      'shopping_list_item_remove',
-      'shopping_list_recipe_batch'
-    )
-    ORDER BY created_at ASC, rowid ASC
-    `
+    INSERT INTO local_metadata (key, value, updated_at) VALUES (?, ?, ?)
+    ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+    `,
+    [acknowledgedKey(listId), String(at), new Date(at).toISOString()]
   );
-  const resolve = async (id: string) =>
-    (await resolveSyncIdMapping(tx, id, "shopping_list_item")) ?? id;
-
-  const edits = {
-    creating: new Set<string>(),
-    checked: new Map<string, boolean>(),
-    removed: new Set<string>(),
-    recipesAdding: false,
-  };
-  for (const operation of operations) {
-    const payload = JSON.parse(operation.payload_json) as {
-      listId?: string;
-      temporaryId?: string;
-      itemId?: string;
-      itemIds?: string[];
-      checked?: boolean;
-    };
-    if (payload.listId !== listId) continue;
-
-    switch (operation.kind) {
-      case "shopping_list_item_add":
-        if (payload.temporaryId) edits.creating.add(payload.temporaryId);
-        break;
-      case "shopping_list_item_toggle":
-        edits.checked.set(await resolve(payload.itemId!), payload.checked!);
-        break;
-      case "shopping_list_items_set_checked":
-        for (const itemId of payload.itemIds ?? []) {
-          edits.checked.set(await resolve(itemId), payload.checked!);
-        }
-        break;
-      case "shopping_list_item_remove":
-        edits.removed.add(await resolve(payload.itemId!));
-        break;
-      case "shopping_list_recipe_batch":
-        edits.recipesAdding = true;
-        break;
-    }
-  }
-  return edits;
 }
 
-// Saves the server's copy of a list (QAD-01). A reply can be older than
-// edits made on the device, so edits still in the outbox win: items not yet
-// created stay, queued checks stay, queued removals stay removed. Returns
-// the list as saved, for screens to show.
+const SHOPPING_LIST_KINDS = [
+  "shopping_list_item_add",
+  "shopping_list_item_toggle",
+  "shopping_list_items_set_checked",
+  "shopping_list_item_remove",
+  "shopping_list_item_restore",
+  "shopping_list_clear_checked",
+  "shopping_list_recipe_batch",
+];
+
+type ListEdit = {
+  kind: string;
+  listId?: string;
+  temporaryId?: string;
+  itemId?: string;
+  itemIds?: string[];
+  checked?: boolean;
+  clientMutationId?: string;
+};
+
+// Saves the server's copy of a list (QAD-01) and returns the list as saved,
+// for screens to show. Edits still in the outbox win: they're applied, in
+// order, on top of the server's copy, so items not created there yet stay,
+// queued checks stay, queued removals stay removed, and an item an unsent
+// edit is about stays even if the reply doesn't have it yet.
+//
+// `requestedAt` is when the reply was asked for. A reply asked for before
+// the server last accepted an edit to this list may not show that edit, and
+// once accepted the edit is no longer in the outbox to win, so the reply is
+// ignored and the phone's copy stays.
 export async function replaceListItemsKeepingPendingEdits(
   tx: SQLiteDatabase,
   listId: string,
-  serverItems: ShoppingListItem[]
+  serverItems: ShoppingListItem[],
+  { requestedAt }: { requestedAt?: number } = {}
 ) {
-  const edits = await pendingListEdits(tx, listId);
-  const serverIds = new Set(serverItems.map((item) => item.id));
   const localRows = await tx.getAllAsync<ShoppingListItemRow>(
-    "SELECT * FROM shopping_list_items WHERE list_id = ?",
+    "SELECT * FROM shopping_list_items WHERE list_id = ? ORDER BY created_at ASC",
     [listId]
   );
-  // Items the server doesn't have yet: created on the device, or added
-  // from a recipe that hasn't reached it.
-  const notYetOnServer = localRows
-    .map(mapShoppingListRowToItem)
-    .filter((item) => !serverIds.has(item.id) && (edits.creating.has(item.id) || edits.recipesAdding));
+  const local = localRows.map(mapShoppingListRowToItem);
 
-  const saved = [
-    ...serverItems
-      .filter((item) => !edits.removed.has(item.id))
-      .map((item) => ({
-        ...item,
-        listId,
-        checked: edits.checked.get(item.id) ?? item.checked,
-      })),
-    ...notYetOnServer,
-  ];
+  if (requestedAt !== undefined) {
+    const acknowledged = await tx.getFirstAsync<{ value: string }>(
+      "SELECT value FROM local_metadata WHERE key = ?",
+      [acknowledgedKey(listId)]
+    );
+    if (acknowledged && Number(acknowledged.value) > requestedAt) return local;
+  }
 
+  const operations = await tx.getAllAsync<{ kind: string; payload_json: string }>(
+    `
+    SELECT kind, payload_json FROM sync_queue
+    WHERE kind IN (${SHOPPING_LIST_KINDS.map(() => "?").join(", ")})
+    ORDER BY created_at ASC, rowid ASC
+    `,
+    SHOPPING_LIST_KINDS
+  );
+  const resolve = async (id: string) => (await resolveSyncIdMapping(tx, id, "shopping_list_item")) ?? id;
+  const localById = new Map(local.map((item) => [item.id, item]));
+  const items = new Map<string, ShoppingListItem>(serverItems.map((item) => [item.id, { ...item, listId }]));
+  // The phone's copy of an item an unsent edit is about.
+  const keep = (id: string) => {
+    const copy = localById.get(id);
+    if (!items.has(id) && copy) items.set(id, copy);
+  };
+
+  for (const operation of operations) {
+    const edit = { kind: operation.kind, ...JSON.parse(operation.payload_json) } as ListEdit;
+    if (edit.listId !== listId) continue;
+    switch (edit.kind) {
+      case "shopping_list_item_add":
+        if (edit.temporaryId) keep(edit.temporaryId);
+        break;
+      case "shopping_list_recipe_batch":
+        for (const item of local) if (item.recipeBatchId === edit.clientMutationId) keep(item.id);
+        break;
+      case "shopping_list_item_toggle":
+      case "shopping_list_items_set_checked":
+        for (const itemId of edit.itemIds ?? [edit.itemId!]) {
+          const id = await resolve(itemId);
+          keep(id);
+          const item = items.get(id);
+          if (item) items.set(id, { ...item, checked: edit.checked! });
+        }
+        break;
+      case "shopping_list_item_remove":
+        items.delete(await resolve(edit.itemId!));
+        break;
+      case "shopping_list_item_restore":
+        keep(await resolve(edit.itemId!));
+        break;
+      case "shopping_list_clear_checked":
+        for (const [id, item] of items) if (item.checked) items.delete(id);
+        break;
+    }
+  }
+
+  const saved = [...items.values()];
   await tx.runAsync("DELETE FROM shopping_list_items WHERE list_id = ?", [listId]);
   for (const item of saved) await insertShoppingListItem(tx, item);
   return saved;
@@ -160,11 +185,12 @@ export async function insertShoppingListItem(db: SQLiteDatabase, item: ShoppingL
       client_mutation_id,
       checked,
       source_recipe_id,
+      recipe_batch_id,
       created_at,
       updated_at,
       list_id
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
     [
       item.id,
@@ -181,6 +207,7 @@ export async function insertShoppingListItem(db: SQLiteDatabase, item: ShoppingL
       item.clientMutationId ?? null,
       item.checked ? 1 : 0,
       item.sourceRecipeId ?? null,
+      item.recipeBatchId ?? null,
       item.createdAt,
       item.updatedAt,
       item.listId ?? DEFAULT_SHOPPING_LIST_ID,

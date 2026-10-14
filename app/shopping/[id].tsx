@@ -22,12 +22,10 @@ import { AppText } from "../../src/components/ui/AppText";
 import { Icon } from "../../src/components/ui/Icon";
 import { Logo } from "../../src/components/ui/Logo";
 import {
-  deleteShoppingListItem,
   insertShoppingListItem,
   mapShoppingListRowToItem,
 } from "../../src/db/shoppingItemRows";
 import {
-  deleteCheckedShoppingListItems,
   getStoredShoppingListItems,
   replaceShoppingListItemsForList,
 } from "../../src/db/shoppingListRepository";
@@ -35,10 +33,6 @@ import {
   deleteShoppingList,
   renameShoppingList as renameShoppingListLocal,
 } from "../../src/db/shoppingListsRepository";
-import {
-  cancelQueuedShoppingListItemRemoval,
-  enqueueSyncOperation,
-} from "../../src/db/syncQueueRepository";
 import {
   useDeleteShoppingListMutation,
   useRenameShoppingListMutation,
@@ -368,12 +362,13 @@ function LocalListDetail({ listId, shareOnOpen }: { listId: string; shareOnOpen:
     if (!isOnline) return;
 
     try {
+      const requestedAt = Date.now();
       const serverList = await shoppingListsApi.getShoppingListById(listId);
       const serverItems = serverList.items
         .filter((item) => !item.deletedAt)
         .map((item) => ({ ...apiShoppingItemToLocalItem(item), listId }));
 
-      setItems(await replaceShoppingListItemsForList(db, listId, serverItems));
+      setItems(await replaceShoppingListItemsForList(db, listId, serverItems, { requestedAt }));
     } catch (error) {
       console.error("Failed to refresh shopping list from server", error);
     }
@@ -436,22 +431,8 @@ function LocalListDetail({ listId, shareOnOpen }: { listId: string; shareOnOpen:
 
   async function handleClearChecked() {
     closeSheet();
-    const checkedIds = items
-      .filter((item) => item.checked)
-      .map((item) => item.id);
     setItems((current) => current.filter((item) => !item.checked));
-
-    await deleteCheckedShoppingListItems(db, listId);
-    try {
-      await shoppingListsApi.clearCheckedShoppingListItems(listId);
-    } catch (error) {
-      console.error("Failed to sync checked item removal", error);
-      await Promise.all(
-        checkedIds.map((itemId) =>
-          enqueueSyncOperation(db, "shopping_list_item_remove", { listId, itemId })
-        )
-      );
-    }
+    await shoppingCommands.clearChecked({ listId });
     showToast("Checked items removed", "success");
   }
 
@@ -513,31 +494,12 @@ function LocalListDetail({ listId, shareOnOpen }: { listId: string; shareOnOpen:
         onRemove={async () => {
           closeSheet();
           setItems((current) => current.filter((entry) => entry.id !== item.id));
-          await deleteShoppingListItem(db, item.id);
-          try {
-            await shoppingListsApi.deleteShoppingListItemFromList(listId, item.id);
-          } catch {
-            await enqueueSyncOperation(db, "shopping_list_item_remove", {
-              listId,
-              itemId: item.id,
-            });
-          }
+          const removed = await shoppingCommands.removeItem({ listId, itemId: item.id });
           showToast("Item removed", "default", {
             label: "Undo",
             onPress: async () => {
-              await cancelQueuedShoppingListItemRemoval(db, listId, item.id);
-              let restored = item;
-              try {
-                const response = await shoppingListsApi.restoreShoppingListItemInList(
-                  listId,
-                  item.id
-                );
-                restored = { ...apiShoppingItemToLocalItem(response), listId };
-              } catch {
-                // A failed deletion may leave the original server row intact.
-              }
-              await insertShoppingListItem(db, restored);
-              setItems((current) => [...current, restored]);
+              await shoppingCommands.undoRemove({ listId, item: removed });
+              await loadItems();
             },
           });
         }}
