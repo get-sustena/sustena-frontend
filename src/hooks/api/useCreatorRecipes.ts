@@ -7,11 +7,10 @@ import {
   RecipeDraftWriteRequest,
 } from "../../types/api";
 
-export function useMyRecipesQuery(params?: MyRecipeListParams, enabled = true) {
+export function useMyRecipesQuery(params?: MyRecipeListParams) {
   return useQuery({
     queryKey: queryKeys.creatorRecipes.list(params),
     queryFn: () => creatorRecipesApi.getMyRecipes(params),
-    enabled,
   });
 }
 

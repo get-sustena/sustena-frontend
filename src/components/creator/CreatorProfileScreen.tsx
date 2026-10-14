@@ -36,8 +36,10 @@ export function CreatorProfileScreen() {
   const profileQuery = useMyCreatorProfileQuery();
   const savedProfile = profileQuery.data;
   const hasCreatorProfile = Boolean(savedProfile);
-  const publishedQuery = useMyRecipesQuery({ status: "published", page: 1, pageSize: 500 }, hasCreatorProfile);
-  const draftsQuery = useMyRecipesQuery({ status: "draft", page: 1, pageSize: 500 }, hasCreatorProfile);
+  // Asked for alongside the profile, not after it: without a creator
+  // profile the lists simply come back empty.
+  const publishedQuery = useMyRecipesQuery({ status: "published", page: 1, pageSize: 500 });
+  const draftsQuery = useMyRecipesQuery({ status: "draft", page: 1, pageSize: 500 });
   const vocabularyQuery = useAuthoringVocabularyQuery();
   const createMutation = useCreateRecipeDraftMutation();
   const displayName = savedProfile?.displayName || user?.fullName?.trim() || [user?.firstName, user?.lastName].filter(Boolean).join(" ") || "Sustena";
