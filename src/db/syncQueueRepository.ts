@@ -22,6 +22,8 @@ export type SyncQueueOperation = {
   payload: unknown;
   createdAt: string;
   attempts: number;
+  nextAttemptAt: number | null;
+  needsAttention: boolean;
 };
 
 type SyncQueueRow = {
@@ -30,6 +32,8 @@ type SyncQueueRow = {
   payload_json: string;
   created_at: string;
   attempts: number;
+  next_attempt_at: number | null;
+  needs_attention: number;
 };
 
 export async function enqueueSyncOperation(
@@ -63,6 +67,8 @@ export async function getPendingSyncOperations(
     payload: JSON.parse(row.payload_json),
     createdAt: row.created_at,
     attempts: row.attempts,
+    nextAttemptAt: row.next_attempt_at,
+    needsAttention: row.needs_attention === 1,
   }));
 }
 
@@ -70,10 +76,19 @@ export async function deleteSyncOperation(db: SQLiteDatabase, id: string) {
   await db.runAsync(`DELETE FROM sync_queue WHERE id = ?`, [id]);
 }
 
-export async function incrementSyncAttempt(db: SQLiteDatabase, id: string) {
+// After a temporary failure: one more attempt, and when to try again.
+export async function scheduleSyncRetry(db: SQLiteDatabase, id: string, nextAttemptAt: number) {
   await db.runAsync(
-    `UPDATE sync_queue SET attempts = attempts + 1 WHERE id = ?`,
-    [id]
+    `UPDATE sync_queue SET attempts = attempts + 1, next_attempt_at = ? WHERE id = ?`,
+    [nextAttemptAt, id]
+  );
+}
+
+// After a permanent failure: kept for repair, and no longer retried.
+export async function markSyncNeedsAttention(db: SQLiteDatabase, id: string, reason: string) {
+  await db.runAsync(
+    `UPDATE sync_queue SET needs_attention = 1, last_error = ? WHERE id = ?`,
+    [reason, id]
   );
 }
 
