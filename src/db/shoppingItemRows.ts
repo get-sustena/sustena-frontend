@@ -66,6 +66,7 @@ export async function markListEditAcknowledged(tx: SQLiteDatabase, listId: strin
 const SHOPPING_LIST_KINDS = [
   "shopping_list_item_add",
   "shopping_list_item_toggle",
+  "shopping_list_item_update",
   "shopping_list_items_set_checked",
   "shopping_list_item_remove",
   "shopping_list_item_restore",
@@ -81,6 +82,13 @@ type ListEdit = {
   itemIds?: string[];
   checked?: boolean;
   clientMutationId?: string;
+  changes?: {
+    name?: string;
+    amount?: number | string | null;
+    displayQuantity?: string | null;
+    unit?: string | null;
+    category?: string | null;
+  };
 };
 
 // Saves the server's copy of a list (QAD-01) and returns the list as saved,
@@ -149,6 +157,24 @@ export async function replaceListItemsKeepingPendingEdits(
           if (item) items.set(id, { ...item, checked: edit.checked! });
         }
         break;
+      case "shopping_list_item_update": {
+        const id = await resolve(edit.itemId!);
+        keep(id);
+        const item = items.get(id);
+        const changes = edit.changes ?? {};
+        if (item) {
+          items.set(id, {
+            ...item,
+            name: changes.name ?? item.name,
+            quantity: changes.displayQuantity ?? item.quantity,
+            amount: changes.amount == null ? item.amount : Number(changes.amount),
+            displayQuantity: changes.displayQuantity ?? item.displayQuantity,
+            unit: changes.unit ?? item.unit,
+            category: changes.category ?? item.category,
+          });
+        }
+        break;
+      }
       case "shopping_list_item_remove":
         items.delete(await resolve(edit.itemId!));
         break;

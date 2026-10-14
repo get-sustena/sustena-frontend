@@ -14,6 +14,7 @@ export type SyncQueueKind =
   | "preferences_update"
   | "shopping_list_item_add"
   | "shopping_list_item_toggle"
+  | "shopping_list_item_update"
   | "shopping_list_items_set_checked"
   | "shopping_list_item_remove"
   | "shopping_list_item_restore"

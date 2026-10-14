@@ -87,10 +87,10 @@ function fakeServer({ lineItems: answersLineItems = true } = {}) {
         maybeFail("after");
         return { ...item };
       },
-      async updateShoppingListItemInList(listId, itemId, { checked }) {
-        calls.push(["check", itemId]);
+      async updateShoppingListItemInList(listId, itemId, changes) {
+        calls.push([changes.checked === undefined ? "edit" : "check", itemId]);
         maybeFail("before");
-        own(itemId).checked = checked;
+        Object.assign(own(itemId), changes);
         maybeFail("after");
         return { ...items.get(itemId) };
       },
@@ -444,4 +444,41 @@ test("F03: with a server that can't say where a line went, a catalogue ingredien
 
   assert.equal(server.live().find((item) => item.ingredientId === "ing-rice").checked, true);
   assert.deepEqual(await outbox(database.db), []);
+});
+
+test("QAD-04: editing an item saves the change and its command together, and the server gets it", async () => {
+  const database = await openTestDatabase();
+  const server = fakeServer();
+  const commands = commandsFor(database);
+  const rice = await commands.addItem({ listId: LIST, name: "Rice", quantity: "1" });
+  // Edited before its creation reaches the server: the edit waits for it.
+  await commands.editItem({ listId: LIST, itemId: rice.id, name: "Basmati rice", quantity: "2", unit: "kg", category: "Grains" });
+
+  assert.deepEqual((await rows(database.db)).map((row) => row.name), ["Basmati rice"]);
+  assert.deepEqual((await outbox(database.db)).map((row) => [row.kind, row.depends_on]), [
+    ["shopping_list_item_add", null],
+    ["shopping_list_item_update", rice.id],
+  ]);
+
+  await replay(database, server);
+  const [onServer] = server.live();
+  assert.equal(onServer.name, "Basmati rice");
+  assert.equal(onServer.displayQuantity, "2 kg");
+  assert.deepEqual(await outbox(database.db), []);
+  assert.deepEqual((await rows(database.db)).map((row) => row.name), ["Basmati rice"]);
+});
+
+test("QAD-01: a reply older than an item edit keeps the edit", async () => {
+  const { replaceListItemsKeepingPendingEdits } = await import("../src/db/shoppingItemRows.ts");
+  const database = await openTestDatabase();
+  const server = fakeServer();
+  const commands = commandsFor(database);
+  await commands.addItem({ listId: LIST, name: "Rice", quantity: "1" });
+  await replay(database, server);
+  const [row] = await rows(database.db);
+  await commands.editItem({ listId: LIST, itemId: row.id, name: "Basmati rice", quantity: "1" });
+
+  const oldReply = server.live().map((item) => ({ ...toLocalItem(item), listId: LIST }));
+  await database.transact((tx) => replaceListItemsKeepingPendingEdits(tx, LIST, oldReply));
+  assert.deepEqual((await rows(database.db)).map((item) => item.name), ["Basmati rice"]);
 });

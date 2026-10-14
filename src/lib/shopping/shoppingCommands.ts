@@ -191,6 +191,62 @@ export function createShoppingCommands({ db, transact, now, newId, requestSync }
       requestSync();
     },
 
+    // A new name, quantity or category, shown at once and sent once the
+    // item exists on the server.
+    async editItem({
+      listId,
+      itemId,
+      name,
+      quantity,
+      unit,
+      category,
+    }: {
+      listId: string;
+      itemId: string;
+      name: string;
+      quantity: string;
+      unit?: string | null;
+      category?: string;
+    }) {
+      const structured = structureShoppingQuantity(quantity, unit);
+      const changes = {
+        name: name.trim(),
+        quantity: structured.quantity,
+        amount: structured.amount,
+        displayQuantity: structured.displayQuantity,
+        unit: structured.unit,
+        ...(category ? { category } : {}),
+      };
+      await transact(async (tx) => {
+        const { id, waitFor } = await lookUp(tx, itemId);
+        await tx.runAsync(
+          `
+          UPDATE shopping_list_items
+          SET name = ?, quantity = ?, amount = ?, display_quantity = ?, unit = ?,
+              category = COALESCE(?, category), updated_at = ?
+          WHERE id = ?
+          `,
+          [
+            changes.name,
+            structured.displayQuantity,
+            structured.amount,
+            structured.displayQuantity,
+            structured.unit,
+            category ?? null,
+            now(),
+            id,
+          ]
+        );
+        await enqueueSyncOperation(
+          tx,
+          "shopping_list_item_update",
+          { listId, itemId: id, changes },
+          { mutationId: newId("shopping_mutation"), entityId: id, dependsOn: waitFor }
+        );
+      });
+      requestSync();
+    },
+
     // Removes the item from the phone at once; the server removes it once
     // it exists there. Returns the item, for Undo.
     async removeItem({ listId, itemId }: { listId: string; itemId: string }) {

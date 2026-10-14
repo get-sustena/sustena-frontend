@@ -13,6 +13,7 @@ import type {
   ShoppingList,
   ShoppingListItem as ApiShoppingListItem,
   ShoppingListItemCreateRequest,
+  ShoppingListItemUpdateRequest,
 } from "../../types/api.ts";
 import type { ShoppingListItem } from "../../types/shoppingList.ts";
 
@@ -24,8 +25,8 @@ type ShoppingApi = {
   updateShoppingListItemInList: (
     listId: string,
     itemId: string,
-    payload: { checked: boolean }
-  ) => Promise<unknown>;
+    payload: ShoppingListItemUpdateRequest
+  ) => Promise<ApiShoppingListItem>;
   setShoppingListItemsChecked: (
     listId: string,
     itemIds: string[],
@@ -175,6 +176,28 @@ export async function runShoppingCommand(
       const { listId, itemId, checked } = operation.payload as { listId: string; itemId: string; checked: boolean };
       await api.updateShoppingListItemInList(listId, await resolve(itemId), { checked });
       await transact(acknowledge);
+      return true;
+    }
+
+    case "shopping_list_item_update": {
+      const { listId, itemId, changes } = operation.payload as {
+        listId: string;
+        itemId: string;
+        changes: ShoppingListItemUpdateRequest;
+      };
+      const updated = await api.updateShoppingListItemInList(listId, await resolve(itemId), changes);
+      await transact(async (tx) => {
+        const local = await tx.getFirstAsync<{ checked: number }>(
+          "SELECT checked FROM shopping_list_items WHERE id = ?",
+          [updated.id]
+        );
+        await insertShoppingListItem(tx, {
+          ...toLocalItem(updated),
+          listId,
+          checked: local ? local.checked === 1 : updated.checked,
+        });
+        await acknowledge(tx);
+      });
       return true;
     }
 

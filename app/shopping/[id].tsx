@@ -21,10 +21,7 @@ import { ShoppingItemsSkeleton } from "../../src/components/shopping/ShoppingIte
 import { AppText } from "../../src/components/ui/AppText";
 import { Icon } from "../../src/components/ui/Icon";
 import { Logo } from "../../src/components/ui/Logo";
-import {
-  insertShoppingListItem,
-  mapShoppingListRowToItem,
-} from "../../src/db/shoppingItemRows";
+import { mapShoppingListRowToItem } from "../../src/db/shoppingItemRows";
 import {
   getStoredShoppingListItems,
   replaceShoppingListItemsForList,
@@ -43,7 +40,6 @@ import { shoppingListsApi } from "../../src/lib/api";
 import { apiShoppingItemToLocalItem } from "../../src/lib/api/adapters";
 import { getApiErrorMessage } from "../../src/lib/api/errors";
 import { groupShoppingListItems } from "../../src/lib/groupShoppingListItems";
-import { structureShoppingQuantity } from "../../src/lib/shoppingQuantity";
 import { formatShoppingQuantity } from "../../src/lib/textFormatters";
 import { queryKeys } from "../../src/lib/query/queryKeys";
 import { onSyncFinished } from "../../src/lib/sync/syncEvents";
@@ -472,24 +468,18 @@ function LocalListDetail({ listId, shareOnOpen }: { listId: string; shareOnOpen:
       <ShoppingListItemEditSheet
         item={item}
         onSave={async (update) => {
-          try {
-            const structuredQuantity = structureShoppingQuantity(update.quantity, update.unit);
-            const updated = await shoppingListsApi.updateShoppingListItemInList(listId, item.id, {
-              name: update.name,
-              quantity: structuredQuantity.quantity,
-              amount: structuredQuantity.amount,
-              displayQuantity: structuredQuantity.displayQuantity,
-              unit: structuredQuantity.unit,
-              category: update.category,
-            });
-            const local = { ...apiShoppingItemToLocalItem(updated), listId };
-            await insertShoppingListItem(db, local);
-            setItems((current) => current.map((entry) => entry.id === item.id ? local : entry));
-            closeSheet();
-            showToast("Item updated", "success");
-          } catch (error) {
-            showToast(getApiErrorMessage(error), "danger");
-          }
+          // Saved on the phone at once, and sent when there's a connection.
+          await shoppingCommands.editItem({
+            listId,
+            itemId: item.id,
+            name: update.name,
+            quantity: update.quantity,
+            unit: update.unit,
+            category: update.category,
+          });
+          await loadItems();
+          closeSheet();
+          showToast("Item updated", "success");
         }}
         onRemove={async () => {
           closeSheet();
