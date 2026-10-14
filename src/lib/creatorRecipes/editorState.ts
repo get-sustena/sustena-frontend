@@ -11,6 +11,7 @@ import {
   RecipeTimerInput,
 } from "../../types/api";
 import { createLocalId } from "../id";
+import { detectTimerPhrases } from "../recipeTimers";
 
 type ClassificationKind = RecipeClassification["kind"];
 
@@ -47,9 +48,6 @@ const BASE_OPTIONAL_CATEGORIES = new Set([
   "dessert",
   "local-drink",
 ]);
-
-const TIMER_PHRASE_RE =
-  /\b(?:for\s+)?(\d+(?:\.\d+)?)(?:\s*(?:-|–|to)\s*(\d+(?:\.\d+)?))?\s*(seconds?|secs?|minutes?|mins?|hours?|hrs?)\b/gi;
 
 export function editorStateFromRecipe(recipe: RecipeDraft): RecipeEditorState {
   return editorStateFromWriteRequest(recipe);
@@ -421,29 +419,6 @@ export function syncInstructionTimers(
   };
 }
 
-function detectTimerPhrases(text: string): RecipeTimerInput[] {
-  const matches: RecipeTimerInput[] = [];
-  TIMER_PHRASE_RE.lastIndex = 0;
-  let match: RegExpExecArray | null;
-  while ((match = TIMER_PHRASE_RE.exec(text)) !== null) {
-    const minimum = Number(match[1]);
-    const maximum = match[2] ? Number(match[2]) : null;
-    const multiplier = timerUnitMultiplier(match[3]);
-    matches.push({
-      position: matches.length,
-      label: null,
-      durationMinSeconds: Math.round(minimum * multiplier),
-      durationMaxSeconds:
-        maximum === null ? null : Math.round(maximum * multiplier),
-      sourceText: match[0],
-      sourceStart: match.index,
-      sourceEnd: match.index + match[0].length,
-      resolutionStatus: "detected",
-    });
-  }
-  return matches;
-}
-
 export function describeTimer(timer: RecipeTimerInput) {
   const range = timer.durationMaxSeconds
     ? `${formatDuration(timer.durationMinSeconds)} to ${formatDuration(
@@ -500,12 +475,6 @@ function isCompleteSubstitution(item: RecipeSubstitutionInput) {
   );
 }
 
-function timerUnitMultiplier(unit: string) {
-  const normalized = unit.toLowerCase();
-  if (normalized.startsWith("hour") || normalized.startsWith("hr")) return 3600;
-  if (normalized.startsWith("minute") || normalized.startsWith("min")) return 60;
-  return 1;
-}
 
 function formatDuration(seconds: number) {
   if (seconds % 3600 === 0) {

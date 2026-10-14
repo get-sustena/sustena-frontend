@@ -23,8 +23,9 @@ import { BottomSheetHost } from "../src/components/ui/BottomSheet";
 import { ProgressLoader } from "../src/components/ui/ProgressLoader";
 import { ToastHost } from "../src/components/ui/Toast";
 import { migrateDbIfNeeded } from "../src/db/migrations";
+import { useLearnTimerAlerts } from "../src/hooks/useLearnTimerAlerts";
 import { useMealReminders } from "../src/hooks/useMealReminders";
-import { configureMealReminderNotifications } from "../src/lib/notifications/mealReminders";
+import { configureForegroundNotifications } from "../src/lib/notifications/foregroundNotifications";
 import { SIGNED_IN_ROUTES } from "../src/lib/navigation/routeAccess";
 import { queryClient } from "../src/lib/query/queryClient";
 import { setupNetworkStatusListener } from "../src/lib/query/networkStatus";
@@ -33,7 +34,7 @@ import { theme } from "../src/theme/theme";
 
 SplashScreen.preventAutoHideAsync();
 setupNetworkStatusListener();
-configureMealReminderNotifications();
+configureForegroundNotifications();
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -89,6 +90,7 @@ export default function RootLayout() {
 function RootNavigator() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   useMealReminders();
+  useLearnTimerAlerts();
 
   return (
     <Stack

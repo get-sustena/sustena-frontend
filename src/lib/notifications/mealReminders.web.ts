@@ -5,8 +5,6 @@ import type { SQLiteDatabase } from "expo-sqlite";
 
 type EnableMealRemindersResult = "enabled" | "denied" | "failed";
 
-export function configureMealReminderNotifications() {}
-
 export async function enableMealReminders(
   _db: SQLiteDatabase
 ): Promise<EnableMealRemindersResult> {

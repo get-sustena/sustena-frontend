@@ -379,12 +379,25 @@ export interface RecipeInstruction {
   timers: RecipeInstructionTimer[];
 }
 
+export interface RecipeTimerSource {
+  text: string;
+  // UTF-16 offsets into the instruction's text; null when the saved place
+  // no longer matches.
+  start: number | null;
+  end: number | null;
+}
+
+// One per duration in a step: a step that says 5 minutes twice has one
+// 5-minute timer with two sources.
 export interface RecipeInstructionTimer {
   id: UUIDString;
   position: number;
   label: string | null;
   durationMinSeconds: number;
   durationMaxSeconds: number | null;
+  // Empty for a timer the creator added by hand. Missing from APIs older than
+  // backend 3759465.
+  sources?: RecipeTimerSource[];
 }
 
 export interface RecipeClassification {

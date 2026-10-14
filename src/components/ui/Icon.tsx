@@ -11,6 +11,8 @@ import {
   ChevronRight,
   CircleCheck,
   CircleHelp,
+  CirclePause,
+  CirclePlay,
   CookingPot,
   CreditCard,
   Droplet,
@@ -27,6 +29,8 @@ import {
   Lock,
   Mail,
   MapPin,
+  Maximize2,
+  Minimize2,
   Minus,
   Pencil,
   Plus,
@@ -43,6 +47,7 @@ import {
   UserRound,
   UsersRound,
   Utensils,
+  Volume2,
   Wallet,
   Wheat,
   WifiOff,
@@ -98,6 +103,11 @@ export type IconName =
   | "image"
   | "alertTriangle"
   | "bulb"
+  | "play"
+  | "pause"
+  | "volume"
+  | "maximize"
+  | "minimize"
   | "protein"
   | "carbs"
   | "fat"
@@ -150,6 +160,11 @@ const ICONS: Record<IconName, LucideIcon> = {
   image: ImageIcon,
   alertTriangle: TriangleAlert,
   bulb: Lightbulb,
+  play: CirclePlay,
+  pause: CirclePause,
+  volume: Volume2,
+  maximize: Maximize2,
+  minimize: Minimize2,
   protein: Drumstick,
   carbs: Wheat,
   fat: Droplet,

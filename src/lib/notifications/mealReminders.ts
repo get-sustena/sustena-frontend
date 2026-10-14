@@ -22,19 +22,6 @@ import { createPhoneRegistration } from "./phoneRegistration";
 
 type EnableMealRemindersResult = "enabled" | "denied" | "failed";
 
-// Show reminders that arrive while the app is open, as Android would when it
-// isn't; without a handler they're dropped.
-export function configureMealReminderNotifications() {
-  Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowBanner: true,
-      shouldShowList: true,
-      shouldPlaySound: true,
-      shouldSetBadge: false,
-    }),
-  });
-}
-
 // Asks permission (the Settings switch is the only place that does), then
 // registers this phone with the backend.
 export async function enableMealReminders(
