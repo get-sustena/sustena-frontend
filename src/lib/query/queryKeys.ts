@@ -14,6 +14,7 @@ export const queryKeys = {
   },
   ingredients: {
     catalog: ["ingredients", "catalog"] as const,
+    savedCatalog: ["ingredients", "saved-catalog"] as const,
   },
   pantry: {
     me: ["pantry", "me"] as const,
