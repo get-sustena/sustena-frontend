@@ -15,4 +15,5 @@ export * as recommendationsApi from "./recommendations";
 export * as recipesApi from "./recipes";
 export * as shoppingListApi from "./shoppingList";
 export * as shoppingListsApi from "./shoppingLists";
+export * as startApi from "./start";
 export * as unitsApi from "./units";

@@ -7,18 +7,25 @@ import type { Ingredient } from "../../types/api";
 import { IngredientImage } from "../ingredient/IngredientImage";
 import { AppText } from "../ui/AppText";
 import { Icon } from "../ui/Icon";
+import { SkeletonBlock, SkeletonGroup } from "../ui/Skeleton";
+import { useIngredientCatalogQuery } from "../../hooks/api/useIngredients";
 import { getApiErrorMessage } from "../../lib/api/errors";
 import { showToast } from "../../store/uiStore";
 
 type Props = {
-  ingredients: Ingredient[];
   savedIngredientIds: string[];
   onClose: () => void;
   onAdd: (ingredientIds: string[]) => Promise<void>;
 };
 
-export function PantryIngredientPickerSheet({ ingredients, savedIngredientIds, onClose, onAdd }: Props) {
+const NO_INGREDIENTS: Ingredient[] = [];
+
+export function PantryIngredientPickerSheet({ savedIngredientIds, onClose, onAdd }: Props) {
   const { height } = useWindowDimensions();
+  // Only this sheet needs the whole catalogue. It reads it itself, so the
+  // list fills in as soon as the catalogue arrives, even after it opened.
+  const catalogQuery = useIngredientCatalogQuery();
+  const ingredients = catalogQuery.data ?? NO_INGREDIENTS;
   const [search, setSearch] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
   const [category, setCategory] = useState("All");
@@ -108,7 +115,22 @@ export function PantryIngredientPickerSheet({ ingredients, savedIngredientIds, o
         contentContainerStyle={styles.resultsContent}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
-        ListEmptyComponent={<AppText style={styles.noResults}>No matching ingredients. Try another search.</AppText>}
+        ListEmptyComponent={
+          catalogQuery.data ? (
+            <AppText style={styles.noResults}>No matching ingredients. Try another search.</AppText>
+          ) : catalogQuery.isError ? (
+            <AppText style={styles.noResults}>{getApiErrorMessage(catalogQuery.error)}</AppText>
+          ) : (
+            <SkeletonGroup label="Loading ingredients">
+              {[0.55, 0.4, 0.62, 0.48, 0.5, 0.36].map((width, index) => (
+                <View key={index} style={styles.skeletonRow}>
+                  <SkeletonBlock width={40} height={40} radius={10} />
+                  <SkeletonBlock width={`${width * 100}%`} height={15} />
+                </View>
+              ))}
+            </SkeletonGroup>
+          )
+        }
         renderItem={({ item: ingredient, index }) => {
               const saved = savedIds.has(ingredient.id);
               const selected = selectedSet.has(ingredient.id);
@@ -207,6 +229,8 @@ const styles = StyleSheet.create({
   results: { flex: 1, minHeight: 0 },
   resultsContent: { paddingBottom: 10 },
   listCell: { paddingBottom: 6 },
+  // The same size as a row, while the catalogue loads.
+  skeletonRow: { minHeight: 56, flexDirection: "row", alignItems: "center", gap: 9, paddingHorizontal: 4, paddingVertical: 7, marginBottom: 6 },
   gridCell: { flexGrow: 1, flexDirection: "row", paddingBottom: 8 },
   gridCellStart: { paddingRight: 4 },
   gridCellEnd: { paddingLeft: 4 },

@@ -1,11 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { pantryApi } from "../../lib/api";
 import { queryKeys } from "../../lib/query/queryKeys";
+import { useStartLoading } from "./useStartLoading";
 
 export function usePantryQuery() {
+  const startLoading = useStartLoading();
   return useQuery({
     queryKey: queryKeys.pantry.me,
     queryFn: pantryApi.getPantry,
+    enabled: !startLoading,
   });
 }
 

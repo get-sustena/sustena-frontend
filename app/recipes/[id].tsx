@@ -3,7 +3,7 @@ import * as Haptics from "expo-haptics";
 import { Image } from "expo-image";
 import { Href, router, useLocalSearchParams } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
-import { useMemo, useState, type ReactNode } from "react";
+import { lazy, Suspense, useMemo, useState, type ReactNode } from "react";
 import {
   Pressable,
   ScrollView,
@@ -79,15 +79,25 @@ import type {
 import { createLocalId } from "../../src/lib/id";
 import { readRecipeSource } from "../../src/lib/recipeSource";
 import { CookedButton } from "../../src/components/recipe/CookedButton";
-import { LearnMode } from "../../src/components/learn/LearnMode";
 import {
   CaloriesEyeButton,
   IngredientCaloriesLine,
   OilTip,
 } from "../../src/components/nutrition/IngredientNutrition";
-import { NutritionStrip } from "../../src/components/nutrition/NutritionStrip";
+import {
+  NutritionStrip,
+  NutritionStripError,
+  NutritionStripSkeleton,
+} from "../../src/components/nutrition/NutritionStrip";
 import { useIngredientCaloriesShown } from "../../src/hooks/useIngredientCaloriesShown";
 import { ingredientCalories, oilTip } from "../../src/lib/nutrition/recipeNutrition";
+
+// Learn mode's code loads the first time it's opened, not with every recipe.
+const LearnMode = lazy(() =>
+  import("../../src/components/learn/LearnMode").then((module) => ({
+    default: module.LearnMode,
+  }))
+);
 
 // --rd-muted in the v6.8 recipe page.
 const INGREDIENT_CHEVRON_COLOR = "#686E66";
@@ -345,8 +355,8 @@ export default function RecipeDetailScreen() {
     }));
   const displayTags = getRecipeDetailTags(recipeDetail, recipe?.tags ?? []);
 
-  // Nutrition (PRD v6.8 section 15). Creator recipes have none, so they show
-  // no strip, no eye, no calorie lines and no oil tip.
+  // Nutrition (PRD v6.8 section 15), for Sustena and creator recipes alike. A
+  // recipe with nothing counted shows no strip, eye, calorie lines or oil tip.
   const nutritionPerServing = recipeDetail?.nutritionPerServing ?? null;
   const nutritionBaseServings = recipeDetail?.baseServings ?? 1;
   const caloriesOnIngredients = useIngredientCaloriesShown();
@@ -771,8 +781,15 @@ export default function RecipeDetailScreen() {
             />
           </View>
 
+          {/* The recipe can show from its saved copy before the server's
+              arrives. If that copy has no nutrition yet, the strip's space is
+              held until the server answers, so the card never pops in. */}
           {nutritionPerServing ? (
             <NutritionStrip perServing={nutritionPerServing} onPress={openNutrition} />
+          ) : recipeQuery.isRefreshingSavedCopy ? (
+            <NutritionStripSkeleton />
+          ) : recipeQuery.savedCopyRefreshFailed ? (
+            <NutritionStripError onRetry={() => void recipeQuery.refetch()} />
           ) : null}
         </View>
 
@@ -1179,6 +1196,13 @@ export default function RecipeDetailScreen() {
       </View>
 
       {learnStep !== null && recipeDetail ? (
+        <Suspense
+          fallback={
+            <View style={StyleSheet.absoluteFill}>
+              <ProgressLoader variant="screen" />
+            </View>
+          }
+        >
         <LearnMode
           initialStep={learnStep}
           recipeId={recipe.id}
@@ -1194,6 +1218,7 @@ export default function RecipeDetailScreen() {
             if (params.learnStep !== undefined) router.setParams({ learnStep: undefined });
           }}
         />
+        </Suspense>
       ) : null}
     </View>
   );

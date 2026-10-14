@@ -4,6 +4,7 @@ import { preferencesApi } from "../../lib/api";
 import { queryKeys } from "../../lib/query/queryKeys";
 import { usePreferencesStore } from "../../store/preferencesStore";
 import { UserPreferences } from "../../types/api";
+import { useStartLoading } from "./useStartLoading";
 import {
   DietaryPreference,
   HealthCondition,
@@ -12,9 +13,11 @@ import {
 export function usePreferencesQuery() {
   const hydrateLocalPreferences = useHydrateLocalPreferences();
 
+  const startLoading = useStartLoading();
   const query = useQuery({
     queryKey: queryKeys.preferences.me,
     queryFn: preferencesApi.getPreferences,
+    enabled: !startLoading,
   });
 
   useEffect(() => {

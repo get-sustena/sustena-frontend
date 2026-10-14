@@ -9,6 +9,7 @@ import { queryKeys } from "../../lib/query/queryKeys";
 import { useAuthStore } from "../../store/authStore";
 import { usePlannerStore } from "../../store/plannerStore";
 import type { PlannerSettingsUpdateRequest } from "../../types/api";
+import { useStartLoading } from "./useStartLoading";
 
 export function useBudgetPlannerMutation() {
   return useMutation({
@@ -20,10 +21,11 @@ export function usePlannerSettingsQuery() {
   const db = useSQLiteContext();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const hydratePlanSetup = usePlannerStore((state) => state.hydratePlanSetup);
+  const startLoading = useStartLoading();
   const query = useQuery({
     queryKey: queryKeys.planner.settings,
     queryFn: plannerApi.getPlannerSettings,
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && !startLoading,
   });
 
   useEffect(() => {

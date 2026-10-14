@@ -9,11 +9,13 @@ export const queryKeys = {
   auth: {
     me: ["auth", "me"] as const,
   },
+  start: ["me", "start"] as const,
   units: {
     all: ["units"] as const,
   },
   ingredients: {
     catalog: ["ingredients", "catalog"] as const,
+    savedCatalog: ["ingredients", "saved-catalog"] as const,
   },
   pantry: {
     me: ["pantry", "me"] as const,
