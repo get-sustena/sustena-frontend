@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { lagosDate, withTodaysPickFirst } from "../src/lib/catalogue/mealPicks.ts";
+import { withTodaysPickFirst } from "../src/lib/catalogue/mealPicks.ts";
+import { getLagosDay } from "../src/lib/lagosDay.ts";
 
 const recipes = [{ id: "pap" }, { id: "jollof" }, { id: "egusi" }];
 const picks = [
@@ -15,8 +16,8 @@ test("OFF-01: offline, Home shows today's pick for the meal first", () => {
 });
 
 test("OFF-01: today is the Lagos date, an hour ahead of UTC", () => {
-  assert.equal(lagosDate(new Date("2026-10-14T22:59:00Z")), "2026-10-14");
-  assert.equal(lagosDate(new Date("2026-10-14T23:30:00Z")), "2026-10-15");
+  assert.equal(getLagosDay(new Date("2026-10-14T22:59:00Z")), "2026-10-14");
+  assert.equal(getLagosDay(new Date("2026-10-14T23:30:00Z")), "2026-10-15");
   const lateNight = new Date("2026-10-14T23:30:00Z");
   assert.deepEqual(withTodaysPickFirst(recipes, picks, "dinner", lateNight).map((r) => r.id), ["egusi", "pap", "jollof"]);
 });

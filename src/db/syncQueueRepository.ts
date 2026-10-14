@@ -15,7 +15,8 @@ export type SyncQueueKind =
   | "shopping_list_item_toggle"
   | "shopping_list_items_set_checked"
   | "shopping_list_item_remove"
-  | "shopping_list_recipe_batch";
+  | "shopping_list_recipe_batch"
+  | "recipe_cooked";
 
 export type SyncQueueOperation = {
   id: string;

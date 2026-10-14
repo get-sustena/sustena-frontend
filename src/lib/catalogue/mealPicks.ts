@@ -4,12 +4,8 @@
 import type { SQLiteDatabase } from "expo-sqlite";
 import { getLocalMetadata, setLocalMetadata } from "../../db/recipeRows.ts";
 import type { MealPicksForDay } from "../../types/api.ts";
+import { getLagosDay } from "../lagosDay.ts";
 import type { MealTime } from "../mealTime.ts";
-
-// Lagos is on West Africa Time all year: UTC+1, no daylight saving.
-export function lagosDate(at: Date) {
-  return new Date(at.getTime() + 60 * 60_000).toISOString().slice(0, 10);
-}
 
 // Puts today's pick for the meal first, when it's on the phone.
 export function withTodaysPickFirst<T extends { id: string }>(
@@ -18,7 +14,7 @@ export function withTodaysPickFirst<T extends { id: string }>(
   mealTime: MealTime,
   at: Date
 ) {
-  const today = picks?.find((day) => day.date === lagosDate(at));
+  const today = picks?.find((day) => day.date === getLagosDay(at));
   const pickId = today?.[mealTime];
   const pick = pickId ? recipes.find((recipe) => recipe.id === pickId) : undefined;
   return pick ? [pick, ...recipes.filter((recipe) => recipe !== pick)] : recipes;

@@ -14,10 +14,12 @@ import {
   favoritesApi,
   plannerApi,
   profileAnswersApi,
+  recipesApi,
   shoppingListApi,
   shoppingListsApi,
 } from "../api";
 import { apiShoppingItemToLocalItem } from "../api/adapters";
+import { runCookedCommand } from "../cooked/cookedCommands";
 import { runFavoriteCommand } from "../favorites/favoriteCommands";
 import { runShoppingCommand } from "../shopping/shoppingReplay";
 import { replayOutbox } from "./outboxReplay";
@@ -41,10 +43,16 @@ async function runOperation(db: SQLiteDatabase, operation: SyncQueueOperation) {
     toLocalItem: apiShoppingItemToLocalItem,
     transact: (work) => runWriteTransaction(db, work),
   });
-  if (handled || (await runFavoriteCommand(operation, {
+  if (handled) return;
+  if (
+    await runFavoriteCommand(operation, {
       addFavorite: favoritesApi.addFavorite,
       removeFavorite: favoritesApi.removeFavorite,
-    }))) return;
+    })
+  ) {
+    return;
+  }
+  if (await runCookedCommand(operation, { markRecipeCooked: recipesApi.markRecipeCooked })) return;
 
   // Older edits may name an item by the temporary id it had when queued.
   const payload = operation.payload as Record<string, unknown>;
