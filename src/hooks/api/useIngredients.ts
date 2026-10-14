@@ -4,13 +4,13 @@ import {
   getSavedIngredientCatalog,
   saveIngredientCatalog,
 } from "../../db/ingredientCatalogRepository";
-import { getAllIngredients } from "../../lib/api/ingredients";
+import { getIngredientCatalogue } from "../../lib/api/ingredients";
 import { queryKeys } from "../../lib/query/queryKeys";
 
 // The ingredient catalogue: the copy saved on the device shows at once
-// (TanStack placeholder data) while a fresh copy loads, and the fresh copy
-// is saved for next time. Offline, the saved copy stands in and is fetched
-// again once it's an hour old.
+// (TanStack placeholder data) while the server is asked whether it changed.
+// Unchanged, the saved copy is used; changed, the new one is saved for next
+// time. Offline, the saved copy stands in.
 export function useIngredientCatalogQuery() {
   const db = useSQLiteContext();
   const saved = useQuery({
@@ -23,19 +23,23 @@ export function useIngredientCatalogQuery() {
   return useQuery({
     queryKey: queryKeys.ingredients.catalog,
     queryFn: async () => {
+      const savedCopy = await getSavedIngredientCatalog(db).catch(() => null);
       try {
-        const ingredients = await getAllIngredients();
-        void saveIngredientCatalog(db, ingredients).catch(() => undefined);
-        return ingredients;
+        const catalogue = await getIngredientCatalogue(savedCopy?.etag ?? null);
+        if (!catalogue.changed && savedCopy) return savedCopy.ingredients;
+        if (!catalogue.changed) throw new Error("The catalogue answered 304 with no saved copy.");
+        void saveIngredientCatalog(db, catalogue.ingredients, catalogue.etag).catch(() => undefined);
+        return catalogue.ingredients;
       } catch (error) {
-        const savedCopy = await getSavedIngredientCatalog(db).catch(() => null);
-        if (savedCopy) return savedCopy;
+        if (savedCopy) return savedCopy.ingredients;
         throw error;
       }
     },
-    placeholderData: saved.data ?? undefined,
-    // The catalogue rarely changes: fetched once an hour at most.
-    staleTime: 60 * 60_000,
+    placeholderData: saved.data?.ingredients,
+    // Asking costs a few bytes when nothing changed, so it's asked whenever a
+    // screen that needs the catalogue opens, at most once a minute (the
+    // recipe page needs it too, and opens often).
+    staleTime: 60_000,
     gcTime: Infinity,
   });
 }

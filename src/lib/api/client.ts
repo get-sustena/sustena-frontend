@@ -106,6 +106,26 @@ export async function apiRequest<TResponse>(
   }
 }
 
+// A GET that may be answered "304 Not Modified" (RFC 9110 conditional
+// request): with the version the caller saved, an unchanged resource comes
+// back with no body.
+export async function apiConditionalGet<TResponse>(url: string, savedEtag: string | null) {
+  try {
+    const response = await apiClient.get<TResponse>(url, {
+      headers: savedEtag ? { "If-None-Match": savedEtag } : undefined,
+      validateStatus: (status) => (status >= 200 && status < 300) || status === 304,
+    });
+    const etag = response.headers.etag;
+    return {
+      notModified: response.status === 304,
+      data: response.data,
+      etag: typeof etag === "string" ? etag : null,
+    };
+  } catch (error) {
+    throw toApiClientError(error);
+  }
+}
+
 async function refreshTokens() {
   if (!refreshPromise) {
     refreshPromise = performRefresh().finally(() => {
