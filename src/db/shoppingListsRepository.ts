@@ -20,54 +20,6 @@ export async function getStoredShoppingLists(db: SQLiteDatabase) {
   );
 }
 
-export async function upsertShoppingList(
-  db: SQLiteDatabase,
-  list: ShoppingListMeta
-) {
-  await db.runAsync(
-    `
-    INSERT INTO shopping_lists (id, name, is_default_synced_list, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?)
-    ON CONFLICT(id) DO UPDATE SET
-      name = excluded.name,
-      is_default_synced_list = excluded.is_default_synced_list,
-      updated_at = excluded.updated_at
-    `,
-    [
-      list.id,
-      list.name,
-      list.isDefaultSyncedList ? 1 : 0,
-      list.createdAt,
-      list.updatedAt,
-    ]
-  );
-}
-
-export async function renameShoppingList(
-  db: SQLiteDatabase,
-  listId: string,
-  name: string
-) {
-  await db.runAsync(
-    `
-    UPDATE shopping_lists
-    SET name = ?, updated_at = ?
-    WHERE id = ?
-    `,
-    [name, new Date().toISOString(), listId]
-  );
-}
-
-export async function deleteShoppingList(db: SQLiteDatabase, listId: string) {
-  await db.runAsync(
-    `
-    DELETE FROM shopping_lists
-    WHERE id = ? AND is_default_synced_list = 0
-    `,
-    [listId]
-  );
-}
-
 export function mapShoppingListRowToMeta(
   row: ShoppingListRow
 ): ShoppingListMeta {

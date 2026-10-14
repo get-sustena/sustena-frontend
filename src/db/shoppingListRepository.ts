@@ -45,19 +45,6 @@ export function replaceShoppingListItemsForList(
   );
 }
 
-export async function deleteShoppingListItemsForList(
-  db: SQLiteDatabase,
-  listId: string
-) {
-  await db.runAsync(
-    `
-    DELETE FROM shopping_list_items
-    WHERE list_id = ?
-    `,
-    [listId]
-  );
-}
-
 export async function getShoppingListItemSummaries(db: SQLiteDatabase) {
   return db.getAllAsync<{
     list_id: string;

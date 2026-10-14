@@ -1002,6 +1002,8 @@ export interface RecipeCookedResponse {
 export interface ShoppingListCreateRequest {
   name: string;
   isActive?: boolean;
+  // Makes a retry after a lost reply return the list already made.
+  clientMutationId?: string;
 }
 
 export interface ShoppingListUpdateRequest {

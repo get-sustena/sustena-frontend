@@ -31,11 +31,9 @@ import {
   getStoredShoppingListItems,
   replaceShoppingListItemsForList,
 } from "../db/shoppingListRepository";
-import {
-  getStoredShoppingLists,
-  mapShoppingListRowToMeta,
-  upsertShoppingList,
-} from "../db/shoppingListsRepository";
+import { replaceListsKeepingPendingEdits } from "../db/shoppingListRows";
+import { getStoredShoppingLists, mapShoppingListRowToMeta } from "../db/shoppingListsRepository";
+import { runWriteTransaction } from "../db/writeTransaction";
 import { getSavedIngredientCatalog } from "../db/ingredientCatalogRepository";
 import { startApi } from "../lib/api";
 import { apiShoppingItemToLocalItem } from "../lib/api/adapters";
@@ -158,15 +156,22 @@ export function useAppBootstrap(enabled = true) {
       hydratePantry(pantryIngredientIds);
       await replaceStoredPantry(db, pantryIngredientIds);
 
-      const listMetadata = start.shoppingLists.map((list) => ({
-        id: list.id,
-        name: list.name,
-        isDefaultSyncedList: list.isActive,
-        createdAt: list.createdAt,
-        updatedAt: list.updatedAt,
-      }));
-      for (const [index, list] of start.shoppingLists.entries()) {
-        await upsertShoppingList(db, listMetadata[index]);
+      // Lists made, renamed or deleted on the phone and not sent yet stay
+      // as the phone has them (QAD-01).
+      const shownLists = await runWriteTransaction(db, (tx) =>
+        replaceListsKeepingPendingEdits(
+          tx,
+          start.shoppingLists.map((list) => ({
+            id: list.id,
+            name: list.name,
+            isDefaultSyncedList: list.isActive,
+            createdAt: list.createdAt,
+            updatedAt: list.updatedAt,
+          }))
+        )
+      );
+      for (const list of start.shoppingLists) {
+        if (!shownLists.some((shown) => shown.id === list.id)) continue;
         const saved = await replaceShoppingListItemsForList(
           db,
           list.id,
@@ -180,7 +185,7 @@ export function useAppBootstrap(enabled = true) {
           hydrateShoppingItems(saved);
         }
       }
-      hydrateShoppingLists(listMetadata);
+      hydrateShoppingLists(shownLists);
     }
 
     async function bootstrap() {

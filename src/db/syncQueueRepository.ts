@@ -20,6 +20,9 @@ export type SyncQueueKind =
   | "shopping_list_item_restore"
   | "shopping_list_clear_checked"
   | "shopping_list_recipe_batch"
+  | "shopping_list_create"
+  | "shopping_list_rename"
+  | "shopping_list_delete"
   | "recipe_cooked";
 
 export type SyncQueueOperation = {

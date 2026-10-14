@@ -20,6 +20,7 @@ import { runFavoriteCommand } from "../favorites/favoriteCommands";
 import { queryClient } from "../query/queryClient";
 import { queryKeys } from "../query/queryKeys";
 import { runSettingsCommand } from "../settings/settingsCommands";
+import { runListCommand } from "../shopping/listCommands";
 import { runShoppingCommand } from "../shopping/shoppingReplay";
 import { replayOutbox } from "./outboxReplay";
 
@@ -33,6 +34,16 @@ export async function processSyncQueue(db: SQLiteDatabase, { reconnected = false
 }
 
 async function runOperation(db: SQLiteDatabase, operation: SyncQueueOperation) {
+  const listHandled = await runListCommand(db, operation, {
+    api: {
+      createShoppingList: shoppingListsApi.createShoppingList,
+      updateShoppingListById: shoppingListsApi.updateShoppingListById,
+      deleteShoppingListById: shoppingListsApi.deleteShoppingListById,
+    },
+    transact: (work) => runWriteTransaction(db, work),
+  });
+  if (listHandled) return;
+
   const handled = await runShoppingCommand(db, operation, {
     api: {
       addShoppingListItemToList: shoppingListsApi.addShoppingListItemToList,

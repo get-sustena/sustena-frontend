@@ -1,7 +1,7 @@
 import { router, useFocusEffect } from "expo-router";
 import { Image } from "expo-image";
 import { useSQLiteContext } from "expo-sqlite";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Pressable,
   ScrollView,
@@ -14,25 +14,18 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppText } from "../../src/components/ui/AppText";
 import { appImages } from "../../src/assets/appImages";
 import { Icon } from "../../src/components/ui/Icon";
+import { replaceListsKeepingPendingEdits } from "../../src/db/shoppingListRows";
 import {
-  deleteShoppingListItemsForList,
   getShoppingListItemSummaries,
   replaceShoppingListItemsForList,
 } from "../../src/db/shoppingListRepository";
-import {
-  deleteShoppingList,
-  renameShoppingList as renameShoppingListLocal,
-  upsertShoppingList,
-} from "../../src/db/shoppingListsRepository";
-import {
-  useCreateShoppingListMutation,
-  useDeleteShoppingListMutation,
-  useRenameShoppingListMutation,
-} from "../../src/hooks/api/useShoppingLists";
+import { getStoredShoppingLists, mapShoppingListRowToMeta } from "../../src/db/shoppingListsRepository";
+import { runWriteTransaction } from "../../src/db/writeTransaction";
+import { useListCommands } from "../../src/hooks/useListCommands";
 import { useIsOnline } from "../../src/hooks/useIsOnline";
 import { shoppingListsApi } from "../../src/lib/api";
 import { apiShoppingItemToLocalItem } from "../../src/lib/api/adapters";
-import { getApiErrorMessage } from "../../src/lib/api/errors";
+import { onSyncFinished } from "../../src/lib/sync/syncEvents";
 import { useShoppingListsStore } from "../../src/store/shoppingListsStore";
 import { closeSheet, openSheet, showToast } from "../../src/store/uiStore";
 import { theme } from "../../src/theme/theme";
@@ -53,9 +46,7 @@ export default function ShoppingListsScreen() {
   const renameListInStore = useShoppingListsStore((state) => state.renameList);
   const removeListInStore = useShoppingListsStore((state) => state.removeList);
   const hydrateLists = useShoppingListsStore((state) => state.hydrateLists);
-  const createShoppingListMutation = useCreateShoppingListMutation();
-  const renameShoppingListMutation = useRenameShoppingListMutation();
-  const deleteShoppingListMutation = useDeleteShoppingListMutation();
+  const listCommands = useListCommands();
   const [summaries, setSummaries] = useState<Record<string, ListSummary>>({});
 
   const loadSummaries = useCallback(async () => {
@@ -78,44 +69,35 @@ export default function ShoppingListsScreen() {
     try {
       const requestedAt = Date.now();
       const serverLists = await shoppingListsApi.getShoppingLists();
-      const currentLists = useShoppingListsStore.getState().lists;
-      const serverIds = new Set(serverLists.map((list) => list.id));
-
-      const staleLocalLists = currentLists.filter(
-        (list) => !serverIds.has(list.id)
+      // Lists made, renamed or deleted on the phone and not sent yet stay
+      // as the phone has them (QAD-01).
+      const shown = await runWriteTransaction(db, (tx) =>
+        replaceListsKeepingPendingEdits(
+          tx,
+          serverLists.map((list) => ({
+            id: list.id,
+            name: list.name,
+            isDefaultSyncedList: list.isActive,
+            createdAt: list.createdAt,
+            updatedAt: list.updatedAt,
+          }))
+        )
       );
 
-      for (const stale of staleLocalLists) {
-        await deleteShoppingListItemsForList(db, stale.id);
-        await deleteShoppingList(db, stale.id);
-      }
-
-      const synchronizedLists: ShoppingListMeta[] = serverLists.map(
-        (list) => ({
-          id: list.id,
-          name: list.name,
-          isDefaultSyncedList: list.isActive,
-          createdAt: list.createdAt,
-          updatedAt: list.updatedAt,
-        })
-      );
-
-      for (const list of synchronizedLists) {
-        await upsertShoppingList(db, list);
+      for (const serverList of serverLists) {
+        if (!shown.some((list) => list.id === serverList.id)) continue;
         await replaceShoppingListItemsForList(
           db,
-          list.id,
-          serverLists
-            .find((serverList) => serverList.id === list.id)!
-            .items.map((item) => ({
-              ...apiShoppingItemToLocalItem(item),
-              listId: list.id,
-            })),
+          serverList.id,
+          serverList.items.map((item) => ({
+            ...apiShoppingItemToLocalItem(item),
+            listId: serverList.id,
+          })),
           { requestedAt }
         );
       }
 
-      hydrateLists(synchronizedLists);
+      hydrateLists(shown);
       await loadSummaries();
     } catch (error) {
       console.error("Failed to sync shopping lists from server", error);
@@ -129,37 +111,26 @@ export default function ShoppingListsScreen() {
     }, [loadSummaries, syncListsFromServer])
   );
 
+  // Sent changes can give a new list the server's id, or bring back a list
+  // whose delete was refused.
+  useEffect(
+    () =>
+      onSyncFinished(() => {
+        void getStoredShoppingLists(db).then((rows) => hydrateLists(rows.map(mapShoppingListRowToMeta)));
+        void loadSummaries();
+      }),
+    [db, hydrateLists, loadSummaries]
+  );
+
   async function handleCreateList(name: string) {
     const trimmed = name.trim();
     if (!trimmed) return;
 
-    if (!isOnline) {
-      closeSheet();
-      showToast("You're offline. Connect to create a new list", "danger");
-      return;
-    }
-
-    try {
-      const created = await createShoppingListMutation.mutateAsync({
-        name: trimmed,
-        isActive: false,
-      });
-      const list: ShoppingListMeta = {
-        id: created.id,
-        name: created.name,
-        isDefaultSyncedList: false,
-        createdAt: created.createdAt,
-        updatedAt: created.updatedAt,
-      };
-
-      await upsertShoppingList(db, list);
-      addList(list);
-      closeSheet();
-      router.push({ pathname: "/shopping/[id]", params: { id: list.id } });
-    } catch (error) {
-      closeSheet();
-      showToast(getApiErrorMessage(error), "danger");
-    }
+    // Saved on the phone at once, and sent when there's a connection.
+    const list = await listCommands.createList({ name: trimmed });
+    addList(list);
+    closeSheet();
+    router.push({ pathname: "/shopping/[id]", params: { id: list.id } });
   }
 
   function openCreateSheet() {
@@ -170,45 +141,17 @@ export default function ShoppingListsScreen() {
     const trimmed = name.trim();
     if (!trimmed) return;
 
-    if (!isOnline) {
-      closeSheet();
-      showToast("You're offline. Connect to rename this list", "danger");
-      return;
-    }
-
-    try {
-      await renameShoppingListMutation.mutateAsync({
-        shoppingListId: list.id,
-        payload: { name: trimmed },
-      });
-      await renameShoppingListLocal(db, list.id, trimmed);
-      renameListInStore(list.id, trimmed);
-      closeSheet();
-      showToast("List renamed", "success");
-    } catch (error) {
-      closeSheet();
-      showToast(getApiErrorMessage(error), "danger");
-    }
+    await listCommands.renameList({ listId: list.id, name: trimmed });
+    renameListInStore(list.id, trimmed);
+    closeSheet();
+    showToast("List renamed", "success");
   }
 
   async function handleDeleteList(list: ShoppingListMeta) {
-    if (!isOnline) {
-      closeSheet();
-      showToast("You're offline. Connect to delete this list", "danger");
-      return;
-    }
-
-    try {
-      await deleteShoppingListMutation.mutateAsync(list.id);
-      await deleteShoppingListItemsForList(db, list.id);
-      await deleteShoppingList(db, list.id);
-      removeListInStore(list.id);
-      closeSheet();
-      showToast("Shopping list deleted", "success");
-    } catch (error) {
-      closeSheet();
-      showToast(getApiErrorMessage(error), "danger");
-    }
+    await listCommands.deleteList({ listId: list.id });
+    removeListInStore(list.id);
+    closeSheet();
+    showToast("Shopping list deleted", "success");
   }
 
   function openListOptionsSheet(list: ShoppingListMeta) {

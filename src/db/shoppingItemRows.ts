@@ -140,7 +140,8 @@ export async function replaceListItemsKeepingPendingEdits(
 
   for (const operation of operations) {
     const edit = { kind: operation.kind, ...JSON.parse(operation.payload_json) } as ListEdit;
-    if (edit.listId !== listId) continue;
+    const editListId = edit.listId && ((await resolveSyncIdMapping(tx, edit.listId, "shopping_list")) ?? edit.listId);
+    if (editListId !== listId) continue;
     switch (edit.kind) {
       case "shopping_list_item_add":
         if (edit.temporaryId) keep(edit.temporaryId);

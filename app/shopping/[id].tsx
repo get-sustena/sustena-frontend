@@ -26,19 +26,13 @@ import {
   getStoredShoppingListItems,
   replaceShoppingListItemsForList,
 } from "../../src/db/shoppingListRepository";
-import {
-  deleteShoppingList,
-  renameShoppingList as renameShoppingListLocal,
-} from "../../src/db/shoppingListsRepository";
-import {
-  useDeleteShoppingListMutation,
-  useRenameShoppingListMutation,
-} from "../../src/hooks/api/useShoppingLists";
+import { resolveSyncIdMapping } from "../../src/db/syncIdMappingRepository";
+import { useListCommands } from "../../src/hooks/useListCommands";
+import { pendingListCreation } from "../../src/lib/shopping/listCommands";
 import { useIsOnline } from "../../src/hooks/useIsOnline";
 import { useShoppingCommands } from "../../src/hooks/useShoppingCommands";
 import { shoppingListsApi } from "../../src/lib/api";
 import { apiShoppingItemToLocalItem } from "../../src/lib/api/adapters";
-import { getApiErrorMessage } from "../../src/lib/api/errors";
 import { groupShoppingListItems } from "../../src/lib/groupShoppingListItems";
 import { formatShoppingQuantity } from "../../src/lib/textFormatters";
 import { queryKeys } from "../../src/lib/query/queryKeys";
@@ -333,8 +327,7 @@ function LocalListDetail({ listId, shareOnOpen }: { listId: string; shareOnOpen:
   );
   const removeListInStore = useShoppingListsStore((state) => state.removeList);
   const renameListInStore = useShoppingListsStore((state) => state.renameList);
-  const renameShoppingListMutation = useRenameShoppingListMutation();
-  const deleteShoppingListMutation = useDeleteShoppingListMutation();
+  const listCommands = useListCommands();
   const [items, setItems] = useState<ShoppingListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [pantryExpanded, setPantryExpanded] = useState(false);
@@ -356,6 +349,8 @@ function LocalListDetail({ listId, shareOnOpen }: { listId: string; shareOnOpen:
 
   const refreshFromServer = useCallback(async () => {
     if (!isOnline) return;
+    // A list made on the phone isn't on the server until its creation is sent.
+    if (await pendingListCreation(db, listId)) return;
 
     try {
       const requestedAt = Date.now();
@@ -381,10 +376,14 @@ function LocalListDetail({ listId, shareOnOpen }: { listId: string; shareOnOpen:
   useEffect(
     () =>
       onSyncFinished(() => {
-        void loadItems();
+        // A list made on the phone moves to the server's id once it's there.
+        void resolveSyncIdMapping(db, listId, "shopping_list").then((serverId) => {
+          if (serverId) router.setParams({ id: serverId });
+          else void loadItems();
+        });
         void queryClient.invalidateQueries({ queryKey: queryKeys.pantry.me });
       }),
-    [loadItems, queryClient]
+    [db, listId, loadItems, queryClient]
   );
 
   const checkedCount = items.filter((item) => item.checked).length;
@@ -442,25 +441,11 @@ function LocalListDetail({ listId, shareOnOpen }: { listId: string; shareOnOpen:
     const trimmed = name.trim();
     if (!trimmed) return;
 
-    if (!isOnline) {
-      closeSheet();
-      showToast("You're offline. Connect to rename this list", "danger");
-      return;
-    }
-
-    try {
-      await renameShoppingListMutation.mutateAsync({
-        shoppingListId: listId,
-        payload: { name: trimmed },
-      });
-      await renameShoppingListLocal(db, listId, trimmed);
-      renameListInStore(listId, trimmed);
-      closeSheet();
-      showToast("List renamed", "success");
-    } catch (error) {
-      closeSheet();
-      showToast(getApiErrorMessage(error), "danger");
-    }
+    // Saved on the phone at once, and sent when there's a connection.
+    await listCommands.renameList({ listId, name: trimmed });
+    renameListInStore(listId, trimmed);
+    closeSheet();
+    showToast("List renamed", "success");
   }
 
   function openItemMenu(item: ShoppingListItem) {
@@ -498,23 +483,11 @@ function LocalListDetail({ listId, shareOnOpen }: { listId: string; shareOnOpen:
   }
 
   async function handleDelete() {
-    if (!isOnline) {
-      closeSheet();
-      showToast("You're offline. Connect to delete this list", "danger");
-      return;
-    }
-
-    try {
-      await deleteShoppingListMutation.mutateAsync(listId);
-      await deleteShoppingList(db, listId);
-      removeListInStore(listId);
-      closeSheet();
-      router.back();
-      showToast("Shopping list deleted", "success");
-    } catch (error) {
-      closeSheet();
-      showToast(getApiErrorMessage(error), "danger");
-    }
+    await listCommands.deleteList({ listId });
+    removeListInStore(listId);
+    closeSheet();
+    router.back();
+    showToast("Shopping list deleted", "success");
   }
 
   function openAddItemSheet() {

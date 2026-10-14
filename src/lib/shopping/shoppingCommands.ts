@@ -11,6 +11,7 @@ import { resolveSyncIdMapping } from "../../db/syncIdMappingRepository.ts";
 import { enqueueSyncOperation } from "../../db/syncQueueRepository.ts";
 import type { ShoppingListItem } from "../../types/shoppingList.ts";
 import { structureShoppingQuantity } from "../shoppingQuantity.ts";
+import { pendingListCreation } from "./listCommands.ts";
 
 // Shopping list edits (QAD-02, QAD-04). Each one saves the change on the
 // device and its outbox command in one transaction, before any request, so
@@ -101,6 +102,7 @@ export function createShoppingCommands({ db, transact, now, newId, requestSync }
 
       await transact(async (tx) => {
         await insertShoppingListItem(tx, item);
+        const waitFor = await pendingListCreation(tx, listId);
         await enqueueSyncOperation(
           tx,
           "shopping_list_item_add",
@@ -116,7 +118,7 @@ export function createShoppingCommands({ db, transact, now, newId, requestSync }
             category,
             clientMutationId: item.clientMutationId,
           },
-          { mutationId: item.clientMutationId, entityId: item.id }
+          { mutationId: item.clientMutationId, entityId: item.id, dependsOn: waitFor }
         );
       });
       requestSync();
@@ -146,7 +148,7 @@ export function createShoppingCommands({ db, transact, now, newId, requestSync }
               ingredientId: item.ingredientId ?? null,
             })),
           },
-          { mutationId: batchId, entityId: recipeBatchEntity(batchId) }
+          { mutationId: batchId, entityId: recipeBatchEntity(batchId), dependsOn: await pendingListCreation(tx, listId) }
         );
       });
       requestSync();

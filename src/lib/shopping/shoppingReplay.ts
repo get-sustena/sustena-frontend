@@ -100,6 +100,8 @@ export async function runShoppingCommand(
   { api, toLocalItem, transact, now }: Dependencies
 ) {
   const payload = operation.payload as { listId: string; itemId?: string };
+  // A list made on the phone is sent under the server's id once it has one.
+  payload.listId = (await resolveSyncIdMapping(db, payload.listId, "shopping_list")) ?? payload.listId;
   // An edit that waited for its item to be created goes to the server's row
   // for it. With no row known, it's kept for review rather than sent to a
   // guess (F03).
