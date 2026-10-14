@@ -178,7 +178,7 @@ const AMAKA = { id: "creator-2", handle: "amaka", displayName: "Amaka", avatarUr
 const BY_CREATOR = {
   version: "v3",
   items: [
-    recipe("pap", "Pap", { creator: KITCHEN, createdAt: "2026-01-01T00:00:00Z", averageRating: 4.2 }),
+    recipe("pap", "Pap", { creator: KITCHEN, createdAt: "2026-01-01T00:00:00Z", averageRating: 4.9 }),
     recipe("egusi", "Egusi Soup", { creator: KITCHEN, createdAt: "2026-03-01T00:00:00Z", averageRating: 4.8 }),
     recipe("ofada", "Ofada Stew", { creator: AMAKA, createdAt: "2026-02-01T00:00:00Z" }),
   ],
@@ -193,7 +193,7 @@ test("OFF-01: offline, a creator's page lists their recipes kept on the phone", 
   assert.deepEqual(newest.items.map((item) => item.id), ["egusi", "pap"]);
   assert.equal(newest.total, 2);
   const topRated = await getLocalCreatorRecipes(database.db, "sustenakitchen", { sort: "top_rated" });
-  assert.deepEqual(topRated.items.map((item) => item.id), ["egusi", "pap"]);
+  assert.deepEqual(topRated.items.map((item) => item.id), ["pap", "egusi"]);
   const searched = await getLocalCreatorRecipes(database.db, "sustenakitchen", { search: "pap" });
   assert.deepEqual(searched.items.map((item) => item.id), ["pap"]);
 });
