@@ -17,14 +17,14 @@ export function useSyncQueueProcessor(enabled = true) {
       return;
     }
 
-    function runProcessor() {
+    function runProcessor(reconnected = false) {
       if (isRunningRef.current || useAuthStore.getState().isSigningOut) {
         return;
       }
 
       isRunningRef.current = true;
 
-      trackAccountBackgroundTask(processSyncQueue(db))
+      trackAccountBackgroundTask(processSyncQueue(db, { reconnected }))
         .catch((error) => {
           console.error("Failed to process sync queue", error);
         })
@@ -37,7 +37,7 @@ export function useSyncQueueProcessor(enabled = true) {
 
     const unsubscribeNetwork = NetInfo.addEventListener((state) => {
       if (isConnectedState(state)) {
-        runProcessor();
+        runProcessor(true);
       }
     });
 

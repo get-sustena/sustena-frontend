@@ -1,11 +1,14 @@
 
+import { onlineManager } from "@tanstack/react-query";
 import { type SQLiteDatabase } from "expo-sqlite";
 import {
   deleteSyncOperation,
   getPendingSyncOperations,
-  incrementSyncAttempt,
+  markSyncNeedsAttention,
+  scheduleSyncRetry,
   SyncQueueOperation,
 } from "../../db/syncQueueRepository";
+import { replayQueue } from "./syncReplay";
 import {
   favoritesApi,
   plannerApi,
@@ -13,7 +16,6 @@ import {
   shoppingListApi,
   shoppingListsApi,
 } from "../api";
-import { isApiClientError } from "../api/errors";
 import { apiShoppingItemToLocalItem } from "../api/adapters";
 import {
   deleteShoppingListItem,
@@ -31,42 +33,33 @@ import {
 } from "../../types/api";
 import { useAuthStore } from "../../store/authStore";
 
-const MAX_ATTEMPTS = 8;
-
-export async function processSyncQueue(db: SQLiteDatabase) {
-  const operations = await getPendingSyncOperations(db);
-
-  for (const operation of operations) {
-    if (useAuthStore.getState().isSigningOut) return;
-
-    try {
-      const payload = operation.payload as Record<string, unknown>;
-      if (typeof payload.itemId === "string") {
-        payload.itemId =
-          (await resolveSyncIdMapping(
-            db,
-            payload.itemId,
-            "shopping_list_item"
-          )) ?? payload.itemId;
-      }
-      await runOperation(operation, db);
-      await deleteSyncOperation(db, operation.id);
-    } catch (error) {
-      if (useAuthStore.getState().isSigningOut) return;
-
-      if (isUnrecoverable(error) || operation.attempts + 1 >= MAX_ATTEMPTS) {
-        console.warn(
-          "Dropping queued change that could not be synced",
-          operation.kind,
-          error
-        );
-        await deleteSyncOperation(db, operation.id);
-        continue;
-      }
-
-      await incrementSyncAttempt(db, operation.id);
+// Replays queued offline edits (rules in syncReplay.ts). `reconnected` is
+// set when the connection has just come back, so edits waiting out a
+// backoff are tried at once.
+export async function processSyncQueue(db: SQLiteDatabase, { reconnected = false } = {}) {
+  await replayQueue(
+    {
+      pending: () => getPendingSyncOperations(db),
+      run: async (operation) => {
+        const payload = operation.payload as Record<string, unknown>;
+        if (typeof payload.itemId === "string") {
+          payload.itemId =
+            (await resolveSyncIdMapping(db, payload.itemId, "shopping_list_item")) ??
+            payload.itemId;
+        }
+        await runOperation(operation, db);
+      },
+      remove: (id) => deleteSyncOperation(db, id),
+      scheduleRetry: (id, nextAttemptAt) => scheduleSyncRetry(db, id, nextAttemptAt),
+      markNeedsAttention: (id, reason) => markSyncNeedsAttention(db, id, reason),
+    },
+    {
+      isOnline: () => onlineManager.isOnline(),
+      isStopped: () => useAuthStore.getState().isSigningOut,
+      now: () => Date.now(),
+      ignoreBackoff: reconnected,
     }
-  }
+  );
 }
 
 async function runOperation(operation: SyncQueueOperation, db: SQLiteDatabase) {
@@ -188,18 +181,4 @@ async function runOperation(operation: SyncQueueOperation, db: SQLiteDatabase) {
     default:
       return;
   }
-}
-
-function isUnrecoverable(error: unknown) {
-  if (!isApiClientError(error)) {
-    return false;
-  }
-
-  // Permanent client errors cannot be repaired by retrying the queued operation.
-  return (
-    error.status >= 400 &&
-    error.status < 500 &&
-    error.status !== 408 &&
-    error.status !== 429
-  );
 }

@@ -5,7 +5,7 @@ import {
   runWithSqliteRetry,
 } from "./sqliteGuards";
 
-const DATABASE_VERSION = 13;
+const DATABASE_VERSION = 14;
 let migrationQueue = Promise.resolve();
 
 export async function migrateDbIfNeeded(db: SQLiteDatabase) {
@@ -404,6 +404,20 @@ async function runMigrations(db: SQLiteDatabase) {
       );
 
       PRAGMA user_version = 13;
+    `);
+  }
+
+  const versionAfterSyncIdMappings = versionAfterPantry < 13 ? 13 : versionAfterPantry;
+
+  // F02: a queued edit waits out a backoff after a temporary failure, and is
+  // kept for repair after a permanent one, instead of being deleted.
+  if (versionAfterSyncIdMappings < 14) {
+    await db.execAsync(`
+      ALTER TABLE sync_queue ADD COLUMN next_attempt_at INTEGER;
+      ALTER TABLE sync_queue ADD COLUMN needs_attention INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE sync_queue ADD COLUMN last_error TEXT;
+
+      PRAGMA user_version = 14;
     `);
   }
 }
