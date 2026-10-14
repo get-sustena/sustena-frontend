@@ -37,4 +37,5 @@ export const SIGNED_IN_ROUTES = [
   "password-security",
   "subscription",
   "support",
+  "unsaved-changes",
 ] as const;

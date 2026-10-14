@@ -56,6 +56,7 @@ test("cooked offline: the button shows Cooked today at once, and the tap waits i
     recipeId: "sustena_pap-ogi",
     source: "learn_mode",
     cookedAt: "2026-10-14T20:30:00.000Z",
+    userId: "user-1",
   });
 });
 

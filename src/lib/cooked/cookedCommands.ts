@@ -47,7 +47,7 @@ export function createCookedCommands({ transact, now, newId, requestSync }: Depe
         await enqueueSyncOperation(
           tx,
           "recipe_cooked",
-          { recipeId, source, cookedAt: at.toISOString() },
+          { recipeId, source, cookedAt: at.toISOString(), userId },
           { mutationId: newId("cooked_mutation"), entityId: recipeId }
         );
         return true;
