@@ -1,5 +1,5 @@
 
-import { UnitMode } from "../data/recipes";
+import type { UnitMode } from "../data/recipes.ts";
 
 export type HealthCondition =
   | "none"

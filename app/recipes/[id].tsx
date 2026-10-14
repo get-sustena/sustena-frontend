@@ -18,6 +18,7 @@ import { Button } from "../../src/components/ui/Button";
 import { Icon } from "../../src/components/ui/Icon";
 import { InlineNotice } from "../../src/components/ui/InlineNotice";
 import { SavedPhoto } from "../../src/components/ui/SavedPhoto";
+import { ServingsStepper } from "../../src/components/ui/ServingsStepper";
 import { ProgressLoader } from "../../src/components/ui/ProgressLoader";
 import { Screen } from "../../src/components/ui/Screen";
 import { useIngredientCatalogQuery } from "../../src/hooks/api/useIngredients";
@@ -685,30 +686,7 @@ export default function RecipeDetailScreen() {
           {recipeDetail && !recipeDetail.baseServings ? null : (
             <>
               <SectionHeader title="Adjust recipe" first />
-              <View style={styles.servingCard}>
-                <Pressable
-                  onPress={() => setServings((current) => Math.max(1, current - 1))}
-                  style={styles.servingButton}
-                >
-                  <Icon name="minus" size={20} color={theme.colors.text} />
-                </Pressable>
-
-                <View style={styles.servingValueWrap}>
-                  <AppText style={styles.servingValue}>{servings}</AppText>
-                  <AppText style={styles.servingLabel}>
-                    servings
-                  </AppText>
-                </View>
-
-                <Pressable
-                  onPress={() =>
-                    setServings((current) => Math.min(25, current + 1))
-                  }
-                  style={styles.servingButton}
-                >
-                  <Icon name="plus" size={20} color={theme.colors.text} />
-                </Pressable>
-              </View>
+              <ServingsStepper value={servings} onChange={setServings} />
             </>
           )}
 
@@ -1517,45 +1495,6 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     color: theme.colors.navy,
     letterSpacing: -0.4,
-  },
-  servingCard: {
-    width: 210,
-    alignSelf: "center",
-    backgroundColor: theme.colors.white,
-    borderWidth: 0.5,
-    borderColor: "#E2E2E0",
-    borderRadius: 999,
-    paddingVertical: 3,
-    paddingHorizontal: 4,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
-  },
-  servingButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 999,
-    backgroundColor: theme.colors.card2,
-    borderWidth: 0,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  servingValueWrap: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "baseline",
-    justifyContent: "center",
-    gap: 6,
-  },
-  servingValue: {
-    fontFamily: theme.fontFamily.display,
-    fontSize: 22,
-    color: theme.colors.navy,
-  },
-  servingLabel: {
-    fontFamily: theme.fontFamily.bodyMedium,
-    fontSize: 13,
-    color: "#545B53",
   },
   unitModeRow: {
     flexDirection: "row",
