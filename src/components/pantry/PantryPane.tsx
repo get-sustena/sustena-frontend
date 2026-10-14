@@ -51,10 +51,16 @@ export function PantryPane({ initialCategory }: Props) {
   const removeIngredient = usePantryStore((state) => state.removeIngredient);
   const catalog = useMemo(() => catalogQuery.data ?? [], [catalogQuery.data]);
   const catalogById = useMemo(() => new Map(catalog.map((ingredient) => [ingredient.id, ingredient])), [catalog]);
-  const pantryIngredients = useMemo(
-    () => pantryIds.map((id) => catalogById.get(id)).filter((item) => item !== undefined),
-    [catalogById, pantryIds]
+  // The pantry response carries each item's ingredient, so the pantry draws
+  // without waiting for the whole catalogue. The catalogue fills in items
+  // just added, and stands in offline.
+  const pantryResponseById = useMemo(
+    () => new Map((pantryQuery.data?.items ?? []).map((item) => [item.ingredientId, item.ingredient])),
+    [pantryQuery.data]
   );
+  const ingredientFor = (id: string) => pantryResponseById.get(id) ?? catalogById.get(id);
+  const pantryIngredients = pantryIds.map(ingredientFor).filter((item) => item !== undefined);
+  const canDrawPantry = Boolean(pantryQuery.data || catalogQuery.data);
   const visibleIngredients = pantryIngredients.filter(
     (ingredient) => matchesPantryCategory(ingredient, activeCategory) && matchesPantrySearch(ingredient, search)
   );
@@ -79,7 +85,6 @@ export function PantryPane({ initialCategory }: Props) {
   function openIngredientPicker() {
     openSheet(
       <PantryIngredientPickerSheet
-        ingredients={catalog}
         savedIngredientIds={pantryIds}
         onClose={closeSheet}
         onAdd={async (ingredientIds) => {
@@ -120,7 +125,7 @@ export function PantryPane({ initialCategory }: Props) {
       const ids = response.items.map((item) => item.ingredientId);
       hydratePantry(ids);
       await replaceStoredPantry(db, ids);
-      const name = catalogById.get(ingredientId)?.displayName ?? "Ingredient";
+      const name = ingredientFor(ingredientId)?.displayName ?? "Ingredient";
       showToast(`${name} removed from pantry`, "default", {
         label: "Undo",
         onPress: () => { void handleRestore(ingredientId); },
@@ -155,8 +160,8 @@ export function PantryPane({ initialCategory }: Props) {
     }
   }
 
-  if (catalogQuery.isPending || (pantryQuery.isPending && !pantryIds.length)) return <PaneScroll><PantryListSkeleton /></PaneScroll>;
-  if (catalogQuery.isError) return <PaneScroll><EmptyState iconName="offline" title="Could not load ingredients" message={getApiErrorMessage(catalogQuery.error)} /></PaneScroll>;
+  if (!canDrawPantry && (pantryQuery.isPending || catalogQuery.isPending)) return <PaneScroll><PantryListSkeleton /></PaneScroll>;
+  if (!canDrawPantry) return <PaneScroll><EmptyState iconName="offline" title="Could not load ingredients" message={getApiErrorMessage(pantryQuery.error ?? catalogQuery.error)} /></PaneScroll>;
 
   if (showResults) {
     return (
