@@ -44,6 +44,7 @@ import { queryKeys } from "../lib/query/queryKeys";
 import { applyBundledRecipeSeed } from "../db/recipeRepository";
 import { keepRecipesOffline, showSavedPhotos } from "../lib/catalogue/offlineCatalogue";
 import { saveMealPicks } from "../lib/catalogue/mealPicks";
+import { withPendingSettings } from "../lib/settings/settingsCommands";
 import { useFavoritesStore } from "../store/favoritesStore";
 import { useAuthStore } from "../store/authStore";
 import { usePreferencesStore } from "../store/preferencesStore";
@@ -101,7 +102,14 @@ export function useAppBootstrap(enabled = true) {
     // saved on the device as before.
     async function loadStart() {
       const mealTime = getMealTime(new Date());
-      const start = await startApi.getStart(mealTime);
+      const reply = await startApi.getStart(mealTime);
+      // Settings changed on the phone and not sent yet stay (QAD-01).
+      const start: StartResponse = {
+        ...reply,
+        preferences: await withPendingSettings(db, "preferences_update", reply.preferences),
+        profileAnswers: await withPendingSettings(db, "profile_answers_update", reply.profileAnswers),
+        plannerSettings: await withPendingSettings(db, "planner_settings_update", reply.plannerSettings),
+      };
 
       queryClient.setQueryData(queryKeys.preferences.me, start.preferences);
       queryClient.setQueryData(queryKeys.profileAnswers.me, start.profileAnswers);

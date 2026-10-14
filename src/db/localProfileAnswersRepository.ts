@@ -1,6 +1,6 @@
 
-import { type SQLiteDatabase } from "expo-sqlite";
-import { ProfileAnswers } from "../types/profileAnswers";
+import type { SQLiteDatabase } from "expo-sqlite";
+import type { ProfileAnswers } from "../types/profileAnswers.ts";
 
 const PROFILE_ANSWERS_ID = "current_user_profile_answers";
 

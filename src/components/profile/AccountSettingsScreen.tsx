@@ -4,7 +4,8 @@ import { useState } from "react";
 import { Linking, Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLogoutMutation } from "../../hooks/api/useAuth";
-import { usePreferencesQuery, useUpdatePreferencesMutation } from "../../hooks/api/usePreferences";
+import { usePreferencesQuery } from "../../hooks/api/usePreferences";
+import { useSettingsCommands } from "../../hooks/useSettingsCommands";
 import { useProfileAnswersQuery } from "../../hooks/api/useProfileAnswers";
 import { useFavoriteRecipes } from "../../hooks/useFavoriteRecipes";
 import { markWelcomeSeen } from "../../db/appMetadataRepository";
@@ -29,7 +30,7 @@ export function AccountSettingsScreen() {
   const db = useSQLiteContext();
   const insets = useSafeAreaInsets();
   const logoutMutation = useLogoutMutation();
-  const updatePreferences = useUpdatePreferencesMutation();
+  const settings = useSettingsCommands();
   const preferences = usePreferencesStore();
   const answers = useProfileAnswersStore();
   const { favoriteRecipes } = useFavoriteRecipes();
@@ -39,8 +40,7 @@ export function AccountSettingsScreen() {
   useProfileAnswersQuery();
 
   function saveUnits(value: UnitMode) {
-    preferences.setDefaultUnitMode(value);
-    updatePreferences.mutate({
+    void settings.savePreferences({
       healthConditions: preferences.healthConditions,
       dietaryPreference: preferences.dietaryPreference,
       defaultUnitMode: value,
@@ -79,8 +79,7 @@ export function AccountSettingsScreen() {
   }
 
   function saveServings(value: number) {
-    preferences.setDefaultServingSize(value);
-    updatePreferences.mutate({
+    void settings.savePreferences({
       healthConditions: preferences.healthConditions,
       dietaryPreference: preferences.dietaryPreference,
       defaultUnitMode: preferences.defaultUnitMode,

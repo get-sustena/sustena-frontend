@@ -14,10 +14,8 @@ import { SkeletonBlock, SkeletonGroup } from "../../src/components/ui/Skeleton";
 import { RECIPE_FILTERS } from "../../src/data/recipeFilters";
 import type { Recipe } from "../../src/data/recipes";
 import { useInfiniteRecipesWithLocalFallback } from "../../src/hooks/api/useRecipes";
-import {
-  useProfileAnswersQuery,
-  useUpdateProfileAnswersMutation,
-} from "../../src/hooks/api/useProfileAnswers";
+import { useProfileAnswersQuery } from "../../src/hooks/api/useProfileAnswers";
+import { useSettingsCommands } from "../../src/hooks/useSettingsCommands";
 import { useDebouncedValue } from "../../src/hooks/useDebouncedValue";
 import { apiRecipeToLocalRecipe } from "../../src/lib/api/adapters";
 import { getApiErrorMessage } from "../../src/lib/api/errors";
@@ -45,7 +43,7 @@ export default function RecipesScreen() {
   const experience = useProfileAnswersStore((state) => state.experience);
   const habitTime = useProfileAnswersStore((state) => state.habitTime);
   const setProfileAnswers = useProfileAnswersStore((state) => state.setProfileAnswers);
-  const updateProfileAnswers = useUpdateProfileAnswersMutation();
+  const settings = useSettingsCommands();
   useProfileAnswersQuery();
   const preferredDifficulty: "beginner" | "intermediate" | undefined =
     experience === "beginner" || experience === "intermediate"
@@ -149,7 +147,7 @@ export default function RecipesScreen() {
               onDismiss={() => setExperienceCardDismissed(true)}
               onSelect={(value) => {
                 setProfileAnswers({ experience: value });
-                updateProfileAnswers.mutate({ experience: value });
+                void settings.saveProfileAnswers({ experience: value });
                 setExperienceCardDismissed(true);
               }}
             />

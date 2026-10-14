@@ -1,6 +1,8 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
+import { useSQLiteContext } from "expo-sqlite";
 import { useCallback, useEffect } from "react";
 import { preferencesApi } from "../../lib/api";
+import { withPendingSettings } from "../../lib/settings/settingsCommands";
 import { queryKeys } from "../../lib/query/queryKeys";
 import { usePreferencesStore } from "../../store/preferencesStore";
 import { UserPreferences } from "../../types/api";
@@ -11,12 +13,15 @@ import {
 } from "../../types/preferences";
 
 export function usePreferencesQuery() {
+  const db = useSQLiteContext();
   const hydrateLocalPreferences = useHydrateLocalPreferences();
 
   const startLoading = useStartLoading();
   const query = useQuery({
     queryKey: queryKeys.preferences.me,
-    queryFn: preferencesApi.getPreferences,
+    // A change not sent yet stays on top of the server's copy (QAD-01).
+    queryFn: async () =>
+      withPendingSettings(db, "preferences_update", await preferencesApi.getPreferences()),
     enabled: !startLoading,
   });
 
@@ -27,20 +32,6 @@ export function usePreferencesQuery() {
   }, [hydrateLocalPreferences, query.data]);
 
   return query;
-}
-
-export function useUpdatePreferencesMutation() {
-  const queryClient = useQueryClient();
-  const hydrateLocalPreferences = useHydrateLocalPreferences();
-
-  return useMutation({
-    mutationFn: preferencesApi.updatePreferences,
-    onSuccess: (preferences) => {
-      queryClient.setQueryData(queryKeys.preferences.me, preferences);
-      queryClient.invalidateQueries({ queryKey: queryKeys.recommendations.home });
-      hydrateLocalPreferences(preferences);
-    },
-  });
 }
 
 function useHydrateLocalPreferences() {

@@ -4,14 +4,11 @@ import { resolveSyncIdMapping } from "../../db/syncIdMappingRepository";
 import type { SyncQueueOperation } from "../../db/syncQueueRepository";
 import { runWriteTransaction } from "../../db/writeTransaction";
 import { useAuthStore } from "../../store/authStore";
-import {
-  PlannerSettingsUpdateRequest,
-  ShoppingListItemCreateRequest,
-  UserProfileAnswersUpdateRequest,
-} from "../../types/api";
+import { ShoppingListItemCreateRequest } from "../../types/api";
 import {
   favoritesApi,
   plannerApi,
+  preferencesApi,
   profileAnswersApi,
   recipesApi,
   shoppingListApi,
@@ -20,6 +17,9 @@ import {
 import { apiShoppingItemToLocalItem } from "../api/adapters";
 import { runCookedCommand } from "../cooked/cookedCommands";
 import { runFavoriteCommand } from "../favorites/favoriteCommands";
+import { queryClient } from "../query/queryClient";
+import { queryKeys } from "../query/queryKeys";
+import { runSettingsCommand } from "../settings/settingsCommands";
 import { runShoppingCommand } from "../shopping/shoppingReplay";
 import { replayOutbox } from "./outboxReplay";
 
@@ -57,6 +57,17 @@ async function runOperation(db: SQLiteDatabase, operation: SyncQueueOperation) {
     return;
   }
   if (await runCookedCommand(operation, { markRecipeCooked: recipesApi.markRecipeCooked })) return;
+  if (
+    await runSettingsCommand(operation, {
+      updatePreferences: preferencesApi.updatePreferences,
+      updateProfileAnswers: profileAnswersApi.updateProfileAnswers,
+      updatePlannerSettings: plannerApi.updatePlannerSettings,
+    })
+  ) {
+    // Recommendations follow preferences and profile answers.
+    await queryClient.invalidateQueries({ queryKey: queryKeys.recommendations.home });
+    return;
+  }
 
   // Older edits may name an item by the temporary id it had when queued.
   const payload = operation.payload as Record<string, unknown>;
@@ -90,20 +101,6 @@ async function runOperation(db: SQLiteDatabase, operation: SyncQueueOperation) {
     case "shopping_remove": {
       const { itemId } = operation.payload as { itemId: string };
       await shoppingListApi.deleteShoppingListItem(itemId);
-      return;
-    }
-
-    case "profile_answers_update": {
-      await profileAnswersApi.updateProfileAnswers(
-        operation.payload as UserProfileAnswersUpdateRequest
-      );
-      return;
-    }
-
-    case "planner_settings_update": {
-      await plannerApi.updatePlannerSettings(
-        operation.payload as PlannerSettingsUpdateRequest
-      );
       return;
     }
 

@@ -1,5 +1,4 @@
 import { router } from "expo-router";
-import { useSQLiteContext } from "expo-sqlite";
 import { Pressable, StyleSheet, View } from "react-native";
 import { ProfileQuestionSheet } from "../src/components/profile/complete/ProfileQuestionSheet";
 import {
@@ -17,8 +16,7 @@ import {
 import { AppText } from "../src/components/ui/AppText";
 import { Icon, IconName } from "../src/components/ui/Icon";
 import { Screen } from "../src/components/ui/Screen";
-import { enqueueSyncOperation } from "../src/db/syncQueueRepository";
-import { useUpdateProfileAnswersMutation } from "../src/hooks/api/useProfileAnswers";
+import { useSettingsCommands } from "../src/hooks/useSettingsCommands";
 import {
   PROFILE_COMPLETION_FIELD_COUNT,
   countAnsweredProfileFields,
@@ -29,12 +27,8 @@ import { theme } from "../src/theme/theme";
 import { ProfileAnswers } from "../src/types/profileAnswers";
 
 export default function ProfileCompleteScreen() {
-  const db = useSQLiteContext();
   const answers = useProfileAnswersStore((state) => state);
-  const setProfileAnswers = useProfileAnswersStore(
-    (state) => state.setProfileAnswers
-  );
-  const updateProfileAnswersMutation = useUpdateProfileAnswersMutation();
+  const settings = useSettingsCommands();
 
   const answeredCount = countAnsweredProfileFields(answers);
   const completionPercent = Math.round(
@@ -44,21 +38,9 @@ export default function ProfileCompleteScreen() {
   async function saveAnswers(partial: Partial<ProfileAnswers>) {
     const next: ProfileAnswers = { ...answers, ...partial };
 
-    // Persist locally before attempting server sync.
-    setProfileAnswers(partial);
     closeSheet();
     showToast(getProfileSaveToast(partial, next), "success");
-
-    try {
-      await updateProfileAnswersMutation.mutateAsync(next);
-    } catch (error) {
-      console.error("Failed to sync profile answers, queuing for retry", error);
-      await enqueueSyncOperation(db, "profile_answers_update", next).catch(
-        (queueError) => {
-          console.error("Failed to queue profile answers sync", queueError);
-        }
-      );
-    }
+    await settings.saveProfileAnswers(partial);
   }
 
   function openQuestion(field: ProfileQuestionField) {

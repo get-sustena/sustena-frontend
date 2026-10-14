@@ -12,21 +12,11 @@ import {
 } from "react-native";
 import type { Recipe } from "../../data/recipes";
 import { replaceShoppingListItemsForList } from "../../db/shoppingListRepository";
-import {
-  useBudgetPlannerMutation,
-  usePlannerSettingsQuery,
-  useUpdatePlannerSettingsMutation,
-} from "../../hooks/api/usePlanner";
-import { useUpdatePreferencesMutation } from "../../hooks/api/usePreferences";
-import {
-  useProfileAnswersQuery,
-  useUpdateProfileAnswersMutation,
-} from "../../hooks/api/useProfileAnswers";
+import { useBudgetPlannerMutation, usePlannerSettingsQuery } from "../../hooks/api/usePlanner";
+import { useProfileAnswersQuery } from "../../hooks/api/useProfileAnswers";
+import { useSettingsCommands } from "../../hooks/useSettingsCommands";
 import { apiRecipeToLocalRecipe, apiShoppingItemToLocalItem } from "../../lib/api/adapters";
-import {
-  getApiErrorMessage,
-  toApiClientError,
-} from "../../lib/api/errors";
+import { getApiErrorMessage } from "../../lib/api/errors";
 import { mealPlansApi, shoppingListsApi } from "../../lib/api";
 import { formatNaira } from "../../lib/formatters";
 import { openRecipe } from "../../lib/navigation/openRecipe";
@@ -94,10 +84,7 @@ export function BudgetPlannerPane() {
   const [isUpdatingSavedPlan, setIsUpdatingSavedPlan] = useState(false);
   const generationRequestRef = useRef(0);
   const budgetPlannerMutation = useBudgetPlannerMutation();
-  const updatePlannerSettingsMutation =
-    useUpdatePlannerSettingsMutation();
-  const updatePreferencesMutation = useUpdatePreferencesMutation();
-  const updateProfileAnswersMutation = useUpdateProfileAnswersMutation();
+  const settings = useSettingsCommands();
   const hydrateItems = useShoppingListStore((state) => state.hydrateItems);
   const activeListId = useShoppingListsStore((state) => state.activeListId);
   const shoppingLists = useShoppingListsStore((state) => state.lists);
@@ -309,31 +296,10 @@ export function BudgetPlannerPane() {
     setPlannedMeals([]);
     setSavedPlanId(null);
     budgetPlannerMutation.reset();
-    updatePlannerSettingsMutation.mutate(
-      {
-        ...value,
-        mealsPerDay: value.mealSlots.length,
-      },
-      {
-        onSuccess: () => {
-          showToast(
-            "Plan updated, tap Generate to build your new plan",
-            "success"
-          );
-        },
-        onError: (error) => {
-          if (toApiClientError(error).status === 0) {
-            showToast(
-              "Plan saved on this device. We'll sync it when you're online.",
-              "success"
-            );
-            return;
-          }
-
-          showToast(getApiErrorMessage(error));
-        },
-      }
-    );
+    // Saved on the phone at once, and sent when there's a connection.
+    void settings.savePlannerSettings(value).then(() => {
+      showToast("Plan updated, tap Generate to build your new plan", "success");
+    });
   }
 
   function startCreatingPlan() {
@@ -359,8 +325,8 @@ export function BudgetPlannerPane() {
     setDefaultServingSize(defaultServingSize);
     setIsQuickSetupOpen(false);
 
-    updateProfileAnswersMutation.mutate(value);
-    updatePreferencesMutation.mutate({
+    void settings.saveProfileAnswers(value);
+    void settings.savePreferences({
       healthConditions,
       dietaryPreference,
       defaultUnitMode,
