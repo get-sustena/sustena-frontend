@@ -286,6 +286,20 @@ export interface PantryItem {
   updatedAt: ISODateTimeString;
 }
 
+// GET /me/start: what the app loads when it opens, in one request. Each part
+// has the same shape as its own request.
+export interface StartResponse {
+  user: User;
+  preferences: UserPreferences;
+  profileAnswers: UserProfileAnswers;
+  plannerSettings: PlannerSettings;
+  pantry: PantryResponse;
+  shoppingLists: ShoppingList[];
+  recommendations: RecommendationListResponse;
+  // The ingredient catalogue's ETag without its quotes.
+  ingredientCatalogueVersion: string;
+}
+
 export interface PantryResponse {
   items: PantryItem[];
 }

@@ -1,4 +1,5 @@
 
+import { useQueryClient } from "@tanstack/react-query";
 import { useSQLiteContext } from "expo-sqlite";
 import { useEffect, useState } from "react";
 import { trackAccountBackgroundTask } from "../lib/accountBackgroundTasks";
@@ -35,14 +36,11 @@ import {
   mapShoppingListRowToMeta,
   upsertShoppingList,
 } from "../db/shoppingListsRepository";
-import {
-  pantryApi,
-  plannerApi,
-  preferencesApi,
-  profileAnswersApi,
-  shoppingListsApi,
-} from "../lib/api";
+import { getSavedIngredientCatalog } from "../db/ingredientCatalogRepository";
+import { startApi } from "../lib/api";
 import { apiShoppingItemToLocalItem } from "../lib/api/adapters";
+import { getMealTime } from "../lib/mealTime";
+import { queryKeys } from "../lib/query/queryKeys";
 import { seedPublishedRecipesIfNeeded } from "../db/recipeRepository";
 import { useFavoritesStore } from "../store/favoritesStore";
 import { useAuthStore } from "../store/authStore";
@@ -53,6 +51,7 @@ import { useProfileAnswersStore } from "../store/profileAnswersStore";
 import { useShoppingListStore } from "../store/shoppingListStore";
 import { useShoppingListsStore } from "../store/shoppingListsStore";
 import { DEFAULT_SHOPPING_LIST_ID } from "../types/shoppingList";
+import type { StartResponse } from "../types/api";
 import type {
   DietaryPreference,
   HealthCondition,
@@ -60,6 +59,7 @@ import type {
 
 export function useAppBootstrap(enabled = true) {
   const db = useSQLiteContext();
+  const queryClient = useQueryClient();
   const currentUserId = useAuthStore((state) => state.user?.id);
 
   const [bootstrapState, setBootstrapState] = useState<{
@@ -92,7 +92,104 @@ export function useAppBootstrap(enabled = true) {
 
     let isMounted = true;
 
+    // Everything the app loads from the server when it opens, in one
+    // request (GET /me/start). Its parts fill the caches their own queries
+    // read, before those queries are let through (see useStartLoading), so
+    // nothing is asked for twice. Shopping lists have no query; they're
+    // saved on the device as before.
+    async function loadStart() {
+      const mealTime = getMealTime(new Date());
+      const start = await startApi.getStart(mealTime);
+
+      queryClient.setQueryData(queryKeys.preferences.me, start.preferences);
+      queryClient.setQueryData(queryKeys.profileAnswers.me, start.profileAnswers);
+      queryClient.setQueryData(queryKeys.planner.settings, start.plannerSettings);
+      queryClient.setQueryData(queryKeys.pantry.me, start.pantry);
+      queryClient.setQueryData(
+        queryKeys.recommendations.homeForMeal(mealTime),
+        start.recommendations
+      );
+
+      // A catalogue version different from the saved copy's means the
+      // catalogue changed since it was saved.
+      const savedCatalogue = await getSavedIngredientCatalog(db).catch(() => null);
+      if (savedCatalogue?.etag?.replace(/"/g, "") !== start.ingredientCatalogueVersion) {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.ingredients.catalog });
+      }
+
+      return start;
+    }
+
+    async function saveStart(start: StartResponse) {
+      const current = usePreferencesStore.getState();
+      const mergedPreferences = {
+        healthConditions: start.preferences.healthConditions as HealthCondition[],
+        dietaryPreference: start.preferences.dietaryPreference as DietaryPreference,
+        defaultUnitMode: start.preferences.defaultUnitMode,
+        defaultServingSize: start.preferences.defaultServingSize,
+        hapticsEnabled: current.hapticsEnabled,
+        dataSaverEnabled: current.dataSaverEnabled,
+        mealRemindersEnabled: current.mealRemindersEnabled,
+        hasCompletedOnboarding: current.hasCompletedOnboarding,
+      };
+      hydratePreferences(mergedPreferences);
+      await saveStoredPreferences(db, mergedPreferences);
+
+      hydrateProfileAnswers(start.profileAnswers);
+      await saveStoredProfileAnswers(db, start.profileAnswers);
+
+      hydratePlanSetup(start.plannerSettings);
+      await saveStoredPlannerSettings(db, start.plannerSettings);
+
+      const pantryIngredientIds = start.pantry.items.map((item) => item.ingredientId);
+      hydratePantry(pantryIngredientIds);
+      await replaceStoredPantry(db, pantryIngredientIds);
+
+      const listMetadata = start.shoppingLists.map((list) => ({
+        id: list.id,
+        name: list.name,
+        isDefaultSyncedList: list.isActive,
+        createdAt: list.createdAt,
+        updatedAt: list.updatedAt,
+      }));
+      for (const [index, list] of start.shoppingLists.entries()) {
+        await upsertShoppingList(db, listMetadata[index]);
+        await replaceShoppingListItemsForList(
+          db,
+          list.id,
+          list.items.map((item) => ({
+            ...apiShoppingItemToLocalItem(item),
+            listId: list.id,
+          }))
+        );
+      }
+      hydrateShoppingLists(listMetadata);
+      const active = start.shoppingLists.find((list) => list.isActive);
+      if (active) {
+        hydrateShoppingItems(
+          active.items.map((item) => ({
+            ...apiShoppingItemToLocalItem(item),
+            listId: active.id,
+          }))
+        );
+      }
+    }
+
     async function bootstrap() {
+      // Asked for first, so the server's answer is on its way while the
+      // copy saved on the device loads. The app opens on the saved copy and
+      // doesn't wait for the server.
+      const start = currentUserId
+        ? queryClient
+            .fetchQuery({
+              queryKey: queryKeys.start,
+              queryFn: loadStart,
+              staleTime: 0,
+              retry: false,
+            })
+            .catch(() => null)
+        : null;
+
       try {
         await seedPublishedRecipesIfNeeded(db);
 
@@ -141,93 +238,10 @@ export function useAppBootstrap(enabled = true) {
           hydratePlanSetup(storedPlannerSettings);
         }
 
-        if (currentUserId) {
-          const [preferencesResult, profileResult, plannerResult] =
-            await Promise.allSettled([
-              preferencesApi.getPreferences(),
-              profileAnswersApi.getProfileAnswers(),
-              plannerApi.getPlannerSettings(),
-            ]);
-
-          if (preferencesResult.status === "fulfilled") {
-            const current = usePreferencesStore.getState();
-            const server = preferencesResult.value;
-            const mergedPreferences = {
-              healthConditions: server.healthConditions as HealthCondition[],
-              dietaryPreference:
-                server.dietaryPreference as DietaryPreference,
-              defaultUnitMode: server.defaultUnitMode,
-              defaultServingSize: server.defaultServingSize,
-              hapticsEnabled: current.hapticsEnabled,
-              dataSaverEnabled: current.dataSaverEnabled,
-              mealRemindersEnabled: current.mealRemindersEnabled,
-              hasCompletedOnboarding: current.hasCompletedOnboarding,
-            };
-            hydratePreferences(mergedPreferences);
-            await saveStoredPreferences(db, mergedPreferences);
-          }
-
-          if (profileResult.status === "fulfilled") {
-            hydrateProfileAnswers(profileResult.value);
-            await saveStoredProfileAnswers(db, profileResult.value);
-          }
-
-          if (plannerResult.status === "fulfilled") {
-            hydratePlanSetup(plannerResult.value);
-            await saveStoredPlannerSettings(db, plannerResult.value);
-          }
-        }
-
         hydratePantry(await getStoredPantryIngredientIds(db));
 
         const storedShoppingLists = await getStoredShoppingLists(db);
         hydrateShoppingLists(storedShoppingLists.map(mapShoppingListRowToMeta));
-
-        if (currentUserId) {
-          try {
-            const serverPantry = await pantryApi.getPantry();
-            const pantryIngredientIds = serverPantry.items.map(
-              (item) => item.ingredientId
-            );
-            hydratePantry(pantryIngredientIds);
-            await replaceStoredPantry(db, pantryIngredientIds);
-          } catch {
-          }
-
-          try {
-            const serverLists = await shoppingListsApi.getShoppingLists();
-            const listMetadata = serverLists.map((list) => ({
-              id: list.id,
-              name: list.name,
-              isDefaultSyncedList: list.isActive,
-              createdAt: list.createdAt,
-              updatedAt: list.updatedAt,
-            }));
-            for (const list of serverLists) {
-              const metadata = listMetadata.find((entry) => entry.id === list.id)!;
-              await upsertShoppingList(db, metadata);
-              await replaceShoppingListItemsForList(
-                db,
-                list.id,
-                list.items.map((item) => ({
-                  ...apiShoppingItemToLocalItem(item),
-                  listId: list.id,
-                }))
-              );
-            }
-            hydrateShoppingLists(listMetadata);
-            const active = serverLists.find((list) => list.isActive);
-            if (active) {
-              hydrateShoppingItems(
-                active.items.map((item) => ({
-                  ...apiShoppingItemToLocalItem(item),
-                  listId: active.id,
-                }))
-              );
-            }
-          } catch {
-          }
-        }
       } catch (error) {
         console.error(error);
 
@@ -245,6 +259,16 @@ export function useAppBootstrap(enabled = true) {
               ? current
               : { userId: currentUserId ?? null, status: "ready", error: null }
           );
+        }
+      }
+
+      // Offline or on a server error, the saved copy stays, and each screen's
+      // own query asks again.
+      const started = await start;
+      if (started && isMounted) {
+        try {
+          await saveStart(started);
+        } catch {
         }
       }
     }
@@ -265,6 +289,7 @@ export function useAppBootstrap(enabled = true) {
     hydrateProfileAnswers,
     hydrateShoppingItems,
     hydrateShoppingLists,
+    queryClient,
   ]);
 
   return {

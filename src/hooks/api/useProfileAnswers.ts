@@ -3,15 +3,18 @@ import { useEffect } from "react";
 import { profileAnswersApi } from "../../lib/api";
 import { queryKeys } from "../../lib/query/queryKeys";
 import { useProfileAnswersStore } from "../../store/profileAnswersStore";
+import { useStartLoading } from "./useStartLoading";
 
 export function useProfileAnswersQuery() {
   const hydrateProfileAnswers = useProfileAnswersStore(
     (state) => state.hydrateProfileAnswers
   );
 
+  const startLoading = useStartLoading();
   const query = useQuery({
     queryKey: queryKeys.profileAnswers.me,
     queryFn: profileAnswersApi.getProfileAnswers,
+    enabled: !startLoading,
   });
 
   useEffect(() => {

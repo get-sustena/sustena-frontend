@@ -9,6 +9,7 @@ export const queryKeys = {
   auth: {
     me: ["auth", "me"] as const,
   },
+  start: ["me", "start"] as const,
   units: {
     all: ["units"] as const,
   },
