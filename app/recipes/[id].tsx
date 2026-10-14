@@ -3,7 +3,7 @@ import * as Haptics from "expo-haptics";
 import { Image } from "expo-image";
 import { Href, router, useLocalSearchParams } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
-import { useMemo, useState, type ReactNode } from "react";
+import { lazy, Suspense, useMemo, useState, type ReactNode } from "react";
 import {
   Pressable,
   ScrollView,
@@ -79,7 +79,6 @@ import type {
 import { createLocalId } from "../../src/lib/id";
 import { readRecipeSource } from "../../src/lib/recipeSource";
 import { CookedButton } from "../../src/components/recipe/CookedButton";
-import { LearnMode } from "../../src/components/learn/LearnMode";
 import {
   CaloriesEyeButton,
   IngredientCaloriesLine,
@@ -92,6 +91,13 @@ import {
 } from "../../src/components/nutrition/NutritionStrip";
 import { useIngredientCaloriesShown } from "../../src/hooks/useIngredientCaloriesShown";
 import { ingredientCalories, oilTip } from "../../src/lib/nutrition/recipeNutrition";
+
+// Learn mode's code loads the first time it's opened, not with every recipe.
+const LearnMode = lazy(() =>
+  import("../../src/components/learn/LearnMode").then((module) => ({
+    default: module.LearnMode,
+  }))
+);
 
 // --rd-muted in the v6.8 recipe page.
 const INGREDIENT_CHEVRON_COLOR = "#686E66";
@@ -1190,6 +1196,13 @@ export default function RecipeDetailScreen() {
       </View>
 
       {learnStep !== null && recipeDetail ? (
+        <Suspense
+          fallback={
+            <View style={StyleSheet.absoluteFill}>
+              <ProgressLoader variant="screen" />
+            </View>
+          }
+        >
         <LearnMode
           initialStep={learnStep}
           recipeId={recipe.id}
@@ -1205,6 +1218,7 @@ export default function RecipeDetailScreen() {
             if (params.learnStep !== undefined) router.setParams({ learnStep: undefined });
           }}
         />
+        </Suspense>
       ) : null}
     </View>
   );
