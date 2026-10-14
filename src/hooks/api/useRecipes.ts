@@ -131,6 +131,12 @@ export function useRecipeDetailWithLocalFallback(recipeId?: string, source?: Rec
     source: usingLocalFallback ? ("local" as const) : ("api" as const),
     isLoading: !data && apiQuery.isLoading,
     isError: apiQuery.isError && !localQuery.isLoading && !localQuery.data,
+    // While the saved copy shows: whether the server's copy is still on its
+    // way, or didn't come. Offline, the request waits ("paused") until the
+    // connection is back, and that counts as not coming for now.
+    isRefreshingSavedCopy: usingLocalFallback && apiQuery.isFetching,
+    savedCopyRefreshFailed:
+      usingLocalFallback && (apiQuery.isError || apiQuery.fetchStatus === "paused"),
     error: localQuery.error ?? apiQuery.error,
     refetch: async () => {
       const [apiResult, localResult] = await Promise.all([

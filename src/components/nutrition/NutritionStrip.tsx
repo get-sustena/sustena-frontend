@@ -4,12 +4,52 @@ import { theme } from "../../theme/theme";
 import type { NutrientValues } from "../../types/api";
 import { AppText } from "../ui/AppText";
 import { Icon } from "../ui/Icon";
+import { SkeletonBlock, SkeletonGroup } from "../ui/Skeleton";
 import { nutritionColors, recipeColors } from "./nutritionColors";
 
 type Props = {
   perServing: NutrientValues;
   onPress: () => void;
 };
+
+// Holds the strip's space while the numbers load, in the strip's own shape,
+// so the recipe page never jumps when they arrive.
+export function NutritionStripSkeleton() {
+  return (
+    <SkeletonGroup label="Loading nutrition" style={styles.strip}>
+      <View style={styles.grid}>
+        {[1.15, 1, 1, 1].map((grow, index) => (
+          <View key={index} style={[styles.cell, { flex: grow }, index > 0 && styles.cellDivided]}>
+            <SkeletonBlock width={index === 0 ? 50 : 42} height={LABEL_LINE} radius={4} />
+            <SkeletonBlock width={index === 0 ? 62 : 34} height={VALUE_LINE} radius={4} />
+          </View>
+        ))}
+      </View>
+      <View style={styles.foot}>
+        <SkeletonBlock width={70} height={FOOT_LINE} radius={4} />
+        <SkeletonBlock width={120} height={FOOT_LINE} radius={4} />
+      </View>
+    </SkeletonGroup>
+  );
+}
+
+// In the strip's place when the recipe's nutrition couldn't be fetched.
+export function NutritionStripError({ onRetry }: { onRetry: () => void }) {
+  return (
+    <Pressable
+      onPress={onRetry}
+      style={({ pressed }) => [styles.strip, styles.error, pressed && styles.pressed]}
+      accessibilityRole="button"
+    >
+      <AppText style={styles.errorText}>Couldn’t load nutrition.</AppText>
+      <AppText style={styles.moreText}>Try again</AppText>
+    </Pressable>
+  );
+}
+
+const LABEL_LINE = 14;
+const VALUE_LINE = 19;
+const FOOT_LINE = 16;
 
 // v6.8 .nu-strip: calories, protein, carbs and fat for 1 serving, under the
 // recipe's stats. The whole strip opens the nutrition page.
@@ -37,10 +77,14 @@ export function NutritionStrip({ perServing, onPress }: Props) {
                 {cell.name}
               </AppText>
             </View>
-            <AppText style={styles.value} numberOfLines={1}>
-              {formatWhole(cell.value)}
-              <AppText style={styles.unit}>{` ${cell.unit}`}</AppText>
-            </AppText>
+            <View style={styles.valueRow}>
+              <AppText style={styles.value} numberOfLines={1}>
+                {formatWhole(cell.value)}
+              </AppText>
+              <AppText style={styles.unit} numberOfLines={1}>
+                {cell.unit}
+              </AppText>
+            </View>
           </View>
         ))}
       </View>
@@ -92,6 +136,7 @@ const styles = StyleSheet.create({
   labelText: {
     fontFamily: theme.fontFamily.bodyMedium,
     fontSize: 11.5,
+    lineHeight: LABEL_LINE,
     color: recipeColors.muted,
   },
   value: {
@@ -101,10 +146,17 @@ const styles = StyleSheet.create({
     letterSpacing: -0.19,
     color: recipeColors.ink,
   },
+  // A fixed height, so the number and its smaller unit (two fonts on one
+  // baseline) are exactly as tall as the skeleton that stood in for them.
+  valueRow: {
+    height: VALUE_LINE,
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: 2,
+  },
   unit: {
     fontFamily: theme.fontFamily.bodyMedium,
     fontSize: 12,
-    letterSpacing: 0,
     color: recipeColors.muted,
   },
   foot: {
@@ -120,6 +172,7 @@ const styles = StyleSheet.create({
   },
   footText: {
     fontSize: 12.5,
+    lineHeight: FOOT_LINE,
     color: recipeColors.muted,
   },
   more: {
@@ -131,7 +184,23 @@ const styles = StyleSheet.create({
   moreText: {
     fontFamily: theme.fontFamily.bodySemiBold,
     fontSize: 13,
+    lineHeight: FOOT_LINE,
     color: theme.colors.navy3,
+  },
+  error: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    paddingVertical: 14,
+    paddingLeft: 14,
+    paddingRight: 12,
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: FOOT_LINE,
+    color: recipeColors.muted,
   },
   pressed: {
     opacity: 0.85,

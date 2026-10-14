@@ -85,7 +85,11 @@ import {
   IngredientCaloriesLine,
   OilTip,
 } from "../../src/components/nutrition/IngredientNutrition";
-import { NutritionStrip } from "../../src/components/nutrition/NutritionStrip";
+import {
+  NutritionStrip,
+  NutritionStripError,
+  NutritionStripSkeleton,
+} from "../../src/components/nutrition/NutritionStrip";
 import { useIngredientCaloriesShown } from "../../src/hooks/useIngredientCaloriesShown";
 import { ingredientCalories, oilTip } from "../../src/lib/nutrition/recipeNutrition";
 
@@ -771,8 +775,15 @@ export default function RecipeDetailScreen() {
             />
           </View>
 
+          {/* The recipe can show from its saved copy before the server's
+              arrives. If that copy has no nutrition yet, the strip's space is
+              held until the server answers, so the card never pops in. */}
           {nutritionPerServing ? (
             <NutritionStrip perServing={nutritionPerServing} onPress={openNutrition} />
+          ) : recipeQuery.isRefreshingSavedCopy ? (
+            <NutritionStripSkeleton />
+          ) : recipeQuery.savedCopyRefreshFailed ? (
+            <NutritionStripError onRetry={() => void recipeQuery.refetch()} />
           ) : null}
         </View>
 
