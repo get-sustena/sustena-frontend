@@ -1,7 +1,7 @@
 // Conversion requires a shared base unit; context only limits which units are offered.
 
-import { Ingredient, IngredientConversionContext, Unit } from "../types/api";
-import { formatQuantityValue } from "./scaling";
+import type { Ingredient, IngredientConversionContext, Unit } from "../types/api.ts";
+import { formatQuantityValue } from "./scaling.ts";
 
 export type UnitMode = "metric" | "cups" | "imperial";
 

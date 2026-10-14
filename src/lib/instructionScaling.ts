@@ -1,15 +1,15 @@
-import {
+import type {
   RecipeInstruction,
   RecipeInstructionQuantitySegment,
   Unit,
-} from "../types/api";
+} from "../types/api.ts";
 import {
   convertQuantity,
   formatConvertedQuantity,
   getUnitDisplayLabel,
   getUnitModeForUnitId,
-} from "./unitConversion";
-import { formatQuantityText, formatQuantityValue } from "./scaling";
+} from "./unitConversion.ts";
+import { formatQuantityText, formatQuantityValue } from "./scaling.ts";
 
 const MAX_DECIMAL_PLACES = 3;
 
