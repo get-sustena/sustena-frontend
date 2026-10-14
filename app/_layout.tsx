@@ -1,13 +1,4 @@
 
-// One import per weight, as the expo-google-fonts README shows: importing a
-// package's index pulls every weight and italic into the app bundle.
-import { BricolageGrotesque_600SemiBold } from "@expo-google-fonts/bricolage-grotesque/600SemiBold";
-import { BricolageGrotesque_700Bold } from "@expo-google-fonts/bricolage-grotesque/700Bold";
-import { BricolageGrotesque_800ExtraBold } from "@expo-google-fonts/bricolage-grotesque/800ExtraBold";
-import { Inter_400Regular } from "@expo-google-fonts/inter/400Regular";
-import { Inter_500Medium } from "@expo-google-fonts/inter/500Medium";
-import { Inter_600SemiBold } from "@expo-google-fonts/inter/600SemiBold";
-import { Inter_700Bold } from "@expo-google-fonts/inter/700Bold";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
@@ -30,6 +21,7 @@ import { SIGNED_IN_ROUTES } from "../src/lib/navigation/routeAccess";
 import { queryClient } from "../src/lib/query/queryClient";
 import { setupNetworkStatusListener } from "../src/lib/query/networkStatus";
 import { useAuthStore } from "../src/store/authStore";
+import { fontSources } from "../src/theme/fontSources";
 import { theme } from "../src/theme/theme";
 
 SplashScreen.preventAutoHideAsync();
@@ -37,15 +29,7 @@ setupNetworkStatusListener();
 configureForegroundNotifications();
 
 export default function RootLayout() {
-  const [fontsLoaded] = useFonts({
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
-    Inter_700Bold,
-    BricolageGrotesque_600SemiBold,
-    BricolageGrotesque_700Bold,
-    BricolageGrotesque_800ExtraBold,
-  });
+  const [fontsLoaded] = useFonts(fontSources);
 
   useEffect(() => {
     if (fontsLoaded) {

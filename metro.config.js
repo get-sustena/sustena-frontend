@@ -3,9 +3,12 @@ const { getDefaultConfig } = require("expo/metro-config");
 /** @type {import("expo/metro-config").MetroConfig} */
 const config = getDefaultConfig(__dirname);
 
-// expo-sqlite uses WebAssembly in browsers.
-if (!config.resolver.assetExts.includes("wasm")) {
-  config.resolver.assetExts.push("wasm");
+// expo-sqlite uses WebAssembly in browsers, and the web build's fonts are
+// WOFF2 (src/theme/fontSources.web.ts).
+for (const extension of ["wasm", "woff2"]) {
+  if (!config.resolver.assetExts.includes(extension)) {
+    config.resolver.assetExts.push(extension);
+  }
 }
 
 // SharedArrayBuffer requires a cross-origin isolated page. Production hosts
