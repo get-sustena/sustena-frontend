@@ -74,6 +74,7 @@ import {
 } from "../../src/components/nutrition/NutritionStrip";
 import { useIngredientCaloriesShown } from "../../src/hooks/useIngredientCaloriesShown";
 import { useShoppingCommands } from "../../src/hooks/useShoppingCommands";
+import { useListToAddTo } from "../../src/hooks/useListToAddTo";
 import { ingredientCalories, oilTip } from "../../src/lib/nutrition/recipeNutrition";
 
 // Learn mode's code loads the first time it's opened, not with every recipe.
@@ -114,6 +115,7 @@ export default function RecipeDetailScreen() {
   const shoppingCommands = useShoppingCommands();
   const activeListId = useShoppingListsStore((state) => state.activeListId);
   const shoppingLists = useShoppingListsStore((state) => state.lists);
+  const listToAddTo = useListToAddTo();
 
   const [servings, setServings] = useState(defaultServingSize);
   const [globalUnitMode, setGlobalUnitMode] =
@@ -467,9 +469,9 @@ export default function RecipeDetailScreen() {
     });
   }
 
-  function chooseShoppingListDestination() {
+  async function chooseShoppingListDestination() {
     if (shoppingLists.length <= 1) {
-      handleAddToShoppingList(activeListId);
+      handleAddToShoppingList(await listToAddTo(recipe?.name ?? "Shopping List #1"));
       return;
     }
     openSheet(
@@ -486,7 +488,7 @@ export default function RecipeDetailScreen() {
 
   async function addToolToShoppingList(tool: { id: string; name: string }) {
     const item = await shoppingCommands.addItem({
-      listId: activeListId,
+      listId: await listToAddTo("Shopping List #1"),
       name: tool.name,
       quantity: "1 item",
       category: "Tools",

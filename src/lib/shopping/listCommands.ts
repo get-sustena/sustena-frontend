@@ -4,6 +4,7 @@
 // here imports React Native.
 import type { SQLiteDatabase } from "expo-sqlite";
 import {
+  activateMostRecentlyTouchedList,
   deleteShoppingListRows,
   mapShoppingListRow,
   saveShoppingListRow,
@@ -77,8 +78,9 @@ export function createListCommands({ transact, now, newId, requestSync }: Depend
       requestSync();
     },
 
-    // Gone from the phone at once. The command keeps a copy of the list and
-    // its items, so a delete the server refuses can put them back.
+    // Gone from the phone at once, on any list (SL-07). The command keeps a
+    // copy of the list and its items, so a delete the server refuses can put
+    // them back.
     async deleteList({ listId }: { listId: string }) {
       await transact(async (tx) => {
         const id = await resolve(tx, listId);
@@ -88,6 +90,7 @@ export function createListCommands({ transact, now, newId, requestSync }: Depend
         );
         const items = await tx.getAllAsync<ShoppingListItemRow>("SELECT * FROM shopping_list_items WHERE list_id = ?", [id]);
         await deleteShoppingListRows(tx, id);
+        if (list?.is_default_synced_list) await activateMostRecentlyTouchedList(tx);
         await enqueueSyncOperation(
           tx,
           "shopping_list_delete",
@@ -160,6 +163,8 @@ export async function runListCommand(db: SQLiteDatabase, operation: SyncQueueOpe
         if (payload.copy) {
           const { list, items } = payload.copy;
           await transact(async (tx) => {
+            // It was the active list: it's the only active one again.
+            if (list.isDefaultSyncedList) await tx.runAsync("UPDATE shopping_lists SET is_default_synced_list = 0");
             await saveShoppingListRow(tx, { ...list, id: listId });
             for (const item of items) await insertShoppingListItem(tx, { ...item, listId });
           });

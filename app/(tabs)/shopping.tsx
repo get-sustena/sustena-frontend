@@ -44,7 +44,6 @@ export default function ShoppingListsScreen() {
   const lists = useShoppingListsStore((state) => state.lists);
   const addList = useShoppingListsStore((state) => state.addList);
   const renameListInStore = useShoppingListsStore((state) => state.renameList);
-  const removeListInStore = useShoppingListsStore((state) => state.removeList);
   const hydrateLists = useShoppingListsStore((state) => state.hydrateLists);
   const listCommands = useListCommands();
   const [summaries, setSummaries] = useState<Record<string, ListSummary>>({});
@@ -149,7 +148,8 @@ export default function ShoppingListsScreen() {
 
   async function handleDeleteList(list: ShoppingListMeta) {
     await listCommands.deleteList({ listId: list.id });
-    removeListInStore(list.id);
+    // Read back from the phone, which also knows the new active list.
+    hydrateLists((await getStoredShoppingLists(db)).map(mapShoppingListRowToMeta));
     closeSheet();
     showToast("Shopping list deleted", "success");
   }
@@ -326,7 +326,7 @@ function ListOptionsSheet({
       <View style={styles.menuSheet}>
         <Pressable onPress={() => setIsRenaming(true)} style={styles.menuRow}><Icon name="pencil" size={19} color={theme.colors.navy} /><AppText style={styles.menuRowText}>Rename list</AppText></Pressable>
         <Pressable onPress={onShare} style={styles.menuRow}><Icon name="share" size={19} color={theme.colors.navy} /><AppText style={styles.menuRowText}>Share as image</AppText></Pressable>
-        {!list.isDefaultSyncedList ? <Pressable onPress={() => setIsConfirmingDelete(true)} style={styles.menuRow}><Icon name="trash" size={19} color={theme.colors.red} /><AppText style={styles.menuRowDanger}>Delete list</AppText></Pressable> : null}
+        <Pressable onPress={() => setIsConfirmingDelete(true)} style={styles.menuRow}><Icon name="trash" size={19} color={theme.colors.red} /><AppText style={styles.menuRowDanger}>Delete list</AppText></Pressable>
       </View>
     );
   }
