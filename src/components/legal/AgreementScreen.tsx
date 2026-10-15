@@ -16,8 +16,8 @@ import { Icon } from "../ui/Icon";
 import { SignOutSheet } from "../profile/SignOutSheet";
 import { AgreementFields } from "./AgreementFields";
 
-// When the Terms change, the date of birth is already saved and the server
-// wants the same one back, so the boxes start with it.
+// When the Terms change, the date of birth is already saved: it isn't asked
+// again, and the saved one is sent back (the server wants the same date).
 function startingForm(dateOfBirth: string | null | undefined): AgreementForm {
   const [y = "", m = "", d = ""] = dateOfBirth?.split("-") ?? [];
   return { dob: { d, m, y }, terms: false, parent: false };
@@ -31,7 +31,8 @@ export function AgreementScreen() {
   const insets = useSafeAreaInsets();
   const agree = useAgreeToTermsMutation();
   const logout = useLogoutMutation();
-  const [form, setForm] = useState(() => startingForm(useAuthStore.getState().user?.dateOfBirth));
+  const [savedDateOfBirth] = useState(() => useAuthStore.getState().user?.dateOfBirth ?? null);
+  const [form, setForm] = useState(() => startingForm(savedDateOfBirth));
   const [error, setError] = useState<string | null>(null);
   const scroll = useRef<ScrollView>(null);
 
@@ -92,6 +93,7 @@ export function AgreementScreen() {
               setError(null);
             }}
             error={error}
+            hideDateOfBirth={savedDateOfBirth !== null}
           />
         </View>
       </ScrollView>

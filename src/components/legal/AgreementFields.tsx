@@ -15,6 +15,9 @@ type Props = {
   error: string | null;
   // Sign-up also asks about marketing emails; the agreement screen doesn't.
   marketing?: { value: boolean; onChange: (value: boolean) => void };
+  // Asked once: when the Terms change, the saved date is in `form` and only
+  // the ticks show.
+  hideDateOfBirth?: boolean;
 };
 
 const BOXES: { key: keyof DateOfBirthBoxes; placeholder: string; label: string; length: number; flex: number; autoComplete: "birthdate-day" | "birthdate-month" | "birthdate-year" }[] = [
@@ -25,7 +28,7 @@ const BOXES: { key: keyof DateOfBirthBoxes; placeholder: string; label: string; 
 
 // v6.9's date of birth (day, month and year boxes) and its ticks. The parent
 // or guardian tick shows as soon as the date makes the person 13 to 17.
-export function AgreementFields({ form, onChange, error, marketing }: Props) {
+export function AgreementFields({ form, onChange, error, marketing, hideDateOfBirth = false }: Props) {
   const inputs = useRef<(TextInput | null)[]>([]);
   const today = getLagosDay();
   const teen = isTeen(form.dob, today);
@@ -43,29 +46,33 @@ export function AgreementFields({ form, onChange, error, marketing }: Props) {
 
   return (
     <View>
-      <AppText style={styles.label} nativeID="dob-label">Date of birth</AppText>
-      <View style={styles.dob} accessibilityLabelledBy="dob-label">
-        {BOXES.map((box, index) => (
-          <View key={box.key} style={[styles.box, { flex: box.flex }, dobError && styles.boxError]}>
-            <TextInput
-              ref={(input) => {
-                inputs.current[index] = input;
-              }}
-              value={form.dob[box.key]}
-              onChangeText={(text) => setBox(index, text)}
-              placeholder={box.placeholder}
-              placeholderTextColor={theme.colors.textMuted}
-              keyboardType="number-pad"
-              inputMode="numeric"
-              maxLength={box.length}
-              autoComplete={box.autoComplete}
-              accessibilityLabel={box.label}
-              style={styles.input}
-            />
+      {hideDateOfBirth ? null : (
+        <>
+          <AppText style={styles.label} nativeID="dob-label">Date of birth</AppText>
+          <View style={styles.dob} accessibilityLabelledBy="dob-label">
+            {BOXES.map((box, index) => (
+              <View key={box.key} style={[styles.box, { flex: box.flex }, dobError && styles.boxError]}>
+                <TextInput
+                  ref={(input) => {
+                    inputs.current[index] = input;
+                  }}
+                  value={form.dob[box.key]}
+                  onChangeText={(text) => setBox(index, text)}
+                  placeholder={box.placeholder}
+                  placeholderTextColor={theme.colors.textMuted}
+                  keyboardType="number-pad"
+                  inputMode="numeric"
+                  maxLength={box.length}
+                  autoComplete={box.autoComplete}
+                  accessibilityLabel={box.label}
+                  style={styles.input}
+                />
+              </View>
+            ))}
           </View>
-        ))}
-      </View>
-      <AppText style={styles.hint}>You need to be 13 or older to use Sustena.</AppText>
+          <AppText style={styles.hint}>You need to be 13 or older to use Sustena.</AppText>
+        </>
+      )}
 
       {teen ? (
         <LegalCheckRow checked={form.parent} onToggle={() => onChange({ ...form, parent: !form.parent })}>
