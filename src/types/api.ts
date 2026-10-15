@@ -736,6 +736,9 @@ export interface ShoppingListItem {
   pricedAt: ISODateTimeString | null;
   clientMutationId: string | null;
   checked: boolean;
+  // SL-03; missing from an API older than it.
+  recipeAmount?: string | null;
+  sources?: { recipeId: string; recipeName: string; amount: string | null; unit: string | null }[];
   createdAt: ISODateTimeString;
   updatedAt: ISODateTimeString;
   deletedAt: ISODateTimeString | null;

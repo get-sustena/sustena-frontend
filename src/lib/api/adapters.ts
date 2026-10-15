@@ -83,6 +83,8 @@ export function apiShoppingItemToLocalItem(
     priceStatus: item.priceStatus,
     checked: item.checked,
     sourceRecipeId: item.recipeId ?? undefined,
+    recipeAmount: item.recipeAmount ?? null,
+    sources: item.sources ?? [],
     ingredientId: item.ingredientId ?? undefined,
     createdAt: item.createdAt,
     updatedAt: item.updatedAt,

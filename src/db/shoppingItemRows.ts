@@ -2,7 +2,7 @@
 // transactions. Shared by the app and its tests, so nothing here imports
 // React Native.
 import type { SQLiteDatabase } from "expo-sqlite";
-import { DEFAULT_SHOPPING_LIST_ID, type ShoppingListItem } from "../types/shoppingList.ts";
+import { DEFAULT_SHOPPING_LIST_ID, type ItemSource, type ShoppingListItem } from "../types/shoppingList.ts";
 import { resolveSyncIdMapping } from "./syncIdMappingRepository.ts";
 
 export type ShoppingListItemRow = {
@@ -21,6 +21,8 @@ export type ShoppingListItemRow = {
   checked: number;
   source_recipe_id: string | null;
   recipe_batch_id: string | null;
+  recipe_amount?: string | null;
+  sources_json?: string | null;
   created_at: string;
   updated_at: string;
   list_id: string | null;
@@ -43,6 +45,8 @@ export function mapShoppingListRowToItem(row: ShoppingListItemRow): ShoppingList
     checked: Boolean(row.checked),
     sourceRecipeId: row.source_recipe_id ?? undefined,
     recipeBatchId: row.recipe_batch_id ?? undefined,
+    recipeAmount: row.recipe_amount ?? null,
+    sources: row.sources_json ? (JSON.parse(row.sources_json) as ItemSource[]) : [],
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     listId: row.list_id ?? DEFAULT_SHOPPING_LIST_ID,
@@ -213,11 +217,13 @@ export async function insertShoppingListItem(db: SQLiteDatabase, item: ShoppingL
       checked,
       source_recipe_id,
       recipe_batch_id,
+      recipe_amount,
+      sources_json,
       created_at,
       updated_at,
       list_id
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
     [
       item.id,
@@ -235,6 +241,8 @@ export async function insertShoppingListItem(db: SQLiteDatabase, item: ShoppingL
       item.checked ? 1 : 0,
       item.sourceRecipeId ?? null,
       item.recipeBatchId ?? null,
+      item.recipeAmount ?? null,
+      item.sources?.length ? JSON.stringify(item.sources) : null,
       item.createdAt,
       item.updatedAt,
       item.listId ?? DEFAULT_SHOPPING_LIST_ID,

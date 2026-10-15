@@ -59,6 +59,9 @@ export function generateShoppingListItemsFromRecipe({
       priceStatus: "unknown",
       checked: false,
       sourceRecipeId: recipe.id,
+      // What the recipe needs, shown until the server's merged line arrives.
+      recipeAmount: scaledAmount,
+      sources: [{ recipeId: recipe.id, recipeName: recipe.name, amount: null, unit: null }],
       createdAt: now,
       updatedAt: now,
     };
