@@ -562,7 +562,12 @@ export function BudgetPlannerPane() {
           }))}
           onOpenRecipe={(recipeId) => openRecipe(recipeId, "meal_plan")}
           onSwap={handleMealSwap}
-          onAddToList={() => addPlanToList(shownMeals.map((meal) => ({ recipeId: meal.recipe.id, servings: meal.servings })))}
+          onAddToList={() =>
+            void addPlanToList(
+              shownMeals.map((meal) => ({ recipeId: meal.recipe.id, servings: meal.servings, day: meal.day })),
+              savedPlan?.name
+            )
+          }
           addToListBusy={isAdding}
           save={{ saved: Boolean(savedPlan), onSave: () => openSavePlanSheet() }}
         />

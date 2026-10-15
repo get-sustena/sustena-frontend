@@ -84,6 +84,7 @@ export function apiShoppingItemToLocalItem(
     checked: item.checked,
     sourceRecipeId: item.recipeId ?? undefined,
     recipeAmount: item.recipeAmount ?? null,
+    canonicalIngredientName: item.canonicalIngredientName,
     sources: item.sources ?? [],
     ingredientId: item.ingredientId ?? undefined,
     createdAt: item.createdAt,

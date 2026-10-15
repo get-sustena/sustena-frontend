@@ -38,7 +38,7 @@ export default function SavedMealPlansScreen() {
         }}
         onAddToList={() => {
           closeSheet();
-          addPlanToList(plan.items.map((item) => ({ recipeId: item.recipeId, servings: item.servings })));
+          void addPlanToList(plan.items.map((item) => ({ recipeId: item.recipeId, servings: item.servings, day: item.day })), plan.name);
         }}
         onDelete={() => {
           void planCommands.deletePlan({ planId: plan.id }).then(() => {

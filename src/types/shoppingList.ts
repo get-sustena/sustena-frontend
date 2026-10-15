@@ -30,6 +30,8 @@ export type ShoppingListItem = {
   // The recipe line a generated item comes from; not stored.
   recipeIngredientId?: string;
   ingredientId?: string;
+  // How the server matches a recipe's line to this row (SL-06).
+  canonicalIngredientName?: string | null;
   createdAt: string;
   updatedAt: string;
   // Only items in the default list are synchronized with the server.

@@ -1,7 +1,7 @@
 
 import { Recipe, UnitMode } from "../data/recipes";
 
-export type IngredientUnitSelections = Record<string, UnitMode | string>;
+type IngredientUnitSelections = Record<string, UnitMode | string>;
 
 export function createInitialIngredientUnitSelections({
   recipe,

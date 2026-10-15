@@ -102,7 +102,7 @@ export default function SavedMealPlanScreen() {
               onOpenRecipe={(recipeId) => openRecipe(recipeId, "meal_plan")}
               onSwap={swap}
               onAddToList={() =>
-                addPlanToList(plan.items.map((item) => ({ recipeId: item.recipeId, servings: item.servings })))
+                void addPlanToList(plan.items.map((item) => ({ recipeId: item.recipeId, servings: item.servings, day: item.day })), plan.name)
               }
               addToListBusy={isAdding}
             />

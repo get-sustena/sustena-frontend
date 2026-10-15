@@ -361,6 +361,9 @@ export interface RecipeIngredient {
   canonicalIngredientName: string | null;
   ingredientId: string | null;
   quantity: DecimalString | number | null;
+  // The stored amount in full, for the shopping list (SL-06); `quantity` is
+  // rounded to 2 places. Missing from an API older than it.
+  exactQuantity?: DecimalString | null;
   quantityMax: DecimalString | number | null;
   quantityMode: "exact" | "range" | "to_taste" | "as_needed";
   unit: string | null;

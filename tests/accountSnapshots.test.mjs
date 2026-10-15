@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { captureAccountTables, clearAccountTables, restoreAccountTables } from "../src/db/accountSnapshots.ts";
 import { createShoppingCommands } from "../src/lib/shopping/shoppingCommands.ts";
+import { queueOldRecipeBatch } from "./helpers/oldRecipeBatch.mjs";
 import { openTestDatabase } from "./helpers/sqlite.mjs";
 
 let idCounter = 0;
@@ -25,7 +26,7 @@ test("switching accounts and back keeps the outbox whole: mutation ids, waits an
   const commands = commandsFor(database);
   const rice = await commands.addItem({ listId: "list-1", name: "Rice", quantity: "1" });
   await commands.setChecked({ listId: "list-1", itemId: rice.id, checked: true });
-  await commands.addRecipes({
+  await queueOldRecipeBatch(database, {
     listId: "list-1",
     recipes: [{ recipeId: "jollof", servings: 2 }],
     items: [{ id: "line-1", name: "Tomatoes", emoji: "🛒", quantity: "1", category: "Pantry", estimatedPrice: null, checked: false, createdAt: "now", updatedAt: "now" }],

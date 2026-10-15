@@ -23,6 +23,7 @@ export type ShoppingListItemRow = {
   recipe_batch_id: string | null;
   recipe_amount?: string | null;
   sources_json?: string | null;
+  canonical_ingredient_name?: string | null;
   created_at: string;
   updated_at: string;
   list_id: string | null;
@@ -47,6 +48,7 @@ export function mapShoppingListRowToItem(row: ShoppingListItemRow): ShoppingList
     recipeBatchId: row.recipe_batch_id ?? undefined,
     recipeAmount: row.recipe_amount ?? null,
     sources: row.sources_json ? (JSON.parse(row.sources_json) as ItemSource[]) : [],
+    canonicalIngredientName: row.canonical_ingredient_name ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     listId: row.list_id ?? DEFAULT_SHOPPING_LIST_ID,
@@ -219,11 +221,12 @@ export async function insertShoppingListItem(db: SQLiteDatabase, item: ShoppingL
       recipe_batch_id,
       recipe_amount,
       sources_json,
+      canonical_ingredient_name,
       created_at,
       updated_at,
       list_id
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
     [
       item.id,
@@ -243,6 +246,7 @@ export async function insertShoppingListItem(db: SQLiteDatabase, item: ShoppingL
       item.recipeBatchId ?? null,
       item.recipeAmount ?? null,
       item.sources?.length ? JSON.stringify(item.sources) : null,
+      item.canonicalIngredientName ?? null,
       item.createdAt,
       item.updatedAt,
       item.listId ?? DEFAULT_SHOPPING_LIST_ID,

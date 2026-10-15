@@ -3,6 +3,7 @@ import { test } from "node:test";
 import { createShoppingCommands } from "../src/lib/shopping/shoppingCommands.ts";
 import { runShoppingCommand } from "../src/lib/shopping/shoppingReplay.ts";
 import { replayOutbox } from "../src/lib/sync/outboxReplay.ts";
+import { queueOldRecipeBatch } from "./helpers/oldRecipeBatch.mjs";
 import { openTestDatabase, testDatabasePath } from "./helpers/sqlite.mjs";
 
 const LIST = "list-1";
@@ -179,7 +180,7 @@ const rows = (db) => db.getAllAsync("SELECT id, name, checked FROM shopping_list
 const outbox = (db) => db.getAllAsync("SELECT kind, depends_on, needs_attention FROM sync_queue ORDER BY created_at, rowid");
 
 const addJollof = (database) =>
-  commandsFor(database).addRecipes({
+  queueOldRecipeBatch(database, {
     listId: LIST,
     recipes: [{ recipeId: "jollof", servings: 2 }],
     items: generated("jollof"),
@@ -253,7 +254,7 @@ test("F03: two recipe lines the server merges into one row both point to that ro
   const server = fakeServer();
   const commands = commandsFor(database);
   await addJollof(database);
-  const stewItems = await commands.addRecipes({
+  const stewItems = await queueOldRecipeBatch(database, {
     listId: LIST,
     recipes: [{ recipeId: "stew", servings: 2 }],
     items: generated("stew"),
@@ -379,7 +380,7 @@ async function twoRice(server) {
   const commands = commandsFor(database);
   await commands.addItem({ listId: LIST, name: "Rice", quantity: "a bunch" });
   await replay(database, server);
-  const [recipeRice] = await commands.addRecipes({
+  const [recipeRice] = await queueOldRecipeBatch(database, {
     listId: LIST,
     recipes: [{ recipeId: "porridge", servings: 1 }],
     items: generated("porridge"),

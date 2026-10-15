@@ -12,7 +12,6 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { RecipePhoto } from "../../src/components/recipe/RecipePhoto";
 import { IngredientImage } from "../../src/components/ingredient/IngredientImage";
-import { ShoppingListDestinationSheet } from "../../src/components/shopping/ShoppingListDestinationSheet";
 import { AppText } from "../../src/components/ui/AppText";
 import { Button } from "../../src/components/ui/Button";
 import { Icon } from "../../src/components/ui/Icon";
@@ -36,9 +35,6 @@ import {
 import { formatScaledInstruction } from "../../src/lib/instructionScaling";
 import { getRecipeMeals, MEAL_LABELS } from "../../src/lib/mealTime";
 import { scaleAmountText, scaleCost } from "../../src/lib/scaling";
-import {
-  generateShoppingListItemsFromRecipe,
-} from "../../src/lib/shoppingListGenerator";
 import { capitalizeWords } from "../../src/lib/textFormatters";
 import {
   buildScaleUnitOptions,
@@ -53,7 +49,6 @@ import {
 import { useFavoritesStore } from "../../src/store/favoritesStore";
 import { usePreferencesStore } from "../../src/store/preferencesStore";
 import { useShoppingListStore } from "../../src/store/shoppingListStore";
-import { useShoppingListsStore } from "../../src/store/shoppingListsStore";
 import { closeSheet, openSheet, showToast } from "../../src/store/uiStore";
 import { theme } from "../../src/theme/theme";
 import type {
@@ -74,7 +69,9 @@ import {
 } from "../../src/components/nutrition/NutritionStrip";
 import { useIngredientCaloriesShown } from "../../src/hooks/useIngredientCaloriesShown";
 import { useShoppingCommands } from "../../src/hooks/useShoppingCommands";
+import { useAddToShoppingList } from "../../src/hooks/useAddToShoppingList";
 import { useListToAddTo } from "../../src/hooks/useListToAddTo";
+import { selectionFromRecipe } from "../../src/lib/shopping/recipeMerge";
 import { ingredientCalories, oilTip } from "../../src/lib/nutrition/recipeNutrition";
 
 // Learn mode's code loads the first time it's opened, not with every recipe.
@@ -113,9 +110,8 @@ export default function RecipeDetailScreen() {
 
   const addItems = useShoppingListStore((state) => state.addItems);
   const shoppingCommands = useShoppingCommands();
-  const activeListId = useShoppingListsStore((state) => state.activeListId);
-  const shoppingLists = useShoppingListsStore((state) => state.lists);
   const listToAddTo = useListToAddTo();
+  const addToShoppingList = useAddToShoppingList();
 
   const [servings, setServings] = useState(defaultServingSize);
   const [globalUnitMode, setGlobalUnitMode] =
@@ -415,75 +411,18 @@ export default function RecipeDetailScreen() {
     );
   }
 
-  async function handleAddToShoppingList(destinationListId: string) {
-    if (!recipe) return;
-
-    const ingredientAmountOverrides = recipeDetail
-      ? Object.fromEntries(
-          recipeDetail.ingredients.map((ingredient) => [
-            ingredient.id,
-            getSelectedApiIngredientOption(ingredient).selectedOption
-              ?.preview ??
-              scaleAmountText({
-                amount:
-                  ingredient.displayText ??
-                  ingredient.quantityText ??
-                  ingredient.rawText,
-                baseServings: recipe.baseServings,
-                selectedServings: servings,
-              }),
-          ])
-        )
-      : undefined;
-    const items = generateShoppingListItemsFromRecipe({
-      recipe,
-      selectedServings: servings,
-      ingredientUnitSelections,
-      ingredientAmountOverrides,
+  // SL-06: pick a list, review what lands on it, then add; offline too.
+  function chooseShoppingListDestination() {
+    if (!recipe || !recipeDetail) return;
+    const unitOverrides = recipeDetail.ingredients.flatMap((ingredient) => {
+      const unit = getSelectedApiIngredientOption(ingredient).selectedOption?.unit;
+      return unit ? [{ ingredientId: ingredient.id, unit }] : [];
     });
-
-    const recipes = [
-      {
-        recipeId: recipe.id,
-        servings,
-        unitOverrides: (recipeDetail?.ingredients ?? []).flatMap((ingredient) => {
-          const unit = getSelectedApiIngredientOption(ingredient).selectedOption?.unit;
-          return unit ? [{ ingredientId: ingredient.id, unit }] : [];
-        }),
-      },
-    ];
-    // Shown at once and sent through the outbox, online or not; the
-    // server's merged list replaces these lines when it arrives.
-    const saved = await shoppingCommands.addRecipes({ listId: destinationListId, recipes, items });
-    if (destinationListId === activeListId) {
-      addItems(saved);
-    }
-
-    if (hapticsEnabled) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    }
-
-    router.push({
-      pathname: "/shopping/[id]",
-      params: { id: destinationListId },
+    addToShoppingList({
+      title: recipe.name,
+      defaultName: recipe.name,
+      selections: [selectionFromRecipe(recipeDetail, servings, unitOverrides)],
     });
-  }
-
-  async function chooseShoppingListDestination() {
-    if (shoppingLists.length <= 1) {
-      handleAddToShoppingList(await listToAddTo(recipe?.name ?? "Shopping List #1"));
-      return;
-    }
-    openSheet(
-      <ShoppingListDestinationSheet
-        lists={shoppingLists}
-        activeListId={activeListId}
-        onSelect={(listId) => {
-          closeSheet();
-          handleAddToShoppingList(listId);
-        }}
-      />
-    );
   }
 
   async function addToolToShoppingList(tool: { id: string; name: string }) {
