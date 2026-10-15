@@ -10,7 +10,7 @@ import { clearLocalAccountData } from "../../db/accountDataRepository";
 import { resetLocalAccountStores } from "../../lib/accountSession";
 import { waitForAccountBackgroundTasks } from "../../lib/accountBackgroundTasks";
 import { markWelcomeSeen } from "../../db/appMetadataRepository";
-import { setAuthFailureHandler } from "../../lib/api/authEvents";
+import { setAuthFailureHandler, setEmailNotVerifiedHandler } from "../../lib/api/authEvents";
 import { useAuthStore } from "../../store/authStore";
 import { theme } from "../../theme/theme";
 import { AppText } from "../ui/AppText";
@@ -27,8 +27,10 @@ export function AppBootstrapGate({ children }: Props) {
   const isHydratingAuth = useAuthStore((state) => state.isHydratingAuth);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const isSigningOut = useAuthStore((state) => state.isSigningOut);
+  // A new account waiting for its email code can't load anything else yet.
+  const emailVerificationRequired = useAuthStore((state) => Boolean(state.user?.emailVerificationRequired));
   const { isBootstrapping, bootstrapError } = useAppBootstrap(
-    !isHydratingAuth && isAuthenticated && !isSigningOut
+    !isHydratingAuth && isAuthenticated && !isSigningOut && !emailVerificationRequired
   );
   const queryClient = useQueryClient();
   const clearAuth = useAuthStore((state) => state.clearAuth);
@@ -70,6 +72,18 @@ export function AppBootstrapGate({ children }: Props) {
       setAuthFailureHandler(null);
     };
   }, [beginSignOut, clearAuth, db, isAuthenticated, queryClient]);
+
+  // The API refused a request until the emailed code is entered: the guard
+  // in app/_layout.tsx then shows the code screen.
+  useEffect(() => {
+    setEmailNotVerifiedHandler(() => {
+      const { user, setUser } = useAuthStore.getState();
+      if (user && !user.emailVerificationRequired) {
+        setUser({ ...user, emailVerificationRequired: true });
+      }
+    });
+    return () => setEmailNotVerifiedHandler(null);
+  }, []);
 
   if (isHydratingAuth || isBootstrapping) {
     return <ProgressLoader variant="screen" />;

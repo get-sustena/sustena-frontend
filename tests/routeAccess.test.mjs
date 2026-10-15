@@ -5,6 +5,7 @@ import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import {
   AGREEMENT_ROUTES,
+  EMAIL_CODE_ROUTES,
   PUBLIC_ROUTES,
   SIGNED_IN_ROUTES,
 } from "../src/lib/navigation/routeAccess.ts";
@@ -31,9 +32,9 @@ function collectRoutes(dir, prefix = "") {
 }
 
 const routesOnDisk = collectRoutes(appDir).sort();
-const listedRoutes = [...PUBLIC_ROUTES, ...SIGNED_IN_ROUTES, ...AGREEMENT_ROUTES].sort();
+const listedRoutes = [...PUBLIC_ROUTES, ...SIGNED_IN_ROUTES, ...AGREEMENT_ROUTES, ...EMAIL_CODE_ROUTES].sort();
 
-test("every screen in app/ is listed as public, signed-in or the agreement", () => {
+test("every screen in app/ is listed as public, signed-in, the agreement or the email code", () => {
   assert.deepEqual(listedRoutes, routesOnDisk);
 });
 
@@ -57,4 +58,10 @@ test("the Terms and Privacy Policy open from sign-up, so they are public", () =>
 test("the agreement screen is its own list: shown only while the account must agree", () => {
   assert.deepEqual([...AGREEMENT_ROUTES], ["legal-agree"]);
   assert.ok(SIGNED_IN_ROUTES.includes("delete-account"));
+});
+
+test("the email code screen is its own list: shown only while a new account must enter its code", () => {
+  assert.deepEqual([...EMAIL_CODE_ROUTES], ["verify-email"]);
+  assert.ok(!PUBLIC_ROUTES.includes("verify-email"));
+  assert.ok(!SIGNED_IN_ROUTES.includes("verify-email"));
 });

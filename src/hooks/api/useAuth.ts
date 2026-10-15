@@ -44,6 +44,25 @@ export function useAgreeToTermsMutation() {
   });
 }
 
+// The email code screen. Neither is resent on its own: a code is checked
+// once, and a second send would replace the code just emailed.
+export function useSendEmailCodeMutation() {
+  return useMutation({ mutationFn: authApi.sendEmailCode, retry: false });
+}
+
+export function useVerifyEmailCodeMutation() {
+  const queryClient = useQueryClient();
+  const setUser = useAuthStore((state) => state.setUser);
+  return useMutation({
+    mutationFn: authApi.verifyEmailCode,
+    retry: false,
+    onSuccess: (user) => {
+      setUser(user);
+      queryClient.setQueryData(queryKeys.auth.me, user);
+    },
+  });
+}
+
 // Delete account. The server deletes everything and signs out every device,
 // so nothing more is asked of it; this phone then forgets the account too,
 // with nothing kept for a return.

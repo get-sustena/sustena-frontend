@@ -8,17 +8,21 @@ class ApiClientError extends Error {
   status: number;
   code?: string;
   payload?: unknown;
+  // From a 429's Retry-After header, when the browser is allowed to read it.
+  retryAfterSeconds?: number;
 
   constructor({
     message,
     status,
     code,
     payload,
+    retryAfterSeconds,
   }: {
     message: string;
     status: number;
     code?: string;
     payload?: unknown;
+    retryAfterSeconds?: number;
   }) {
     super(message);
 
@@ -26,6 +30,7 @@ class ApiClientError extends Error {
     this.status = status;
     this.code = code;
     this.payload = payload;
+    this.retryAfterSeconds = retryAfterSeconds;
   }
 }
 
@@ -71,6 +76,7 @@ export function toApiClientError(error: unknown): ApiClientError {
       status,
       code: getErrorCode(payload),
       payload,
+      retryAfterSeconds: readRetryAfterSeconds(error.response?.headers?.["retry-after"]),
     });
   }
 
@@ -87,6 +93,12 @@ export function toApiClientError(error: unknown): ApiClientError {
     status: 0,
     payload: error,
   });
+}
+
+// Retry-After in seconds; the HTTP-date form isn't sent by this API.
+function readRetryAfterSeconds(header: unknown) {
+  const seconds = Number(header);
+  return Number.isFinite(seconds) && seconds > 0 ? Math.ceil(seconds) : undefined;
 }
 
 function getNetworkErrorMessage(error: AxiosError) {

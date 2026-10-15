@@ -13,6 +13,7 @@ export default function Index() {
   const isHydratingAuth = useAuthStore((state) => state.isHydratingAuth);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const agreementRequired = useAuthStore((state) => Boolean(state.user?.agreementRequired));
+  const emailCodeRequired = useAuthStore((state) => Boolean(state.user?.emailVerificationRequired));
   const [hasSeenWelcome, setHasSeenWelcome] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -49,6 +50,10 @@ export default function Index() {
 
   if (!isAuthenticated) {
     return <Redirect href={hasSeenWelcome ? "/auth" : "/welcome"} />;
+  }
+
+  if (emailCodeRequired) {
+    return <Redirect href="/verify-email" />;
   }
 
   if (agreementRequired) {

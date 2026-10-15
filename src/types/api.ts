@@ -88,6 +88,10 @@ export interface User {
   // True until the person agrees to the current Terms: the agreement screen
   // shows before the app.
   agreementRequired: boolean;
+  // True for a new account until the emailed code is entered: the code
+  // screen shows before the app, and the API refuses the rest with
+  // EMAIL_NOT_VERIFIED. Older accounts confirm by link and are never blocked.
+  emailVerificationRequired: boolean;
 }
 
 // A date of birth and agreement to the Terms, at sign-up and once of older
@@ -107,6 +111,13 @@ export interface DeleteAccountRequest {
 export interface ResendConfirmationResponse {
   sent: boolean;
   alreadyVerified: boolean;
+}
+
+// "Resend code" on the email code screen. A new code replaces the last one.
+export interface SendEmailCodeResponse {
+  sent: boolean;
+  alreadyVerified: boolean;
+  retryAfterSeconds: number;
 }
 
 export interface CurrentUserUpdateRequest {

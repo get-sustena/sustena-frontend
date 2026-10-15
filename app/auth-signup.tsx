@@ -120,7 +120,7 @@ export default function AuthSignupScreen() {
     setFieldErrors({});
 
     try {
-      await signupMutation.mutateAsync({
+      const { user } = await signupMutation.mutateAsync({
         firstName: trimmedFirstName,
         lastName: trimmedLastName,
         email: trimmedEmail,
@@ -130,6 +130,11 @@ export default function AuthSignupScreen() {
         guardianConsent: agreement.parent,
         marketingEmailsOptIn: marketingEmails,
       });
+      // New accounts enter the code from their email before the app opens.
+      if (user.emailVerificationRequired) {
+        router.replace({ pathname: "/verify-email", params: { sent: "1" } });
+        return;
+      }
       showToast(
         "You're in. We've sent a verification email so you can verify your account.",
         "success"

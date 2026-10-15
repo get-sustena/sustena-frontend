@@ -13,6 +13,7 @@ import {
   ResendConfirmationResponse,
   ResetPasswordRequest,
   ResetPasswordResponse,
+  SendEmailCodeResponse,
   SignupRequest,
   User,
   VerifyResetCodeRequest,
@@ -83,6 +84,22 @@ export function resendConfirmationEmail() {
   return apiRequest<ResendConfirmationResponse>({
     url: "/auth/verify-email/resend",
     method: "POST",
+  });
+}
+
+export function sendEmailCode() {
+  return apiRequest<SendEmailCodeResponse>({
+    url: "/auth/verify-email/code/send",
+    method: "POST",
+  });
+}
+
+// Answers with the account, now confirmed.
+export function verifyEmailCode(code: string) {
+  return apiRequest<User>({
+    url: "/auth/verify-email/code",
+    method: "POST",
+    data: { code },
   });
 }
 

@@ -12,7 +12,7 @@ import {
   API_BASE_URL,
   API_TIMEOUT_MS,
 } from "./config";
-import { notifyAuthFailure } from "./authEvents";
+import { notifyAuthFailure, notifyEmailNotVerified } from "./authEvents";
 import { toApiClientError } from "./errors";
 import { createSessionRefresher } from "./sessionRefresh";
 import {
@@ -81,6 +81,10 @@ apiClient.interceptors.response.use(
       | undefined;
 
     const status = error.response?.status;
+
+    if (status === 403 && toApiClientError(error).code === "EMAIL_NOT_VERIFIED") {
+      notifyEmailNotVerified();
+    }
 
     if (
       status !== ACCESS_TOKEN_EXPIRED_STATUS ||
