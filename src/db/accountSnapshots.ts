@@ -35,6 +35,13 @@ export async function clearAccountTables(tx: SQLiteDatabase) {
   for (const table of ACCOUNT_TABLES) await tx.runAsync(`DELETE FROM ${table}`);
 }
 
+// After the account is deleted on the server: its data goes, and so does the
+// copy kept for when it signs in again.
+export async function forgetAccount(tx: SQLiteDatabase, userId: string) {
+  await clearAccountTables(tx);
+  await tx.runAsync("DELETE FROM account_data_snapshots WHERE user_id = ?", [userId]);
+}
+
 // Values a snapshot from before a column existed can't have, worked out
 // the way the app did when it added the column.
 function filledIn(table: string, row: Row): Row {

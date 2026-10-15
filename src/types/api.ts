@@ -79,6 +79,27 @@ export interface User {
   emailVerifiedAt: ISODateTimeString | null;
   createdAt: ISODateTimeString;
   updatedAt: ISODateTimeString;
+  // "YYYY-MM-DD"; null for accounts made before sign-up asked.
+  dateOfBirth: string | null;
+  termsAcceptedAt: ISODateTimeString | null;
+  termsVersion: string | null;
+  // Set for ages 13 to 17 only.
+  guardianConsentAt: ISODateTimeString | null;
+  // True until the person agrees to the current Terms: the agreement screen
+  // shows before the app.
+  agreementRequired: boolean;
+}
+
+// A date of birth and agreement to the Terms, at sign-up and once of older
+// accounts. guardianConsent must be true for ages 13 to 17.
+export interface AgreementRequest {
+  dateOfBirth: string;
+  termsAccepted: boolean;
+  guardianConsent: boolean;
+}
+
+export interface DeleteAccountRequest {
+  password: string;
 }
 
 export interface CurrentUserUpdateRequest {
@@ -875,11 +896,13 @@ export interface SavedMealPlan {
   updatedAt: ISODateTimeString;
 }
 
-export interface SignupRequest {
+export interface SignupRequest extends AgreementRequest {
   email: string;
   password: string;
   firstName: string;
   lastName: string;
+  // The sign-up box, which starts ticked; the person can untick it.
+  marketingEmailsOptIn: boolean;
 }
 
 export interface LoginRequest {

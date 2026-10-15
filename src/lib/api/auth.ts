@@ -1,8 +1,10 @@
 
 import {
+  AgreementRequest,
   AuthResponse,
   ChangePasswordRequest,
   CurrentUserUpdateRequest,
+  DeleteAccountRequest,
   ForgotPasswordRequest,
   ForgotPasswordResponse,
   LoginRequest,
@@ -64,6 +66,24 @@ export function updateMe(payload: CurrentUserUpdateRequest) {
   return apiRequest<User>({
     url: "/auth/me",
     method: "PUT",
+    data: payload,
+  });
+}
+
+export function agreeToTerms(payload: AgreementRequest) {
+  return apiRequest<User>({
+    url: "/auth/me/agreement",
+    method: "POST",
+    data: payload,
+  });
+}
+
+// Deletes the account and everything in it on the server, and signs out
+// every device.
+export function deleteMe(payload: DeleteAccountRequest) {
+  return apiRequest<void>({
+    url: "/auth/me",
+    method: "DELETE",
     data: payload,
   });
 }

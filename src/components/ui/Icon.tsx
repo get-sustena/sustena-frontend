@@ -20,6 +20,7 @@ import {
   Ellipsis,
   Eye,
   EyeOff,
+  FileText,
   HeartPulse,
   House,
   Image as ImageIcon,
@@ -37,6 +38,7 @@ import {
   Refrigerator,
   Search,
   Share2,
+  ShieldCheck,
   ShoppingBasket,
   Shuffle,
   SlidersHorizontal,
@@ -111,7 +113,9 @@ export type IconName =
   | "protein"
   | "carbs"
   | "fat"
-  | "circleCheck";
+  | "circleCheck"
+  | "fileText"
+  | "shieldCheck";
 
 const ICONS: Record<IconName, LucideIcon> = {
   discover: Search,
@@ -169,6 +173,8 @@ const ICONS: Record<IconName, LucideIcon> = {
   carbs: Wheat,
   fat: Droplet,
   circleCheck: CircleCheck,
+  fileText: FileText,
+  shieldCheck: ShieldCheck,
 };
 
 type IconProps = {

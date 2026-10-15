@@ -17,6 +17,7 @@ type Props = {
   iconBackground?: string;
   iconColor?: string;
   valueColor?: string;
+  labelColor?: string;
 };
 
 export function SettingsRow({
@@ -31,6 +32,7 @@ export function SettingsRow({
   iconBackground = "#EEF2E7",
   iconColor = "#17291E",
   valueColor = "#279a5f",
+  labelColor,
 }: Props) {
   return (
     <Pressable
@@ -48,7 +50,7 @@ export function SettingsRow({
       </View>
 
       <View style={styles.info}>
-        <AppText style={styles.label}>{label}</AppText>
+        <AppText style={[styles.label, labelColor ? { color: labelColor } : null]}>{label}</AppText>
 
         {subtitle ? (
           <AppText style={styles.subtitle}>{subtitle}</AppText>

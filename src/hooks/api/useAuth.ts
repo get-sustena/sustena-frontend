@@ -2,15 +2,18 @@ import { QueryClient, useMutation, useQueryClient } from "@tanstack/react-query"
 import { SQLiteDatabase, useSQLiteContext } from "expo-sqlite";
 import {
   clearLocalAccountData,
+  forgetLocalAccountData,
+  getLocalAccountDataOwner,
   prepareLocalAccountData,
 } from "../../db/accountDataRepository";
+import { clearAuthTokens } from "../../lib/api/tokenStorage";
 import {
   hydrateLocalAccountStores,
   resetLocalAccountStores,
 } from "../../lib/accountSession";
 import { authApi } from "../../lib/api";
 import { waitForAccountBackgroundTasks } from "../../lib/accountBackgroundTasks";
-import { disableMealReminders } from "../../lib/notifications/mealReminders";
+import { disableMealReminders, forgetMealReminders } from "../../lib/notifications/mealReminders";
 import { queryKeys } from "../../lib/query/queryKeys";
 import { useAuthStore } from "../../store/authStore";
 
@@ -22,6 +25,57 @@ export function useUpdateMeMutation() {
     onSuccess: (user) => {
       setUser(user);
       queryClient.setQueryData(queryKeys.auth.me, user);
+    },
+  });
+}
+
+// The agreement screen: the saved user no longer needs it.
+export function useAgreeToTermsMutation() {
+  const queryClient = useQueryClient();
+  const setUser = useAuthStore((state) => state.setUser);
+  return useMutation({
+    mutationFn: authApi.agreeToTerms,
+    // A refusal (age, ticks, already saved) won't change on a second try.
+    retry: false,
+    onSuccess: (user) => {
+      setUser(user);
+      queryClient.setQueryData(queryKeys.auth.me, user);
+    },
+  });
+}
+
+// Delete account. The server deletes everything and signs out every device,
+// so nothing more is asked of it; this phone then forgets the account too,
+// with nothing kept for a return.
+export function useDeleteAccountMutation() {
+  const db = useSQLiteContext();
+  const queryClient = useQueryClient();
+  const clearAuth = useAuthStore((state) => state.clearAuth);
+  const beginSignOut = useAuthStore((state) => state.beginSignOut);
+
+  return useMutation({
+    mutationFn: authApi.deleteMe,
+    // Sent once: a wrong password isn't resent, and a delete is never repeated.
+    retry: false,
+    // The account is gone by now, so a step failing here mustn't stop the
+    // sign-out or show the person an error.
+    onSuccess: async () => {
+      beginSignOut();
+      try {
+        const userId = useAuthStore.getState().user?.id ?? (await getLocalAccountDataOwner(db));
+        await queryClient.cancelQueries();
+        await waitForAccountBackgroundTasks();
+        await clearAuthTokens();
+        await forgetMealReminders(db);
+        if (userId) await forgetLocalAccountData(db, userId);
+        else await clearLocalAccountData(db);
+      } catch (error) {
+        console.warn("Failed to forget the deleted account on this device", error);
+      } finally {
+        clearAuth();
+        queryClient.clear();
+        resetLocalAccountStores();
+      }
     },
   });
 }

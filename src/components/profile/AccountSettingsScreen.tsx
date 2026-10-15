@@ -10,7 +10,9 @@ import { useProfileAnswersQuery } from "../../hooks/api/useProfileAnswers";
 import { useFavoriteRecipes } from "../../hooks/useFavoriteRecipes";
 import { markWelcomeSeen } from "../../db/appMetadataRepository";
 import { disableMealReminders, enableMealReminders } from "../../lib/notifications/mealReminders";
+import { agreedOnText } from "../../lib/legal/agreement";
 import { countAnsweredProfileFields, PROFILE_COMPLETION_FIELD_COUNT } from "../../lib/profileCompletion";
+import { useAuthStore } from "../../store/authStore";
 import { usePreferencesStore } from "../../store/preferencesStore";
 import { useProfileAnswersStore } from "../../store/profileAnswersStore";
 import { closeSheet, openSheet, showToast } from "../../store/uiStore";
@@ -35,6 +37,9 @@ export function AccountSettingsScreen() {
   const answers = useProfileAnswersStore();
   const { favoriteRecipes } = useFavoriteRecipes();
   const answered = countAnsweredProfileFields(answers);
+  // Unknown until /auth/me answers (an offline start), so left blank till then.
+  const user = useAuthStore((state) => state.user);
+  const agreedOn = user ? agreedOnText(user.termsAcceptedAt) : undefined;
   const [mealRemindersBusy, setMealRemindersBusy] = useState(false);
   usePreferencesQuery();
   useProfileAnswersQuery();
@@ -114,7 +119,8 @@ export function AccountSettingsScreen() {
           <View style={styles.completionCard}>
             <ProfileCompletionCard answered={answered} total={PROFILE_COMPLETION_FIELD_COUNT} onPress={() => router.push("/profile-complete" as Href)} />
           </View>
-          <SettingsRow icon="lock" label="Password and security" subtitle="Keep your account secure." onPress={() => router.push("/password-security" as Href)} showDivider={false} />
+          <SettingsRow icon="lock" label="Password and security" subtitle="Keep your account secure." onPress={() => router.push("/password-security" as Href)} />
+          <SettingsRow icon="trash" iconColor={theme.colors.red} label="Delete account" labelColor={theme.colors.red} subtitle="Remove your account and your data" onPress={() => router.push("/delete-account")} showDivider={false} />
         </Section>
 
         <Section title="Your activity">
@@ -137,6 +143,11 @@ export function AccountSettingsScreen() {
 
         <Section title="Support" compact>
           <SettingsRow icon="help" label="Help & Support" subtitle="FAQs and how-to guides" onPress={() => router.push("/support" as Href)} showDivider={false} />
+        </Section>
+
+        <Section title="Legal" compact>
+          <SettingsRow icon="fileText" label="Terms of Service" subtitle={agreedOn} onPress={() => router.push({ pathname: "/legal/[doc]", params: { doc: "terms" } })} />
+          <SettingsRow icon="shieldCheck" label="Privacy Policy" subtitle={agreedOn} onPress={() => router.push({ pathname: "/legal/[doc]", params: { doc: "privacy" } })} showDivider={false} />
         </Section>
 
         <Pressable disabled={logoutMutation.isPending} onPress={() => openSheet(<SignOutSheet pending={logoutMutation.isPending} onCancel={closeSheet} onConfirm={signOut} />)} style={styles.signOut}>

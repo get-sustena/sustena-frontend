@@ -25,13 +25,6 @@ export function AuthAlternativeActions() {
         <GoogleMark />
         <AppText style={styles.googleButtonText}>Continue with Google</AppText>
       </Pressable>
-
-      <AppText style={styles.legalText}>
-        By continuing, you agree to Sustena&apos;s{"\n"}
-        <AppText style={styles.legalLink}>Terms of Service</AppText>
-        {" & "}
-        <AppText style={styles.legalLink}>Privacy Policy</AppText>
-      </AppText>
     </>
   );
 }
@@ -95,19 +88,5 @@ const styles = StyleSheet.create({
   },
   pressed: {
     transform: [{ scale: 0.98 }],
-  },
-  legalText: {
-    marginTop: 26,
-    fontFamily: theme.fontFamily.body,
-    fontSize: 12.5,
-    lineHeight: 21,
-    color: theme.colors.textMutedAlt,
-    textAlign: "center",
-  },
-  legalLink: {
-    fontFamily: theme.fontFamily.body,
-    fontSize: 12.5,
-    color: theme.colors.textMuted,
-    textDecorationLine: "underline",
   },
 });
