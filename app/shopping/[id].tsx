@@ -26,9 +26,11 @@ import {
   getStoredShoppingListItems,
   replaceShoppingListItemsForList,
 } from "../../src/db/shoppingListRepository";
+import { getStoredShoppingLists, mapShoppingListRowToMeta } from "../../src/db/shoppingListsRepository";
 import { resolveSyncIdMapping } from "../../src/db/syncIdMappingRepository";
 import { useListCommands } from "../../src/hooks/useListCommands";
 import { pendingListCreation } from "../../src/lib/shopping/listCommands";
+import { markAllChange, tickMessage } from "../../src/lib/shopping/tickChanges";
 import { useIsOnline } from "../../src/hooks/useIsOnline";
 import { useShoppingCommands } from "../../src/hooks/useShoppingCommands";
 import { shoppingListsApi } from "../../src/lib/api";
@@ -325,7 +327,7 @@ function LocalListDetail({ listId, shareOnOpen }: { listId: string; shareOnOpen:
   const list = useShoppingListsStore((state) =>
     state.lists.find((item) => item.id === listId)
   );
-  const removeListInStore = useShoppingListsStore((state) => state.removeList);
+  const hydrateLists = useShoppingListsStore((state) => state.hydrateLists);
   const renameListInStore = useShoppingListsStore((state) => state.renameList);
   const listCommands = useListCommands();
   const [items, setItems] = useState<ShoppingListItem[]>([]);
@@ -401,27 +403,29 @@ function LocalListDetail({ listId, shareOnOpen }: { listId: string; shareOnOpen:
     if (!item) return;
 
     const nextChecked = !item.checked;
-    setItems((current) =>
-      current.map((entry) =>
-        entry.id === itemId ? { ...entry, checked: nextChecked } : entry
-      )
-    );
-    await shoppingCommands.setChecked({ listId, itemId, checked: nextChecked });
+    await setChecked([itemId], nextChecked);
+    showToast(tickMessage(nextChecked), "default", {
+      label: "Undo",
+      onPress: () => void setChecked([itemId], !nextChecked),
+    });
+  }
+
+  // On screen at once; saved with its outbox command, so it works offline.
+  async function setChecked(itemIds: string[], checked: boolean) {
+    setItems((current) => current.map((item) => (itemIds.includes(item.id) ? { ...item, checked } : item)));
+    if (itemIds.length === 1) await shoppingCommands.setChecked({ listId, itemId: itemIds[0], checked });
+    else await shoppingCommands.setManyChecked({ listId, itemIds, checked });
   }
 
   async function handleToggleSelectAll() {
-    const allChecked = items.length > 0 && checkedCount === items.length;
-    const nextChecked = !allChecked;
-    const itemsToFlip = items.filter((item) => item.checked !== nextChecked);
-
-    const itemIds = itemsToFlip.map((item) => item.id);
-    setItems((current) =>
-      current.map((item) =>
-        itemIds.includes(item.id) ? { ...item, checked: nextChecked } : item
-      )
-    );
-    await shoppingCommands.setManyChecked({ listId, itemIds, checked: nextChecked });
-    showToast(allChecked ? "All items deselected" : "All items selected");
+    if (items.length === 0) return;
+    // Undo flips back only the items this changed.
+    const change = markAllChange(items);
+    await setChecked(change.itemIds, change.checked);
+    showToast(change.message, "default", {
+      label: "Undo",
+      onPress: () => void setChecked(change.itemIds, !change.checked),
+    });
   }
 
   async function handleClearChecked() {
@@ -431,8 +435,13 @@ function LocalListDetail({ listId, shareOnOpen }: { listId: string; shareOnOpen:
     showToast("Checked items removed", "success");
   }
 
-  async function handleAddItem(name: string, quantity: string, ingredientId?: string, category = "Pantry") {
-    const item = await shoppingCommands.addItem({ listId, name, quantity, ingredientId, category });
+  async function handleAddItem(
+    name: string,
+    start: { quantity: string; unit: string | null; displayQuantity: string },
+    ingredientId?: string,
+    category = "Pantry"
+  ) {
+    const item = await shoppingCommands.addItem({ listId, name, ...start, ingredientId, category });
     setItems((current) => [...current, item]);
     return item;
   }
@@ -484,7 +493,8 @@ function LocalListDetail({ listId, shareOnOpen }: { listId: string; shareOnOpen:
 
   async function handleDelete() {
     await listCommands.deleteList({ listId });
-    removeListInStore(listId);
+    // Read back from the phone, which also knows the new active list.
+    hydrateLists((await getStoredShoppingLists(db)).map(mapShoppingListRowToMeta));
     closeSheet();
     router.back();
     showToast("Shopping list deleted", "success");
@@ -542,22 +552,20 @@ function LocalListDetail({ listId, shareOnOpen }: { listId: string; shareOnOpen:
             }}
           />
         ) : null}
-        {!list?.isDefaultSyncedList ? (
-          <MenuSheetRow
-            icon="trash"
-            label="Delete list"
-            destructive
-            onPress={() => {
-              closeSheet();
-              openSheet(
-                <DeleteListSheet
-                  listName={list?.name ?? "Shopping List"}
-                  onDelete={handleDelete}
-                />
-              );
-            }}
-          />
-        ) : null}
+        <MenuSheetRow
+          icon="trash"
+          label="Delete list"
+          destructive
+          onPress={() => {
+            closeSheet();
+            openSheet(
+              <DeleteListSheet
+                listName={list?.name ?? "Shopping List"}
+                onDelete={handleDelete}
+              />
+            );
+          }}
+        />
       </View>
     );
   }

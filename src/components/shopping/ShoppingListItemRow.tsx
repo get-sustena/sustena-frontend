@@ -1,6 +1,7 @@
 
 import * as Haptics from "expo-haptics";
 import { Pressable, StyleSheet, View } from "react-native";
+import { recipeNeedsLine } from "../../lib/shopping/recipeNeeds";
 import {
   capitalizeWords,
   formatShoppingQuantity,
@@ -20,6 +21,7 @@ type Props = {
 
 export function ShoppingListItemRow({ item, onToggle, onMenu }: Props) {
   const hapticsEnabled = usePreferencesStore((state) => state.hapticsEnabled);
+  const recipeNeeds = recipeNeedsLine(item);
 
   function handleToggle() {
     if (hapticsEnabled) {
@@ -59,6 +61,12 @@ export function ShoppingListItemRow({ item, onToggle, onMenu }: Props) {
         <AppText style={[styles.quantity, item.checked && styles.quantityChecked]}>
           {formatShoppingQuantity(item.quantity)}
         </AppText>
+
+        {recipeNeeds ? (
+          <AppText style={styles.recipeNeeds} numberOfLines={1}>
+            {recipeNeeds}
+          </AppText>
+        ) : null}
       </View>
 
       {onMenu ? (
@@ -123,6 +131,14 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
   quantityChecked: { color: theme.colors.textMuted },
+  // v6.8 .shop-v6-item-meta
+  recipeNeeds: {
+    fontFamily: theme.fontFamily.body,
+    fontSize: 11.5,
+    lineHeight: 15.5,
+    color: theme.colors.textMedium,
+    marginTop: 2,
+  },
   menuButton: {
     width: 44,
     height: 44,

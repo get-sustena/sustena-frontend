@@ -11,6 +11,7 @@ import { resolveSyncIdMapping } from "../../db/syncIdMappingRepository.ts";
 import { enqueueSyncOperation } from "../../db/syncQueueRepository.ts";
 import type { ShoppingListItem } from "../../types/shoppingList.ts";
 import { structureShoppingQuantity } from "../shoppingQuantity.ts";
+import { reviewRecipeAdd, toStoredItem } from "./addReview.ts";
 import { pendingListCreation } from "./listCommands.ts";
 
 // Shopping list edits (QAD-02, QAD-04). Each one saves the change on the
@@ -33,9 +34,15 @@ type NewItem = {
   listId: string;
   name: string;
   quantity: string;
+  // Sent as its own field (SL-08); with `displayQuantity`, what the phone
+  // shows until the server's copy arrives.
+  unit?: string | null;
+  displayQuantity?: string;
   ingredientId?: string;
   category?: string;
 };
+
+type Review = ReturnType<typeof reviewRecipeAdd>;
 
 type RecipeSelection = {
   recipeId: string;
@@ -78,9 +85,10 @@ export function createShoppingCommands({ db, transact, now, newId, requestSync }
     // Shows at once under a temporary id; the outbox swaps in the server's
     // id when the item reaches the server. Its mutation id stays the same
     // across retries, so a retry after a lost reply can't add it twice.
-    async addItem({ listId, name, quantity, ingredientId, category = "Pantry" }: NewItem) {
+    async addItem({ listId, name, quantity, unit, displayQuantity, ingredientId, category = "Pantry" }: NewItem) {
       const at = now();
-      const structured = structureShoppingQuantity(quantity.trim() || "1");
+      const parsed = structureShoppingQuantity(quantity.trim() || "1", unit);
+      const structured = { ...parsed, unit: unit === undefined ? parsed.unit : unit, displayQuantity: displayQuantity ?? parsed.displayQuantity };
       const item: ShoppingListItem = {
         id: newId("shopping_item"),
         ingredientId,
@@ -125,15 +133,32 @@ export function createShoppingCommands({ db, transact, now, newId, requestSync }
       return item;
     },
 
-    // A recipe's (or several recipes') ingredients, as the phone works them
-    // out, shown at once. The server adds its own lines, merging any it
-    // already has; the outbox then points each local line at the server's
-    // row (QAD-02, F03).
-    async addRecipes({ listId, recipes, items }: { listId: string; recipes: RecipeSelection[]; items: ShoppingListItem[] }) {
+    // After "Review shopping quantities" (SL-06): the rows exactly as the
+    // review showed them, merged ones updated and new ones added, with one
+    // outbox command. The server's rows replace them once it answers.
+    async addReviewedRecipes({ listId, recipes, review }: { listId: string; recipes: RecipeSelection[]; review: Review }) {
       const batchId = newId("recipe_shopping");
-      const saved = items.map((item) => ({ ...item, listId, recipeBatchId: batchId }));
+      const at = now();
+      const localIds = new Map(review.newRows.map((row) => [row.id, newId("shopping_item")]));
       await transact(async (tx) => {
-        for (const item of saved) await insertShoppingListItem(tx, item);
+        for (const row of review.mergedRows) {
+          const existing = await tx.getFirstAsync<ShoppingListItemRow>("SELECT * FROM shopping_list_items WHERE id = ?", [row.id]);
+          if (!existing) continue;
+          const kept = mapShoppingListRowToItem(existing);
+          await insertShoppingListItem(tx, {
+            ...kept,
+            ...toStoredItem(row, { listId, createdAt: kept.createdAt, updatedAt: at }, review.subcategoryOf(row.ingredientId ?? null)),
+            emoji: kept.emoji,
+            checked: kept.checked,
+          });
+        }
+        for (const row of review.newRows) {
+          await insertShoppingListItem(tx, {
+            ...toStoredItem({ ...row, id: localIds.get(row.id)! }, { listId, createdAt: at, updatedAt: at }, review.subcategoryOf(row.ingredientId ?? null)),
+            sourceRecipeId: row.recipeId,
+            recipeBatchId: batchId,
+          });
+        }
         await enqueueSyncOperation(
           tx,
           "shopping_list_recipe_batch",
@@ -141,18 +166,16 @@ export function createShoppingCommands({ db, transact, now, newId, requestSync }
             listId,
             clientMutationId: batchId,
             recipes,
-            lines: saved.map((item) => ({
-              id: item.id,
-              recipeId: item.sourceRecipeId ?? null,
-              recipeIngredientId: item.recipeIngredientId ?? null,
-              ingredientId: item.ingredientId ?? null,
-            })),
+            lines: Object.entries(review.landed).map(([key, rowId]) => {
+              const [recipeId, recipeIngredientId] = key.split("|");
+              const id = localIds.get(rowId) ?? rowId;
+              return { id, clientLineId: `${batchId}:${key}`, recipeId, recipeIngredientId, ingredientId: null };
+            }),
           },
           { mutationId: batchId, entityId: recipeBatchEntity(batchId), dependsOn: await pendingListCreation(tx, listId) }
         );
       });
       requestSync();
-      return saved;
     },
 
     // An item still waiting to reach the server is checked locally now, and

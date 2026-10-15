@@ -3,7 +3,8 @@ import { test } from "node:test";
 import { createListCommands, runListCommand } from "../src/lib/shopping/listCommands.ts";
 import { createShoppingCommands } from "../src/lib/shopping/shoppingCommands.ts";
 import { runShoppingCommand } from "../src/lib/shopping/shoppingReplay.ts";
-import { replaceListsKeepingPendingEdits } from "../src/db/shoppingListRows.ts";
+import { insertShoppingListItem } from "../src/db/shoppingItemRows.ts";
+import { replaceListsKeepingPendingEdits, saveShoppingListRow } from "../src/db/shoppingListRows.ts";
 import { replayOutbox } from "../src/lib/sync/outboxReplay.ts";
 import { openTestDatabase, testDatabasePath } from "./helpers/sqlite.mjs";
 
@@ -231,4 +232,81 @@ test("QAD-01: a lists reply keeps a list being deleted hidden", async () => {
   const reply = [{ id, name: "Party", isDefaultSyncedList: false, createdAt: "2026-10-14", updatedAt: "2026-10-14" }];
   await database.transact((tx) => replaceListsKeepingPendingEdits(tx, reply));
   assert.deepEqual(await lists(database.db), []);
+});
+
+// Three lists already on the server; "Weekly" is active. "Party" is the
+// newest list, but "Market" had an item changed after it.
+async function threeLists() {
+  const database = await openTestDatabase();
+  await database.db.runAsync("DELETE FROM shopping_lists WHERE id = 'default'");
+  const make = (id, name, active, at) =>
+    saveShoppingListRow(database.db, { id, name, isDefaultSyncedList: active, createdAt: at, updatedAt: at });
+  await make("00000000-0000-4000-8000-00000000000a", "Weekly", true, "2026-10-01T00:00:00.000Z");
+  await make("00000000-0000-4000-8000-00000000000b", "Party", false, "2026-10-03T00:00:00.000Z");
+  await make("00000000-0000-4000-8000-00000000000c", "Market", false, "2026-10-02T00:00:00.000Z");
+  await insertShoppingListItem(database.db, {
+    id: "00000000-0000-4000-8000-0000000000c1",
+    name: "Yam",
+    emoji: "🛒",
+    quantity: "1",
+    category: "Pantry",
+    estimatedPrice: null,
+    priceStatus: "unknown",
+    checked: false,
+    createdAt: "2026-10-02T00:00:00.000Z",
+    updatedAt: "2026-10-05T00:00:00.000Z",
+    listId: "00000000-0000-4000-8000-00000000000c",
+  });
+  return database;
+}
+const active = (db) => db.getAllAsync("SELECT name FROM shopping_lists WHERE is_default_synced_list = 1");
+
+test("SL-07: deleting the active list makes the list touched most recently active, as the server does", async () => {
+  const database = await threeLists();
+  await createListCommands(deps(database)).deleteList({ listId: "00000000-0000-4000-8000-00000000000a" });
+
+  assert.deepEqual(await active(database.db), [{ name: "Market" }]);
+  assert.deepEqual(await outbox(database.db), [{ kind: "shopping_list_delete", needs_attention: 0 }]);
+});
+
+test("SL-07: the last list can be deleted, leaving no list", async () => {
+  const database = await openTestDatabase();
+  await database.db.runAsync("DELETE FROM shopping_lists WHERE id = 'default'");
+  await saveShoppingListRow(database.db, {
+    id: "00000000-0000-4000-8000-00000000000a",
+    name: "Weekly",
+    isDefaultSyncedList: true,
+    createdAt: "2026-10-01T00:00:00.000Z",
+    updatedAt: "2026-10-01T00:00:00.000Z",
+  });
+  await createListCommands(deps(database)).deleteList({ listId: "00000000-0000-4000-8000-00000000000a" });
+
+  assert.deepEqual(await database.db.getAllAsync("SELECT id FROM shopping_lists"), []);
+});
+
+test("SL-07: a refused delete of the active list makes it the only active list again", async () => {
+  const server = fakeServer({ refuseDelete: 409 });
+  const database = await threeLists();
+  server.lists.set("00000000-0000-4000-8000-00000000000a", { id: "00000000-0000-4000-8000-00000000000a" });
+  await createListCommands(deps(database)).deleteList({ listId: "00000000-0000-4000-8000-00000000000a" });
+  await replay(database, server);
+
+  assert.deepEqual(await active(database.db), [{ name: "Weekly" }]);
+});
+
+test("SL-07: the phone's empty placeholder list goes once the server's lists arrive", async () => {
+  const database = await openTestDatabase();
+  const shown = await database.transact((tx) =>
+    replaceListsKeepingPendingEdits(tx, [
+      { id: "00000000-0000-4000-8000-00000000000a", name: "Weekly", isDefaultSyncedList: true, createdAt: "2026-10-01", updatedAt: "2026-10-01" },
+    ])
+  );
+  assert.deepEqual(shown.map((list) => list.name), ["Weekly"]);
+  assert.deepEqual(await database.db.getAllAsync("SELECT name FROM shopping_lists"), [{ name: "Weekly" }]);
+});
+
+test("SL-07: with no lists on the server, the phone shows none", async () => {
+  const database = await openTestDatabase();
+  const shown = await database.transact((tx) => replaceListsKeepingPendingEdits(tx, []));
+  assert.deepEqual(shown, []);
 });

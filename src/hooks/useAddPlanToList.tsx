@@ -1,28 +1,25 @@
-import { router } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
 import { useState } from "react";
-import { ShoppingListDestinationSheet } from "../components/shopping/ShoppingListDestinationSheet";
-import { replaceShoppingListItemsForList } from "../db/shoppingListRepository";
-import { shoppingListsApi } from "../lib/api";
-import { apiShoppingItemToLocalItem } from "../lib/api/adapters";
-import { createLocalId } from "../lib/id";
-import { useShoppingListStore } from "../store/shoppingListStore";
-import { useShoppingListsStore } from "../store/shoppingListsStore";
-import { closeSheet, openSheet } from "../store/uiStore";
+import { getLocalRecipeById } from "../db/recipeRows";
+import { recipesApi } from "../lib/api";
+import { selectionFromRecipe } from "../lib/shopping/recipeMerge";
+import { showToast } from "../store/uiStore";
+import { useAddToShoppingList } from "./useAddToShoppingList";
 
-type PlanMealServings = { recipeId: string; servings: number };
+type PlanMealServings = { recipeId: string; servings: number; day: number };
 
-// "Add to shopping list" on a meal plan: asks which list when there's more
-// than one, adds every recipe once with its servings summed, then opens the
-// list. Used by the planner, Saved meal plans and a saved plan's screen.
+// "Add to shopping list" on a meal plan (SL-06): the same list choice and
+// review as a recipe, with each recipe once and its servings summed. Uses
+// the recipes saved on the phone, so it works offline. Used by the planner,
+// Saved meal plans and a saved plan's screen.
 export function useAddPlanToList() {
   const db = useSQLiteContext();
+  const addToShoppingList = useAddToShoppingList();
   const [isAdding, setIsAdding] = useState(false);
-  const hydrateItems = useShoppingListStore((state) => state.hydrateItems);
-  const activeListId = useShoppingListsStore((state) => state.activeListId);
-  const shoppingLists = useShoppingListsStore((state) => state.lists);
 
-  async function addToList(listId: string, meals: PlanMealServings[]) {
+  // `name` is the saved plan's name; an unsaved plan is named by its length,
+  // as in the prototype.
+  async function addPlanToList(meals: PlanMealServings[], name?: string) {
     if (meals.length === 0 || isAdding) return;
     setIsAdding(true);
     try {
@@ -30,39 +27,24 @@ export function useAddPlanToList() {
       for (const meal of meals) {
         servingsByRecipe.set(meal.recipeId, (servingsByRecipe.get(meal.recipeId) ?? 0) + meal.servings);
       }
-      const updatedList = await shoppingListsApi.addRecipesToShoppingList(listId, {
-        clientMutationId: createLocalId("plan_shopping"),
-        recipes: Array.from(servingsByRecipe, ([recipeId, servings]) => ({ recipeId, servings })),
-      });
-      const saved = await replaceShoppingListItemsForList(
-        db,
-        listId,
-        updatedList.items.map((item) => ({ ...apiShoppingItemToLocalItem(item), listId }))
+      const recipes = await Promise.all(
+        [...servingsByRecipe.keys()].map(
+          async (recipeId) => (await getLocalRecipeById(db, recipeId)) ?? (await recipesApi.getRecipeById(recipeId).catch(() => null))
+        )
       );
-      if (listId === activeListId) hydrateItems(saved);
-      router.push({ pathname: "/shopping/[id]", params: { id: listId } });
-    } catch (error) {
-      console.error("Failed to add meal plan to shopping list", error);
+      if (recipes.some((recipe) => !recipe)) {
+        showToast("Connect to the internet to add these recipes", "danger");
+        return;
+      }
+      const days = new Set(meals.map((meal) => meal.day)).size;
+      addToShoppingList({
+        title: name ?? (days > 1 ? "Week meal plan" : "Daily meal plan"),
+        defaultName: name ?? (days > 1 ? "Week Meal Plan" : "Daily Meal Plan"),
+        selections: recipes.map((recipe) => selectionFromRecipe(recipe!, servingsByRecipe.get(recipe!.id) ?? 1)),
+      });
     } finally {
       setIsAdding(false);
     }
-  }
-
-  function addPlanToList(meals: PlanMealServings[]) {
-    if (shoppingLists.length <= 1) {
-      void addToList(activeListId, meals);
-      return;
-    }
-    openSheet(
-      <ShoppingListDestinationSheet
-        lists={shoppingLists}
-        activeListId={activeListId}
-        onSelect={(listId) => {
-          closeSheet();
-          void addToList(listId, meals);
-        }}
-      />
-    );
   }
 
   return { addPlanToList, isAdding };

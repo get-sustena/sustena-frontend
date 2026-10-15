@@ -5,7 +5,7 @@ import {
   runWithSqliteRetry,
 } from "./sqliteGuards.ts";
 
-const DATABASE_VERSION = 18;
+const DATABASE_VERSION = 20;
 let migrationQueue = Promise.resolve();
 
 export async function migrateDbIfNeeded(db: SQLiteDatabase) {
@@ -482,6 +482,30 @@ async function runMigrations(db: SQLiteDatabase) {
       );
 
       PRAGMA user_version = 18;
+    `);
+  }
+
+  const versionAfterPlans = versionAfterBatches < 18 ? 18 : versionAfterBatches;
+
+  // SL-03: what each item's recipes need, so "Recipe needs …" shows offline.
+  if (versionAfterPlans < 19) {
+    await db.execAsync(`
+      ALTER TABLE shopping_list_items ADD COLUMN recipe_amount TEXT;
+      ALTER TABLE shopping_list_items ADD COLUMN sources_json TEXT;
+
+      PRAGMA user_version = 19;
+    `);
+  }
+
+  const versionAfterRecipeNeeds = versionAfterPlans < 19 ? 19 : versionAfterPlans;
+
+  // SL-06: the name the server matches recipe lines by, so adding a recipe
+  // offline merges into the same rows the server would.
+  if (versionAfterRecipeNeeds < 20) {
+    await db.execAsync(`
+      ALTER TABLE shopping_list_items ADD COLUMN canonical_ingredient_name TEXT;
+
+      PRAGMA user_version = 20;
     `);
   }
 }

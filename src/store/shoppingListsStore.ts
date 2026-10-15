@@ -9,7 +9,6 @@ type ShoppingListsState = {
   hydrateLists: (lists: ShoppingListMeta[]) => void;
   addList: (list: ShoppingListMeta) => void;
   renameList: (listId: string, name: string) => void;
-  removeList: (listId: string) => void;
   setActiveListId: (listId: string) => void;
 
   defaultList: () => ShoppingListMeta | undefined;
@@ -29,7 +28,11 @@ export const useShoppingListsStore = create<ShoppingListsState>(
     },
 
     addList: (list) => {
-      set((state) => ({ lists: [...state.lists, list] }));
+      set((state) => ({
+        lists: [...state.lists, list],
+        // A list made when there were none becomes the one to add to.
+        activeListId: state.lists.some((item) => item.id === state.activeListId) ? state.activeListId : list.id,
+      }));
     },
 
     renameList: (listId, name) => {
@@ -40,26 +43,6 @@ export const useShoppingListsStore = create<ShoppingListsState>(
             : list
         ),
       }));
-    },
-
-    removeList: (listId) => {
-      set((state) => {
-        const list = state.lists.find((item) => item.id === listId);
-
-        // The default list is the only list backed by server sync.
-        if (!list || list.isDefaultSyncedList) {
-          return state;
-        }
-
-        return {
-          lists: state.lists.filter((item) => item.id !== listId),
-          activeListId:
-            state.activeListId === listId
-              ? state.lists.find((item) => item.id !== listId)?.id ??
-                DEFAULT_SHOPPING_LIST_ID
-              : state.activeListId,
-        };
-      });
     },
 
     setActiveListId: (listId) => {

@@ -13,9 +13,9 @@ export type RecipeTag =
 
 export type UnitMode = "metric" | "cups" | "imperial";
 
-export type RecipeIngredientAmount = Record<UnitMode, string>;
+type RecipeIngredientAmount = Record<UnitMode, string>;
 
-export type RecipeIngredientAvailableUnit = {
+type RecipeIngredientAvailableUnit = {
   quantity: string | number | null;
   unit: string | null;
   label: string;

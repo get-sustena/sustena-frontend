@@ -64,7 +64,10 @@ type RecipeBatch = {
 };
 
 type BatchLine = {
+  // The phone's row the line landed in; several lines can share one.
   id: string;
+  // What the server answers the line by; the row's id for older batches.
+  clientLineId?: string;
   recipeId?: string | null;
   recipeIngredientId?: string | null;
   ingredientId: string | null;
@@ -82,7 +85,11 @@ function serverRowsFor(
 ) {
   const rows = new Map<string, string>();
   if (lineItems?.length) {
-    for (const { clientLineId, itemId } of lineItems) if (itemId) rows.set(clientLineId, itemId);
+    const answers = new Map(lineItems.map(({ clientLineId, itemId }) => [clientLineId, itemId]));
+    for (const line of lines) {
+      const itemId = answers.get(line.clientLineId ?? line.id);
+      if (itemId) rows.set(line.id, itemId);
+    }
     return rows;
   }
   for (const line of lines) {
@@ -144,7 +151,7 @@ export async function runShoppingCommand(
       const { listId, clientMutationId, recipes, lines = [] } = operation.payload as RecipeBatch;
       const sentLines = lines.flatMap((line) =>
         line.recipeId && line.recipeIngredientId
-          ? [{ clientLineId: line.id, recipeId: line.recipeId, recipeIngredientId: line.recipeIngredientId }]
+          ? [{ clientLineId: line.clientLineId ?? line.id, recipeId: line.recipeId, recipeIngredientId: line.recipeIngredientId }]
           : []
       );
       const updated = await api.addRecipesToShoppingList(listId, {

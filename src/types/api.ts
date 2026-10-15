@@ -251,6 +251,10 @@ export interface IngredientLocalName {
   languageOrRegion: string | null;
 }
 
+// The unit the shopping list gives an ingredient; null for counted things,
+// which read in pieces (SL-08).
+export type ShoppingUnit = "kg" | "L" | "tbsp" | "cube";
+
 export interface Ingredient {
   id: string;
   canonicalName: string;
@@ -269,6 +273,8 @@ export interface Ingredient {
   isCommonUsUk: boolean;
   isActive: boolean;
   notes: string | null;
+  // Missing on a catalogue saved before shopping units existed.
+  shoppingUnit?: ShoppingUnit | null;
   createdAt: ISODateTimeString;
   updatedAt: ISODateTimeString;
 }
@@ -355,6 +361,9 @@ export interface RecipeIngredient {
   canonicalIngredientName: string | null;
   ingredientId: string | null;
   quantity: DecimalString | number | null;
+  // The stored amount in full, for the shopping list (SL-06); `quantity` is
+  // rounded to 2 places. Missing from an API older than it.
+  exactQuantity?: DecimalString | null;
   quantityMax: DecimalString | number | null;
   quantityMode: "exact" | "range" | "to_taste" | "as_needed";
   unit: string | null;
@@ -730,6 +739,9 @@ export interface ShoppingListItem {
   pricedAt: ISODateTimeString | null;
   clientMutationId: string | null;
   checked: boolean;
+  // SL-03; missing from an API older than it.
+  recipeAmount?: string | null;
+  sources?: { recipeId: string; recipeName: string; amount: string | null; unit: string | null }[];
   createdAt: ISODateTimeString;
   updatedAt: ISODateTimeString;
   deletedAt: ISODateTimeString | null;
