@@ -1,7 +1,6 @@
 
 import { AxiosError } from "axios";
 import { ApiError, ApiValidationError } from "../../types/api";
-import { API_BASE_URL } from "./config";
 import { validationFieldErrors } from "./validationErrors";
 
 class ApiClientError extends Error {
@@ -103,10 +102,10 @@ function readRetryAfterSeconds(header: unknown) {
 
 function getNetworkErrorMessage(error: AxiosError) {
   if (error.code === "ECONNABORTED") {
-    return "The API request timed out. Check that the backend is running and reachable from this device.";
+    return "This is taking longer than expected. Check your connection and try again.";
   }
 
-  return `Could not reach the API at ${API_BASE_URL}. Check that the backend is running, the port is correct, and this device can access that host.`;
+  return "Could not connect. Check your internet connection and try again.";
 }
 
 function parseErrorPayload(payload: unknown) {
