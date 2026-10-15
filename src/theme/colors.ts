@@ -68,6 +68,13 @@ export const lightColors = {
   success: "#34B673",
   danger: "#C0392E",
   warning: "#C68A2E",
+  // v6.9's --st-warning-* tokens, for the "Confirm your email" reminder.
+  warningSoft: "#FBF0DC",
+  warningLine: "#E9C877",
+  warningText: "#604A25",
+  warningStrong: "#392F1F",
+  warningIcon: "#9B681F",
+  warningInk: "#8A5A12",
 
   black: "#000000",
 } as const;

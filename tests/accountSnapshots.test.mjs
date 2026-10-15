@@ -78,10 +78,22 @@ test("a deleted account leaves nothing on the phone: its tables and the copy kep
   await database.db.runAsync(
     "INSERT INTO account_data_snapshots (user_id, snapshot_json, updated_at) VALUES ('deleted-user', '{}', 'now'), ('other-user', '{}', 'now')"
   );
+  await database.db.runAsync(
+    `INSERT INTO local_metadata (key, value, updated_at) VALUES
+     ('email_reminder:deleted-user', '2026-10-15', 'now'),
+     ('recipe_cooked:deleted-user:recipe-1', '2026-10-15', 'now'),
+     ('email_reminder:other-user', '', 'now'),
+     ('welcome_seen', '1', 'now')`
+  );
 
   await database.transact((tx) => forgetAccount(tx, "deleted-user"));
 
   assert.deepEqual(await items(database.db), []);
   assert.deepEqual(await outbox(database.db), []);
   assert.deepEqual(await database.db.getAllAsync("SELECT user_id FROM account_data_snapshots"), [{ user_id: "other-user" }]);
+  // What the phone remembered for that person goes; other people's and the phone's own stay.
+  assert.deepEqual(
+    (await database.db.getAllAsync("SELECT key FROM local_metadata ORDER BY key")).map((row) => row.key),
+    ["email_reminder:other-user", "welcome_seen"]
+  );
 });

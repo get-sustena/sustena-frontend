@@ -21,6 +21,7 @@ import type { UnitMode } from "../../data/recipes";
 import { AppText } from "../ui/AppText";
 import { Icon } from "../ui/Icon";
 import { ToggleSwitch } from "../ui/ToggleSwitch";
+import { ConfirmEmailRow } from "./ConfirmEmailRow";
 import { ProfileCompletionCard } from "./ProfileCompletionCard";
 import { ProfileDetailsSheet } from "./ProfileDetailsSheet";
 import { ServingSizeSheet } from "./ServingSizeSheet";
@@ -116,6 +117,7 @@ export function AccountSettingsScreen() {
         <Section title="Account & creator profile" first>
           <SettingsRow icon="chefHat" label="Edit creator profile" subtitle="Update your public name, photo, handle and bio." onPress={() => router.push("/creator/edit-profile" as Href)} />
           <SettingsRow icon="profile" label="Profile details" subtitle="Full name, email & date of birth" onPress={() => openSheet(<ProfileDetailsSheet />)} />
+          <ConfirmEmailRow />
           <View style={styles.completionCard}>
             <ProfileCompletionCard answered={answered} total={PROFILE_COMPLETION_FIELD_COUNT} onPress={() => router.push("/profile-complete" as Href)} />
           </View>

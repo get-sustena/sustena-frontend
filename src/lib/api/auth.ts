@@ -10,6 +10,7 @@ import {
   LoginRequest,
   LogoutRequest,
   LogoutResponse,
+  ResendConfirmationResponse,
   ResetPasswordRequest,
   ResetPasswordResponse,
   SignupRequest,
@@ -75,6 +76,13 @@ export function agreeToTerms(payload: AgreementRequest) {
     url: "/auth/me/agreement",
     method: "POST",
     data: payload,
+  });
+}
+
+export function resendConfirmationEmail() {
+  return apiRequest<ResendConfirmationResponse>({
+    url: "/auth/verify-email/resend",
+    method: "POST",
   });
 }
 

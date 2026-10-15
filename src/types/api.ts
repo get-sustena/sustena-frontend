@@ -102,6 +102,13 @@ export interface DeleteAccountRequest {
   password: string;
 }
 
+// POST /auth/verify-email/resend: a fresh 7-day link, unless the email is
+// already confirmed.
+export interface ResendConfirmationResponse {
+  sent: boolean;
+  alreadyVerified: boolean;
+}
+
 export interface CurrentUserUpdateRequest {
   fullName: string;
   email: string;

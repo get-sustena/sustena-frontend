@@ -36,10 +36,12 @@ export async function clearAccountTables(tx: SQLiteDatabase) {
 }
 
 // After the account is deleted on the server: its data goes, and so does the
-// copy kept for when it signs in again.
+// copy kept for when it signs in again, and what the phone remembers per
+// person (keys like `email_reminder:<id>` or `recipe_cooked:<id>:<recipe>`).
 export async function forgetAccount(tx: SQLiteDatabase, userId: string) {
   await clearAccountTables(tx);
   await tx.runAsync("DELETE FROM account_data_snapshots WHERE user_id = ?", [userId]);
+  await tx.runAsync("DELETE FROM local_metadata WHERE key LIKE ? OR key LIKE ?", [`%:${userId}`, `%:${userId}:%`]);
 }
 
 // Values a snapshot from before a column existed can't have, worked out

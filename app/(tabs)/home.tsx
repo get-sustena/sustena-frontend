@@ -24,6 +24,7 @@ import {
   QuickRecipeCardsSkeleton,
   RecommendationCardSkeleton,
 } from "../../src/components/home/HomeRecipeSkeletons";
+import { HomeReminder } from "../../src/components/home/HomeReminder";
 import { NotificationsSheet } from "../../src/components/home/NotificationsSheet";
 import { FeaturedRecipeCard } from "../../src/components/recipe/FeaturedRecipeCard";
 import { RecipeCard } from "../../src/components/recipe/RecipeCard";
@@ -124,6 +125,7 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
+        <HomeReminder />
         <View style={styles.plannerSection}>
           <AppText style={[styles.sectionTitle, styles.plannerTitle]}>
             Smart Planner
