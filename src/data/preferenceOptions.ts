@@ -1,37 +1,10 @@
 
-import { DietaryPreference, HealthCondition } from "../types/preferences";
+import { DietaryPreference } from "../types/preferences";
 
 type PreferenceOption<TValue extends string> = {
   label: string;
   value: TValue;
 };
-
-export const HEALTH_CONDITION_OPTIONS: PreferenceOption<HealthCondition>[] = [
-  {
-    label: "✓ None",
-    value: "none",
-  },
-  {
-    label: "🩸 Diabetic",
-    value: "diabetic",
-  },
-  {
-    label: "❤️ Hypertension",
-    value: "hypertension",
-  },
-  {
-    label: "🥛 Lactose Intolerant",
-    value: "lactose_intolerant",
-  },
-  {
-    label: "⚡ High Cholesterol",
-    value: "high_cholesterol",
-  },
-  {
-    label: "🌾 Gluten Sensitivity",
-    value: "gluten_sensitivity",
-  },
-];
 
 export const DIETARY_PREFERENCE_OPTIONS: PreferenceOption<DietaryPreference>[] =
   [

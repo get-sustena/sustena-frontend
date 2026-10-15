@@ -15,7 +15,6 @@ type PreferencesState = UserPreferences & {
   hydratePreferences: (preferences: StoredPreferences) => void;
 
   setHealthConditions: (conditions: HealthCondition[]) => void;
-  toggleHealthCondition: (condition: HealthCondition) => void;
 
   setDietaryPreference: (preference: DietaryPreference) => void;
 
@@ -41,7 +40,7 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   mealRemindersEnabled: false,
 };
 
-export const usePreferencesStore = create<PreferencesState>((set, get) => ({
+export const usePreferencesStore = create<PreferencesState>((set) => ({
   ...DEFAULT_PREFERENCES,
   hasCompletedOnboarding: false,
 
@@ -54,33 +53,6 @@ export const usePreferencesStore = create<PreferencesState>((set, get) => ({
   setHealthConditions: (conditions) => {
     set({
       healthConditions: normalizeHealthConditions(conditions),
-    });
-  },
-
-  toggleHealthCondition: (condition) => {
-    const current = get().healthConditions;
-
-    if (condition === "none") {
-      set({
-        healthConditions: ["none"],
-      });
-      return;
-    }
-
-    const withoutNone = current.filter((item) => item !== "none");
-
-    if (withoutNone.includes(condition)) {
-      const next = withoutNone.filter((item) => item !== condition);
-
-      set({
-        healthConditions: next.length === 0 ? ["none"] : next,
-      });
-
-      return;
-    }
-
-    set({
-      healthConditions: [...withoutNone, condition],
     });
   },
 

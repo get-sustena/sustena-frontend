@@ -32,7 +32,6 @@ export const SIGNED_IN_ROUTES = [
   "creator/specialities",
   "creator/unit-picker",
   "creator/vocabulary-picker",
-  "onboarding/health",
   "onboarding/preferences",
   "profile-complete",
   "settings",
