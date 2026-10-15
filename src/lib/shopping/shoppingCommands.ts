@@ -33,6 +33,10 @@ type NewItem = {
   listId: string;
   name: string;
   quantity: string;
+  // Sent as its own field (SL-08); with `displayQuantity`, what the phone
+  // shows until the server's copy arrives.
+  unit?: string | null;
+  displayQuantity?: string;
   ingredientId?: string;
   category?: string;
 };
@@ -78,9 +82,10 @@ export function createShoppingCommands({ db, transact, now, newId, requestSync }
     // Shows at once under a temporary id; the outbox swaps in the server's
     // id when the item reaches the server. Its mutation id stays the same
     // across retries, so a retry after a lost reply can't add it twice.
-    async addItem({ listId, name, quantity, ingredientId, category = "Pantry" }: NewItem) {
+    async addItem({ listId, name, quantity, unit, displayQuantity, ingredientId, category = "Pantry" }: NewItem) {
       const at = now();
-      const structured = structureShoppingQuantity(quantity.trim() || "1");
+      const parsed = structureShoppingQuantity(quantity.trim() || "1", unit);
+      const structured = { ...parsed, unit: unit === undefined ? parsed.unit : unit, displayQuantity: displayQuantity ?? parsed.displayQuantity };
       const item: ShoppingListItem = {
         id: newId("shopping_item"),
         ingredientId,

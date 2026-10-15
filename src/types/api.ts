@@ -251,6 +251,10 @@ export interface IngredientLocalName {
   languageOrRegion: string | null;
 }
 
+// The unit the shopping list gives an ingredient; null for counted things,
+// which read in pieces (SL-08).
+export type ShoppingUnit = "kg" | "L" | "tbsp" | "cube";
+
 export interface Ingredient {
   id: string;
   canonicalName: string;
@@ -269,6 +273,8 @@ export interface Ingredient {
   isCommonUsUk: boolean;
   isActive: boolean;
   notes: string | null;
+  // Missing on a catalogue saved before shopping units existed.
+  shoppingUnit?: ShoppingUnit | null;
   createdAt: ISODateTimeString;
   updatedAt: ISODateTimeString;
 }

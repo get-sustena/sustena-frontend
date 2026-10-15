@@ -435,8 +435,13 @@ function LocalListDetail({ listId, shareOnOpen }: { listId: string; shareOnOpen:
     showToast("Checked items removed", "success");
   }
 
-  async function handleAddItem(name: string, quantity: string, ingredientId?: string, category = "Pantry") {
-    const item = await shoppingCommands.addItem({ listId, name, quantity, ingredientId, category });
+  async function handleAddItem(
+    name: string,
+    start: { quantity: string; unit: string | null; displayQuantity: string },
+    ingredientId?: string,
+    category = "Pantry"
+  ) {
+    const item = await shoppingCommands.addItem({ listId, name, ...start, ingredientId, category });
     setItems((current) => [...current, item]);
     return item;
   }

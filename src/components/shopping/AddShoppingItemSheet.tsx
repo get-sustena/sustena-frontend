@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
 import { useIngredientCatalogQuery } from "../../hooks/api/useIngredients";
+import { handAddedQuantity } from "../../lib/shopping/handAddedQuantity";
 import type { ShoppingListItem } from "../../types/shoppingList";
 import { theme } from "../../theme/theme";
 import { closeSheet } from "../../store/uiStore";
@@ -10,7 +11,7 @@ import { Icon } from "../ui/Icon";
 type Props = {
   listName: string;
   existingItems: ShoppingListItem[];
-  onAdd: (name: string, quantity: string, ingredientId?: string, category?: string) => Promise<ShoppingListItem>;
+  onAdd: (name: string, start: ReturnType<typeof handAddedQuantity>, ingredientId?: string, category?: string) => Promise<ShoppingListItem>;
   onEdit: (item: ShoppingListItem) => void;
 };
 
@@ -41,7 +42,9 @@ export function AddShoppingItemSheet({ listName, existingItems, onAdd, onEdit }:
     }
     setPendingName(normalized);
     try {
-      const created = await onAdd(trimmed, "1 unit", ingredientId, category);
+      // A catalogue ingredient starts at 1 of its own unit (SL-08).
+      const ingredient = ingredientId ? catalog.find((entry) => entry.id === ingredientId) : undefined;
+      const created = await onAdd(trimmed, handAddedQuantity(ingredient), ingredientId, category);
       setNewItems((current) => [...current, created]);
       setAddedNames((current) => new Set(current).add(normalized));
       setConfirmation(`Added ${trimmed}`);
