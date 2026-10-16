@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { AuthHeader } from "../src/components/auth/AuthHeader";
 import { AuthPrimaryButton } from "../src/components/auth/AuthPrimaryButton";
+import { ChangeEmailSheet } from "../src/components/auth/ChangeEmailSheet";
 import { CodeBoxes, emptyCode } from "../src/components/auth/CodeBoxes";
 import { AppText } from "../src/components/ui/AppText";
 import { Icon } from "../src/components/ui/Icon";
@@ -21,7 +22,7 @@ import {
 import { authApi } from "../src/lib/api";
 import { getApiErrorMessage, isApiClientError } from "../src/lib/api/errors";
 import { useAuthStore } from "../src/store/authStore";
-import { showToast } from "../src/store/uiStore";
+import { openSheet, showToast } from "../src/store/uiStore";
 import { theme } from "../src/theme/theme";
 
 // Sign-up sends the first code; the server allows a new one a minute later.
@@ -79,6 +80,14 @@ export default function VerifyEmailScreen() {
       }
       setError(getApiErrorMessage(sendError));
     }
+  }
+
+  // The server emailed a new code to the new address.
+  function emailChanged(newEmail: string) {
+    setCode(emptyCode());
+    setError(null);
+    resendWait.start(RESEND_SECONDS);
+    showToast(`New code sent to ${newEmail}`, "success");
   }
 
   // Back signs out: the account can't open anything else until it's confirmed.
@@ -160,6 +169,14 @@ export default function VerifyEmailScreen() {
         <AppText style={styles.spamHint}>
           Can&apos;t find the email? Check your spam folder.
         </AppText>
+
+        <Pressable
+          onPress={() => openSheet(<ChangeEmailSheet onChanged={emailChanged} />)}
+          style={styles.changeEmail}
+          accessibilityRole="button"
+        >
+          <AppText style={styles.changeEmailText}>Use a different email</AppText>
+        </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -265,6 +282,19 @@ const styles = StyleSheet.create({
     fontFamily: theme.fontFamily.bodyBold,
     fontSize: 13.5,
     color: theme.colors.textMedium,
+  },
+  changeEmail: {
+    alignSelf: "center",
+    minHeight: 44,
+    marginTop: 8,
+    paddingHorizontal: 8,
+    justifyContent: "center",
+  },
+  changeEmailText: {
+    fontFamily: theme.fontFamily.bodySemiBold,
+    fontSize: 13.5,
+    color: theme.colors.navy,
+    textDecorationLine: "underline",
   },
   spamHint: {
     marginTop: 10,
