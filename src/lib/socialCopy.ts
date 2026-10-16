@@ -19,8 +19,6 @@ export const socialCopy = {
   youGaveIt: (stars: number) => `You gave it ${stars} ${stars === 1 ? "star" : "stars"}`,
   nothingSaved: "Nothing saved yet",
   savedCount: (count: number) => `${count} ${count === 1 ? "recipe" : "recipes"}`,
-  // WAITING FOR THE FOUNDER'S APPROVAL: the error and offline lines below
-  // (PRD v6.9 "Loading, errors and offline") were placeholders in the design.
   couldNotCopyLink: "Couldn’t copy the link",
   tryAgain: "Try again",
   couldNotFollow: (name: string) => `Couldn’t follow ${name}`,
