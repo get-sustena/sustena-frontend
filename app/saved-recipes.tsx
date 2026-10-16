@@ -9,9 +9,11 @@ import { Button } from "../src/components/ui/Button";
 import { Icon } from "../src/components/ui/Icon";
 import { Screen } from "../src/components/ui/Screen";
 import { useFavoriteRecipes } from "../src/hooks/useFavoriteRecipes";
+import { useScreenViewed } from "../src/hooks/useActivity";
 import { theme } from "../src/theme/theme";
 
 export default function SavedRecipesScreen() {
+  useScreenViewed("saved_recipes");
   const { favoriteRecipes } = useFavoriteRecipes();
 
   return (

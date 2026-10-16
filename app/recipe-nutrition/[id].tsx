@@ -9,6 +9,7 @@ import { AppText } from "../../src/components/ui/AppText";
 import { Icon } from "../../src/components/ui/Icon";
 import { ProgressLoader } from "../../src/components/ui/ProgressLoader";
 import { useLoadedRecipeDetail } from "../../src/hooks/api/useRecipes";
+import { useNutritionViewed } from "../../src/hooks/useActivity";
 import { amountFor, dayShare, PLATES } from "../../src/lib/nutrition/recipeNutrition";
 import { readRecipeSource } from "../../src/lib/recipeSource";
 import { theme } from "../../src/theme/theme";
@@ -18,6 +19,7 @@ import { theme } from "../../src/theme/theme";
 export default function RecipeNutritionScreen() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ id: string; source?: string }>();
+  useNutritionViewed(params.id);
   const recipeQuery = useLoadedRecipeDetail(params.id, readRecipeSource(params.source));
   const recipe = recipeQuery.data;
   const perServing = recipe?.nutritionPerServing ?? null;

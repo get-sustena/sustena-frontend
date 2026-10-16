@@ -4,6 +4,7 @@ import { router } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
 import { ReactNode, useEffect, useRef } from "react";
 import { StyleSheet, View } from "react-native";
+import { useActivityTracker } from "../../hooks/useActivity";
 import { useAppBootstrap } from "../../hooks/useAppBootstrap";
 import { useAuthBootstrap } from "../../hooks/useAuthBootstrap";
 import { clearLocalAccountData } from "../../db/accountDataRepository";
@@ -32,6 +33,7 @@ export function AppBootstrapGate({ children }: Props) {
   const { isBootstrapping, bootstrapError } = useAppBootstrap(
     !isHydratingAuth && isAuthenticated && !isSigningOut && !emailVerificationRequired
   );
+  useActivityTracker(!isHydratingAuth && !isBootstrapping);
   const queryClient = useQueryClient();
   const clearAuth = useAuthStore((state) => state.clearAuth);
   const beginSignOut = useAuthStore((state) => state.beginSignOut);

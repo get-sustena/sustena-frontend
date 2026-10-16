@@ -11,6 +11,7 @@ import {
   hydrateLocalAccountStores,
   resetLocalAccountStores,
 } from "../../lib/accountSession";
+import { startAppOpen } from "../../lib/activity/appActivity";
 import { authApi } from "../../lib/api";
 import { waitForAccountBackgroundTasks } from "../../lib/accountBackgroundTasks";
 import { disableMealReminders, forgetMealReminders } from "../../lib/notifications/mealReminders";
@@ -115,6 +116,8 @@ export function useSignupMutation() {
       await hydrateLocalAccountStores(db);
       queryClient.clear();
       setUser(response.user);
+      // The tokens are stored by now, so the new session's first event goes to this account.
+      void startAppOpen(db);
       queryClient.setQueryData(queryKeys.auth.me, response.user);
       await queryClient.invalidateQueries({ queryKey: queryKeys.auth.me });
     },
@@ -133,6 +136,8 @@ export function useLoginMutation() {
       await hydrateLocalAccountStores(db);
       queryClient.clear();
       setUser(response.user);
+      // The tokens are stored by now, so the new session's first event goes to this account.
+      void startAppOpen(db);
       queryClient.setQueryData(queryKeys.auth.me, response.user);
       await queryClient.invalidateQueries({ queryKey: queryKeys.auth.me });
     },

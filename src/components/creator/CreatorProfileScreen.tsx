@@ -5,6 +5,7 @@ import { LayoutChangeEvent, Pressable, ScrollView, Share, StyleSheet, TextInput,
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuthoringVocabularyQuery, useCreateRecipeDraftMutation, useMyRecipesQuery } from "../../hooks/api/useCreatorRecipes";
 import { useMyCreatorProfileQuery } from "../../hooks/api/useCreators";
+import { useRecordActivity } from "../../hooks/useActivity";
 import { getApiErrorMessage } from "../../lib/api/errors";
 import { suggestedCreatorHandle } from "../../lib/creators/profileDefaults";
 import { createLocalId } from "../../lib/id";
@@ -35,6 +36,7 @@ export function CreatorProfileScreen() {
   const gridCardWidth = useCreatorGridCardWidth();
   const profileQuery = useMyCreatorProfileQuery();
   const savedProfile = profileQuery.data;
+  const recordActivity = useRecordActivity();
   const hasCreatorProfile = Boolean(savedProfile);
   // Asked for alongside the profile, not after it: without a creator
   // profile the lists simply come back empty.
@@ -105,7 +107,10 @@ export function CreatorProfileScreen() {
     }
     const url = `https://sustena.app/@${savedProfile.handle}`;
     try {
-      await Share.share({ title: savedProfile.displayName, message: url, url });
+      const result = await Share.share({ title: savedProfile.displayName, message: url, url });
+      if (result.action !== Share.dismissedAction) {
+        recordActivity({ type: "creator_profile_shared", properties: { creatorProfileId: savedProfile.id } });
+      }
       showToast("Profile link copied", "success");
     } catch {
       showToast("We couldn’t share your profile. Try again.", "danger");

@@ -5,6 +5,7 @@ import { Pressable, ScrollView, Share, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuthoringVocabularyQuery } from "../../hooks/api/useCreatorRecipes";
 import { useCreatorRecipesQuery, useMyCreatorProfileQuery } from "../../hooks/api/useCreators";
+import { useRecordActivity } from "../../hooks/useActivity";
 import { useCreatorProfileEditStore } from "../../store/creatorProfileEditStore";
 import { closeSheet, openSheet, showToast } from "../../store/uiStore";
 import { theme } from "../../theme/theme";
@@ -21,6 +22,7 @@ export function CreatorProfilePreviewScreen() {
   const insets = useSafeAreaInsets();
   const draft = useCreatorProfileEditStore();
   const currentProfile = useMyCreatorProfileQuery().data;
+  const recordActivity = useRecordActivity();
   const [sort, setSort] = useState<CreatorRecipeSort>("newest");
   const [collection, setCollection] = useState("");
   const [scrolled, setScrolled] = useState(false);
@@ -38,7 +40,10 @@ export function CreatorProfilePreviewScreen() {
   async function shareProfile() {
     const url = `https://sustena.app/@${draft.handle}`;
     try {
-      await Share.share({ title: draft.displayName, message: url, url });
+      const result = await Share.share({ title: draft.displayName, message: url, url });
+      if (result.action !== Share.dismissedAction && currentProfile) {
+        recordActivity({ type: "creator_profile_shared", properties: { creatorProfileId: currentProfile.id } });
+      }
       showToast("Profile link copied", "success");
     } catch {
       showToast("We couldn’t share this profile. Try again.", "danger");

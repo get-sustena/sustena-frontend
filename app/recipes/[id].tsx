@@ -25,6 +25,7 @@ import { useFavoriteCommands } from "../../src/hooks/useFavoriteCommands";
 import {
   useRecipeDetailWithLocalFallback,
 } from "../../src/hooks/api/useRecipes";
+import { useOfflineRecipeOpened, useRecordActivity, useServingsChanged } from "../../src/hooks/useActivity";
 import { useUnitsQuery } from "../../src/hooks/api/useUnits";
 import { apiRecipeToLocalRecipe } from "../../src/lib/api/adapters";
 import { getApiErrorMessage } from "../../src/lib/api/errors";
@@ -114,6 +115,12 @@ export default function RecipeDetailScreen() {
   const addToShoppingList = useAddToShoppingList();
 
   const [servings, setServings] = useState(defaultServingSize);
+  useServingsChanged(id, servings);
+  useOfflineRecipeOpened(id, source, {
+    savedCopyWithoutServer: recipeQuery.savedCopyRefreshFailed,
+    serverAnsweredAt: recipeQuery.dataUpdatedAt,
+  });
+  const recordActivity = useRecordActivity();
   const [globalUnitMode, setGlobalUnitMode] =
     useState<UnitMode>(defaultUnitMode);
 
@@ -898,7 +905,10 @@ export default function RecipeDetailScreen() {
 
           {instructions.length > 0 ? (
             <Pressable
-              onPress={() => setLearnStep(0)}
+              onPress={() => {
+                setLearnStep(0);
+                recordActivity({ type: "learn_mode_started", properties: { recipeId: id } });
+              }}
               style={({ pressed }) => [styles.learnStart, pressed && styles.pressed]}
               accessibilityRole="button"
             >

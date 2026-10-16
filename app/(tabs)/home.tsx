@@ -34,6 +34,7 @@ import { useRecipesWithLocalFallback } from "../../src/hooks/api/useRecipes";
 import { useProfileAnswersQuery } from "../../src/hooks/api/useProfileAnswers";
 import { useHomeRecommendations } from "../../src/hooks/api/useRecommendations";
 import { useTimeOfDay } from "../../src/hooks/useTimeOfDay";
+import { useScreenViewed } from "../../src/hooks/useActivity";
 import { apiRecipeToLocalRecipe } from "../../src/lib/api/adapters";
 import { getGreeting } from "../../src/lib/greeting";
 import { getMealTime, type MealTime } from "../../src/lib/mealTime";
@@ -56,6 +57,7 @@ function openPlanner(tab: "budget" | "kitchen", category?: string) {
 }
 
 export default function HomeScreen() {
+  useScreenViewed("home");
   const insets = useSafeAreaInsets();
   const nickname = useProfileAnswersStore((state) => state.nickname);
   const habitTime = useProfileAnswersStore((state) => state.habitTime);

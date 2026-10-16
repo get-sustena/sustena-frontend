@@ -4,6 +4,7 @@ import { Pressable, ScrollView, Share, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuthoringVocabularyQuery } from "../../hooks/api/useCreatorRecipes";
 import { useCreatorProfileQuery, useCreatorRecipesQuery, useSaveCreatorMutation } from "../../hooks/api/useCreators";
+import { useRecordActivity } from "../../hooks/useActivity";
 import { getApiErrorMessage } from "../../lib/api/errors";
 import { closeSheet, openSheet, showToast } from "../../store/uiStore";
 import { theme } from "../../theme/theme";
@@ -30,6 +31,7 @@ export function PublicCreatorProfileScreen() {
   const vocabularyQuery = useAuthoringVocabularyQuery();
   const saveMutation = useSaveCreatorMutation();
   const profile = profileQuery.data;
+  const recordActivity = useRecordActivity();
   const recipes = useMemo(() => recipesQuery.data?.items ?? [], [recipesQuery.data?.items]);
   const categories = useMemo(() => vocabularyQuery.data?.categories ?? [], [vocabularyQuery.data?.categories]);
   const categoryLabels = useMemo(() => new Map(categories.map((item) => [item.id, item.label])), [categories]);
@@ -54,7 +56,10 @@ export function PublicCreatorProfileScreen() {
     if (!profile) return;
     const url = `https://sustena.app/@${profile.handle}`;
     try {
-      await Share.share({ title: profile.displayName, message: url, url });
+      const result = await Share.share({ title: profile.displayName, message: url, url });
+      if (result.action !== Share.dismissedAction) {
+        recordActivity({ type: "creator_profile_shared", properties: { creatorProfileId: profile.id } });
+      }
       showToast("Profile link copied", "success");
     } catch {
       showToast("We couldn’t share this profile. Try again.", "danger");

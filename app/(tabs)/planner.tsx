@@ -7,6 +7,7 @@ import { TAB_BAR_CLEARANCE } from "../../src/components/layout/tabBarClearance";
 import { AppText } from "../../src/components/ui/AppText";
 import { Icon } from "../../src/components/ui/Icon";
 import { useSavedPlans } from "../../src/hooks/useSavedPlans";
+import { useScreenViewed } from "../../src/hooks/useActivity";
 import { usePantryStore } from "../../src/store/pantryStore";
 import { theme } from "../../src/theme/theme";
 
@@ -14,6 +15,7 @@ export default function PantryScreen() {
   const insets = useSafeAreaInsets();
   const { tab, category } = useLocalSearchParams<{ tab?: string; category?: string }>();
   const isBudget = tab === "budget";
+  useScreenViewed(isBudget ? "meal_plans" : "pantry");
   const pantryCount = usePantryStore((state) => state.ingredientIds.length);
 
   return (

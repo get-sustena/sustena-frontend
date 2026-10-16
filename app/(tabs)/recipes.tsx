@@ -17,6 +17,7 @@ import { useInfiniteRecipesWithLocalFallback } from "../../src/hooks/api/useReci
 import { useProfileAnswersQuery } from "../../src/hooks/api/useProfileAnswers";
 import { useSettingsCommands } from "../../src/hooks/useSettingsCommands";
 import { useDebouncedValue } from "../../src/hooks/useDebouncedValue";
+import { useScreenViewed } from "../../src/hooks/useActivity";
 import { apiRecipeToLocalRecipe } from "../../src/lib/api/adapters";
 import { getApiErrorMessage } from "../../src/lib/api/errors";
 import { finiteTimeCap } from "../../src/lib/plannerQuickSetup";
@@ -34,6 +35,7 @@ const EXPERIENCE_OPTIONS = [
 ] as const;
 
 export default function RecipesScreen() {
+  useScreenViewed("search");
   const insets = useSafeAreaInsets();
   const listRef = useRef<FlashListRef<Recipe>>(null);
   const [search, setSearch] = useState("");

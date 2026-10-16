@@ -32,6 +32,7 @@ import { useListCommands } from "../../src/hooks/useListCommands";
 import { pendingListCreation } from "../../src/lib/shopping/listCommands";
 import { markAllChange, tickMessage } from "../../src/lib/shopping/tickChanges";
 import { useIsOnline } from "../../src/hooks/useIsOnline";
+import { useRecordActivity, useScreenViewed } from "../../src/hooks/useActivity";
 import { useShoppingCommands } from "../../src/hooks/useShoppingCommands";
 import { shoppingListsApi } from "../../src/lib/api";
 import { apiShoppingItemToLocalItem } from "../../src/lib/api/adapters";
@@ -48,6 +49,7 @@ import {
 } from "../../src/types/shoppingList";
 
 export default function ShoppingListDetailScreen() {
+  useScreenViewed("shopping_list");
   const { id, share } = useLocalSearchParams<{ id: string; share?: string }>();
   const activeListId = useShoppingListsStore((state) => state.activeListId);
   const resolvedId = id === DEFAULT_SHOPPING_LIST_ID ? activeListId : id;
@@ -289,7 +291,7 @@ function ShareCard({
   );
 }
 
-async function shareViewShot(shotRef: React.RefObject<ViewShotRef | null>) {
+async function shareViewShot(shotRef: React.RefObject<ViewShotRef | null>, onShared: () => void) {
   try {
     const uri = await shotRef.current?.capture?.();
     if (!uri) return;
@@ -301,6 +303,7 @@ async function shareViewShot(shotRef: React.RefObject<ViewShotRef | null>) {
       document.body.appendChild(link);
       link.click();
       link.remove();
+      onShared();
       return;
     }
 
@@ -311,6 +314,7 @@ async function shareViewShot(shotRef: React.RefObject<ViewShotRef | null>) {
     }
 
     await Sharing.shareAsync(uri, { mimeType: "image/png" });
+    onShared();
   } catch (error) {
     console.error("Failed to share shopping list", error);
     showToast("Could not generate image", "danger");
@@ -335,13 +339,18 @@ function LocalListDetail({ listId, shareOnOpen }: { listId: string; shareOnOpen:
   const [pantryExpanded, setPantryExpanded] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const didShareOnOpen = useRef(false);
+  const recordActivity = useRecordActivity();
+  const shareList = useCallback(
+    () => shareViewShot(shotRef, () => recordActivity({ type: "shopping_list_shared", properties: {} })),
+    [recordActivity]
+  );
 
   useEffect(() => {
     if (!shareOnOpen || isLoading || didShareOnOpen.current) return;
     didShareOnOpen.current = true;
-    const frame = requestAnimationFrame(() => { void shareViewShot(shotRef); });
+    const frame = requestAnimationFrame(() => { void shareList(); });
     return () => cancelAnimationFrame(frame);
-  }, [shareOnOpen, isLoading]);
+  }, [shareOnOpen, isLoading, shareList]);
 
   const loadItems = useCallback(async () => {
     const rows = await getStoredShoppingListItems(db, listId);
@@ -533,7 +542,7 @@ function LocalListDetail({ listId, shareOnOpen }: { listId: string; shareOnOpen:
           label="Share as image"
           onPress={() => {
             closeSheet();
-            shareViewShot(shotRef);
+            void shareList();
           }}
         />
         {checkedCount > 0 ? (

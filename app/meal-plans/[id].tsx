@@ -9,6 +9,7 @@ import { AppText } from "../../src/components/ui/AppText";
 import { Icon } from "../../src/components/ui/Icon";
 import { useAddPlanToList } from "../../src/hooks/useAddPlanToList";
 import { usePlanCommands, useSavedPlans } from "../../src/hooks/useSavedPlans";
+import { useMealPlanOpened, useScreenViewed } from "../../src/hooks/useActivity";
 import { apiRecipeToLocalRecipe } from "../../src/lib/api/adapters";
 import { openRecipe } from "../../src/lib/navigation/openRecipe";
 import { currentPlanId, planSummary } from "../../src/lib/planner/planCommands";
@@ -25,6 +26,8 @@ export default function SavedMealPlanScreen() {
   const planCommands = usePlanCommands();
   const { addPlanToList, isAdding } = useAddPlanToList();
   const plan = plans.find((saved) => saved.id === id);
+  useScreenViewed("meal_plans");
+  useMealPlanOpened(plan?.id);
 
   // A plan saved offline takes the server's id once it's sent; a deleted
   // plan closes its screen.
