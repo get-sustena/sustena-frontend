@@ -2177,6 +2177,99 @@
       }
     },
     {
+      "name": "bunches, cloves and tins without weights read in their plural",
+      "existingRows": [],
+      "pantryIngredientIds": [],
+      "recipes": [
+        {
+          "id": "r1",
+          "baseServings": 1,
+          "ingredients": [
+            {
+              "id": "d2ab1c91-5a20-54c8-953c-014909dde2aa",
+              "position": 1,
+              "rawText": "Tomato",
+              "ingredientName": "Tomato",
+              "canonicalIngredientName": "tomato",
+              "ingredientId": "tomato",
+              "quantity": "2",
+              "exactQuantity": "2",
+              "quantityMax": null,
+              "quantityMode": "exact",
+              "unit": "tin",
+              "quantityText": "2 tin",
+              "displayText": null,
+              "alternateQuantity": null,
+              "alternateUnit": null,
+              "availableUnits": [
+                {
+                  "quantity": "2",
+                  "unit": "tin",
+                  "label": "2 tin",
+                  "source": "explicit",
+                  "confidence": "1.0000"
+                }
+              ],
+              "preparationNote": null,
+              "sizeNote": null,
+              "customMeasurementBasis": null,
+              "isCustom": false,
+              "sectionPosition": null,
+              "category": "other",
+              "isCoreIngredient": true,
+              "isOptional": false,
+              "parseConfidence": null,
+              "parseWarnings": [],
+              "measure": {
+                "unit": "tin",
+                "size": null,
+                "quantity": "2",
+                "exactQuantity": "2"
+              },
+              "nutrition": null,
+              "isFryingOil": false
+            }
+          ]
+        }
+      ],
+      "add": [
+        {
+          "recipeId": "r1",
+          "servings": 1,
+          "unitOverrides": []
+        }
+      ],
+      "expected": {
+        "rows": [
+          {
+            "name": "Tomato",
+            "ingredientId": "tomato",
+            "amount": "2",
+            "unit": "tin",
+            "displayQuantity": "2 tins",
+            "checked": false,
+            "recipeAmount": "2 tins",
+            "sources": [
+              {
+                "recipeId": "r1",
+                "recipeName": "Recipe r1",
+                "amount": "2",
+                "unit": "tin"
+              }
+            ],
+            "existingRow": null
+          }
+        ],
+        "lineItems": [
+          {
+            "clientLineId": "r1/1",
+            "row": 0
+          }
+        ],
+        "skippedInPantry": []
+      }
+    },
+    {
       "name": "leafy vegetables buy whole bunches",
       "existingRows": [],
       "pantryIngredientIds": [],

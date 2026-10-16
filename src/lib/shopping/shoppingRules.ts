@@ -102,6 +102,7 @@ export const MEASURE_LABELS: Record<string, [string, string]> = {
   tin: ["tin", "tins"],
   cube: ["cube", "cubes"],
 };
+const MEASURE_PLURALS = new Map(Object.values(MEASURE_LABELS));
 // Up to this much over a whole or a half of a sensitive ingredient rounds down.
 const COUNTED_SLACK = 0.1;
 
@@ -177,12 +178,13 @@ function biggerUnitFromAThousand(unit: string | null, amount: number): [string |
 function unitLabel(unit: string | null): [string, boolean] {
   if (unit === null) return ["piece", true];
   if (unit in UNIT_LABELS) return [UNIT_LABELS[unit], true];
+  if (unit in MEASURE_LABELS) return [MEASURE_LABELS[unit][0], true];
   const suffix = unit.includes("_") ? unit.slice(unit.lastIndexOf("_") + 1) : "";
   if (["mg", "g", "kg", "oz", "lb"].includes(suffix)) return [suffix, true];
   return [unit, false];
 }
 
-const plural = (label: string) => (ABBREVIATIONS.has(label) || !/[a-z]$/i.test(label) ? label : `${label}s`);
+const plural = (label: string) => (ABBREVIATIONS.has(label) || !/[a-z]$/i.test(label) ? label : (MEASURE_PLURALS.get(label) ?? `${label}s`));
 
 export type UnitRow = {
   id: string;
