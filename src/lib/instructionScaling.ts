@@ -1,15 +1,17 @@
 import type {
   RecipeInstruction,
   RecipeInstructionQuantitySegment,
+  RecipeLineMeasure,
   Unit,
 } from "../types/api.ts";
+import { friendlyCount, type CountRule } from "./friendlyAmounts.ts";
+import { measureAmountText } from "./measures.ts";
 import {
   convertQuantity,
-  formatConvertedQuantity,
+  formatAmountInUnit,
   getUnitDisplayLabel,
-  getUnitModeForUnitId,
 } from "./unitConversion.ts";
-import { formatQuantityText, formatQuantityValue } from "./scaling.ts";
+import { formatQuantityText } from "./scaling.ts";
 
 const MAX_DECIMAL_PLACES = 3;
 
@@ -19,12 +21,18 @@ export function formatScaledInstruction({
   selectedServings,
   unitsById,
   selectedUnitByIngredientId,
+  countRuleByIngredientId = new Map(),
+  measureByIngredientId = new Map(),
 }: {
   instruction: RecipeInstruction;
   baseServings: number | null;
   selectedServings: number;
   unitsById: Map<string, Unit>;
   selectedUnitByIngredientId: Map<string, string>;
+  // How each recipe ingredient's count rounds (see countRuleFor).
+  countRuleByIngredientId?: Map<string, CountRule>;
+  // Lines shown in pieces, cloves or bunches (P-17); their steps read the same.
+  measureByIngredientId?: Map<string, LineMeasure>;
 }) {
   if (
     !instruction.segments?.length ||
@@ -50,9 +58,28 @@ export function formatScaledInstruction({
         selectedServings,
         unitsById,
         selectedUnitByIngredientId,
+        countRuleByIngredientId,
+        measureByIngredientId,
       });
     })
     .join("");
+}
+
+// A recipe line's amount, with the share of its measure it comes to.
+type LineMeasure = { measure: RecipeLineMeasure; quantity: number; unit: string | null };
+
+// The step's amount in the line's measure ("1 ½ pieces"): its share of the
+// line, so a step that uses half the onion reads half of it. Null keeps the
+// step's own amount (another unit, or too small a share to count).
+function measureSegmentText(
+  segment: RecipeInstructionQuantitySegment,
+  line: LineMeasure | undefined,
+  servingFactor: number,
+  countRule: CountRule
+) {
+  if (!line || !(line.quantity > 0) || segment.unit !== line.unit) return null;
+  const share = (Number(segment.baseQuantity) / line.quantity) * Number(line.measure.exactQuantity);
+  return measureAmountText({ ...line.measure, exactQuantity: String(share) }, servingFactor, countRule);
 }
 
 function scaleDecimalString(
@@ -90,12 +117,16 @@ function formatQuantitySegment({
   selectedServings,
   unitsById,
   selectedUnitByIngredientId,
+  countRuleByIngredientId,
+  measureByIngredientId,
 }: {
   segment: RecipeInstructionQuantitySegment;
   baseServings: number;
   selectedServings: number;
   unitsById: Map<string, Unit>;
   selectedUnitByIngredientId: Map<string, string>;
+  countRuleByIngredientId: Map<string, CountRule>;
+  measureByIngredientId: Map<string, LineMeasure>;
 }) {
   const scaledQuantity = scaleDecimalString(
     segment.baseQuantity,
@@ -110,10 +141,26 @@ function formatQuantitySegment({
   const selectedUnit = segment.recipeIngredientId
     ? selectedUnitByIngredientId.get(segment.recipeIngredientId)
     : undefined;
+  const countRule = (segment.recipeIngredientId && countRuleByIngredientId.get(segment.recipeIngredientId)) || "normal";
+  const inMeasure = measureSegmentText(
+    segment,
+    segment.recipeIngredientId ? measureByIngredientId.get(segment.recipeIngredientId) : undefined,
+    selectedServings / baseServings,
+    countRule
+  );
 
+  if (inMeasure) {
+    return inMeasure;
+  }
+
+  // A unit the app doesn't know keeps the recipe's own words; known ones read
+  // like the ingredient line ("½ tsp", not "0.5 teaspoons").
   if (
     selectedServings === baseServings &&
-    (!selectedUnit || selectedUnit === segment.unit)
+    (!selectedUnit || selectedUnit === segment.unit) &&
+    segment.unit &&
+    segment.unit.trim().toLowerCase() !== "item" &&
+    !unitsById.has(segment.unit)
   ) {
     return formatQuantityText(segment.text);
   }
@@ -127,24 +174,25 @@ function formatQuantitySegment({
     });
 
     if (converted) {
-      const mode = getUnitModeForUnitId(converted.unit) ?? "metric";
-      const quantity = formatConvertedQuantity(converted.quantity, mode);
-      const unitLabel = getInstructionUnitLabel(unitsById, converted.unit);
-
-      return `${converted.isApproximate ? "≈" : ""}${quantity}${
-        unitLabel ? ` ${unitLabel}` : ""
-      }`;
+      return formatAmountInUnit(
+        unitsById,
+        converted,
+        getInstructionUnitLabel(unitsById, converted.unit),
+        countRule
+      );
     }
   }
 
-  if (!segment.unit) {
-    return formatQuantityValue(Number(scaledQuantity));
+  if (!segment.unit || segment.unit.trim().toLowerCase() === "item") {
+    return friendlyCount(Number(scaledQuantity), countRule);
   }
 
-  const unitLabel = getInstructionUnitLabel(unitsById, segment.unit);
-  return `${formatQuantityValue(Number(scaledQuantity))}${
-    unitLabel ? ` ${unitLabel}` : ""
-  }`;
+  return formatAmountInUnit(
+    unitsById,
+    { quantity: Number(scaledQuantity), unit: segment.unit, isApproximate: false },
+    getInstructionUnitLabel(unitsById, segment.unit),
+    countRule
+  );
 }
 
 function getInstructionUnitLabel(unitsById: Map<string, Unit>, unit: string) {

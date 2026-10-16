@@ -1,5 +1,6 @@
 import { router } from "expo-router";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ProfileQuestionSheet } from "../src/components/profile/complete/ProfileQuestionSheet";
 import {
   EXPERIENCE_OPTIONS,
@@ -14,8 +15,9 @@ import {
   type ProfileQuestionField,
 } from "../src/components/profile/complete/profileQuestionOptions";
 import { AppText } from "../src/components/ui/AppText";
-import { Icon, IconName } from "../src/components/ui/Icon";
-import { Screen } from "../src/components/ui/Screen";
+import { Icon } from "../src/components/ui/Icon";
+import { SettingsRow } from "../src/components/profile/SettingsRow";
+import { SettingsCard, SettingsSection } from "../src/components/settings/SettingsLayout";
 import { useSettingsCommands } from "../src/hooks/useSettingsCommands";
 import {
   PROFILE_COMPLETION_FIELD_COUNT,
@@ -32,10 +34,8 @@ export default function ProfileCompleteScreen() {
   const answers = useProfileAnswersStore((state) => state);
   const settings = useSettingsCommands();
 
+  const insets = useSafeAreaInsets();
   const answeredCount = countAnsweredProfileFields(answers);
-  const completionPercent = Math.round(
-    (answeredCount / PROFILE_COMPLETION_FIELD_COUNT) * 100
-  );
 
   async function saveAnswers(partial: Partial<ProfileAnswers>) {
     const next: ProfileAnswers = { ...answers, ...partial };
@@ -73,163 +73,102 @@ export default function ProfileCompleteScreen() {
       : undefined;
 
   return (
-    <Screen scroll>
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <Icon name="chevronLeft" size={19} color={theme.colors.text} />
+    <View style={styles.screen}>
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+        <Pressable accessibilityLabel="Back" onPress={() => router.back()} style={styles.backButton}>
+          <Icon name="chevronLeft" size={19} />
         </Pressable>
-
-        <AppText style={styles.headerTitle}>Complete Profile</AppText>
+        <AppText style={styles.headerTitle}>Complete profile</AppText>
         <View style={styles.headerSpacer} />
       </View>
 
-      <View style={styles.progressWrap}>
-        <AppText style={styles.progressLabel}>
-          Answer anytime. The more we know, the better your suggestions.
-        </AppText>
-
-        <View style={styles.progressTrack}>
-          <View
-            style={[styles.progressFill, { width: `${completionPercent}%` }]}
-          />
+      <ScrollView style={styles.scroll} contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 120 }]} showsVerticalScrollIndicator={false}>
+        <View style={styles.top}>
+          <View style={styles.count}>
+            <AppText style={styles.countNumber}>{answeredCount}</AppText>
+            <AppText style={styles.countLabel}>of {PROFILE_COMPLETION_FIELD_COUNT} answered</AppText>
+          </View>
+          <AppText style={styles.intro}>Answer anytime. The more we know, the better your suggestions.</AppText>
         </View>
-        <AppText style={styles.progressCount}>
-          {answeredCount} of {PROFILE_COMPLETION_FIELD_COUNT} answered
-        </AppText>
-      </View>
 
-      <View style={styles.section}>
-        <AppText style={styles.sectionTitle}>About you</AppText>
-        <View style={styles.sectionCard}>
-          <QuestionRow
-            icon={PROFILE_QUESTION_META.nickname.icon}
-            label={PROFILE_QUESTION_META.nickname.row}
-            value={answers.nickname ?? undefined}
-            onPress={() => openQuestion("nickname")}
-          />
-          <QuestionRow
-            icon={PROFILE_QUESTION_META.gender.icon}
-            label={PROFILE_QUESTION_META.gender.row}
-            value={labelFor(GENDER_OPTIONS, answers.gender)}
-            onPress={() => openQuestion("gender")}
-          />
-          <QuestionRow
-            icon={PROFILE_QUESTION_META.birthday.icon}
-            label={PROFILE_QUESTION_META.birthday.row}
-            value={birthdayLabel}
-            onPress={() => openQuestion("birthday")}
-          />
-        </View>
-      </View>
+        <SettingsSection title="About you">
+          <SettingsCard>
+            <QuestionRow field="nickname" value={answers.nickname ?? undefined} onPress={openQuestion} />
+            <QuestionRow field="gender" value={labelFor(GENDER_OPTIONS, answers.gender)} onPress={openQuestion} />
+            <QuestionRow field="birthday" value={birthdayLabel} onPress={openQuestion} last />
+          </SettingsCard>
+        </SettingsSection>
 
-      <View style={styles.section}>
-        <AppText style={styles.sectionTitle}>Your cooking life</AppText>
-        <View style={styles.sectionCard}>
-          <QuestionRow
-            icon={PROFILE_QUESTION_META.lifestyle.icon}
-            label={PROFILE_QUESTION_META.lifestyle.row}
-            value={labelFor(LIFESTYLE_OPTIONS, answers.lifestyle)}
-            onPress={() => openQuestion("lifestyle")}
-          />
-          <QuestionRow
-            icon={PROFILE_QUESTION_META.experience.icon}
-            label={PROFILE_QUESTION_META.experience.row}
-            value={labelFor(EXPERIENCE_OPTIONS, answers.experience)}
-            onPress={() => openQuestion("experience")}
-          />
-          <QuestionRow
-            icon={PROFILE_QUESTION_META.habitFreq.icon}
-            label={PROFILE_QUESTION_META.habitFreq.row}
-            value={labelFor(HABIT_FREQ_OPTIONS, answers.habitFreq)}
-            onPress={() => openQuestion("habitFreq")}
-          />
-          <QuestionRow
-            icon={PROFILE_QUESTION_META.habitWho.icon}
-            label={PROFILE_QUESTION_META.habitWho.row}
-            value={labelFor(HABIT_WHO_OPTIONS, answers.habitWho)}
-            onPress={() => openQuestion("habitWho")}
-          />
-          <QuestionRow
-            icon={PROFILE_QUESTION_META.habitTime.icon}
-            label={PROFILE_QUESTION_META.habitTime.row}
-            value={labelFor(HABIT_TIME_OPTIONS, answers.habitTime)}
-            onPress={() => openQuestion("habitTime")}
-          />
-        </View>
-      </View>
+        <SettingsSection title="Your cooking life">
+          <SettingsCard>
+            <QuestionRow field="lifestyle" value={labelFor(LIFESTYLE_OPTIONS, answers.lifestyle)} onPress={openQuestion} />
+            <QuestionRow field="experience" value={labelFor(EXPERIENCE_OPTIONS, answers.experience)} onPress={openQuestion} />
+            <QuestionRow field="habitFreq" value={labelFor(HABIT_FREQ_OPTIONS, answers.habitFreq)} onPress={openQuestion} />
+            <QuestionRow field="habitWho" value={labelFor(HABIT_WHO_OPTIONS, answers.habitWho)} onPress={openQuestion} />
+            <QuestionRow field="habitTime" value={labelFor(HABIT_TIME_OPTIONS, answers.habitTime)} onPress={openQuestion} last />
+          </SettingsCard>
+        </SettingsSection>
 
-      <View style={styles.section}>
-        <AppText style={styles.sectionTitle}>What you&apos;re here for</AppText>
-        <View style={styles.sectionCard}>
-          <QuestionRow
-            icon={PROFILE_QUESTION_META.goals.icon}
-            label={PROFILE_QUESTION_META.goals.row}
-            value={answers.goals.length > 0 ? `${answers.goals.length} ${answers.goals.length === 1 ? "goal" : "goals"}` : undefined}
-            onPress={() => openQuestion("goals")}
-          />
-          <QuestionRow
-            icon={PROFILE_QUESTION_META.challenges.icon}
-            label={PROFILE_QUESTION_META.challenges.row}
-            value={answers.challenges.length > 0 ? `${answers.challenges.length} selected` : undefined}
-            onPress={() => openQuestion("challenges")}
-          />
-        </View>
-      </View>
+        <SettingsSection title="What you're here for">
+          <SettingsCard>
+            <QuestionRow
+              field="goals"
+              value={answers.goals.length > 0 ? `${answers.goals.length} ${answers.goals.length === 1 ? "goal" : "goals"}` : undefined}
+              onPress={openQuestion}
+            />
+            <QuestionRow
+              field="challenges"
+              value={answers.challenges.length > 0 ? `${answers.challenges.length} selected` : undefined}
+              onPress={openQuestion}
+              last
+            />
+          </SettingsCard>
+        </SettingsSection>
 
-      <View style={styles.section}>
-        <AppText style={styles.sectionTitle}>One last thing</AppText>
-        <View style={styles.sectionCard}>
-          <QuestionRow
-            icon={PROFILE_QUESTION_META.heard.icon}
-            label={PROFILE_QUESTION_META.heard.row}
-            value={
-              answers.heard === "other" && answers.heardOther
-                ? answers.heardOther
-                : labelFor(HEARD_OPTIONS, answers.heard)
-            }
-            onPress={() => openQuestion("heard")}
-          />
-        </View>
-      </View>
-    </Screen>
+        <SettingsSection title="One last thing">
+          <SettingsCard>
+            <QuestionRow
+              field="heard"
+              value={answers.heard === "other" && answers.heardOther ? answers.heardOther : labelFor(HEARD_OPTIONS, answers.heard)}
+              onPress={openQuestion}
+              last
+            />
+          </SettingsCard>
+        </SettingsSection>
+      </ScrollView>
+    </View>
   );
 }
 
+// v6.9.2's Complete profile row: the answer in brand green, or "Add".
 function QuestionRow({
-  icon,
-  label,
+  field,
   value,
   onPress,
+  last = false,
 }: {
-  icon: IconName;
-  label: string;
+  field: ProfileQuestionField;
   value?: string;
-  onPress: () => void;
+  onPress: (field: ProfileQuestionField) => void;
+  last?: boolean;
 }) {
   return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
-    >
-      <View style={styles.rowIconWrap}>
-        <Icon name={icon} size={18} color={theme.colors.navy} />
-      </View>
-
-      <View style={styles.rowInfo}>
-        <AppText style={styles.rowLabel}>{label}</AppText>
-      </View>
-
-      {value ? (
-        <AppText style={styles.rowValue} numberOfLines={1}>
-          {value}
-        </AppText>
-      ) : (
-        <View style={styles.rowAddWrap}>
-          <AppText style={styles.rowAddText}>Add</AppText>
-          <Icon name="chevronRight" size={14} color={theme.colors.textMuted} />
-        </View>
-      )}
-    </Pressable>
+    <SettingsRow
+      icon={PROFILE_QUESTION_META[field].icon}
+      label={PROFILE_QUESTION_META[field].row}
+      onPress={() => onPress(field)}
+      showDivider={!last}
+      rightElement={
+        value ? (
+          <AppText style={styles.value} numberOfLines={1}>{value}</AppText>
+        ) : (
+          <View style={styles.add}>
+            <AppText style={styles.addText}>Add</AppText>
+            <Icon name="chevronRight" size={15} color={theme.colors.textMedium} />
+          </View>
+        )
+      }
+    />
   );
 }
 
@@ -257,121 +196,20 @@ function getProfileSaveToast(
 }
 
 const styles = StyleSheet.create({
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 52,
-    paddingBottom: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.card,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerSpacer: {
-    width: 44,
-    height: 44,
-  },
-  headerTitle: {
-    flex: 1,
-    textAlign: "center",
-    fontFamily: theme.fontFamily.display,
-    fontSize: 18,
-    letterSpacing: -0.2,
-    color: theme.colors.text,
-  },
-  progressWrap: {
-    paddingHorizontal: 20,
-    marginBottom: theme.spacing.sm,
-  },
-  progressTrack: {
-    height: 6,
-    borderRadius: 999,
-    backgroundColor: theme.colors.card2,
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: "100%",
-    borderRadius: 999,
-    backgroundColor: theme.colors.green,
-  },
-  progressLabel: {
-    fontFamily: theme.fontFamily.body,
-    fontSize: 14,
-    lineHeight: 21,
-    color: theme.colors.textMedium,
-    marginBottom: 14,
-  },
-  progressCount: {
-    fontFamily: theme.fontFamily.body,
-    fontSize: 12,
-    color: theme.colors.textMuted,
-    marginTop: 6,
-  },
-  section: {
-    paddingHorizontal: 20,
-  },
-  sectionTitle: {
-    fontFamily: theme.fontFamily.body,
-    fontSize: 14,
-    color: theme.colors.textMuted,
-    marginTop: 22,
-    marginBottom: 4,
-  },
-  sectionCard: {
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  rowPressed: {
-    opacity: 0.75,
-  },
-  rowIconWrap: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    backgroundColor: theme.colors.card2,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  rowInfo: {
-    flex: 1,
-    minWidth: 0,
-  },
-  rowLabel: {
-    fontFamily: theme.fontFamily.bodySemiBold,
-    fontSize: 14.5,
-    color: theme.colors.text,
-  },
-  rowValue: {
-    flexShrink: 0,
-    maxWidth: 140,
-    fontFamily: theme.fontFamily.bodyBold,
-    fontSize: 13,
-    color: theme.colors.navy3,
-    textAlign: "right",
-  },
-  rowAddWrap: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
-    flexShrink: 0,
-  },
-  rowAddText: {
-    fontFamily: theme.fontFamily.bodyBold,
-    fontSize: 13,
-    color: theme.colors.textMuted,
-  },
+  screen: { flex: 1, backgroundColor: theme.colors.page },
+  header: { paddingHorizontal: 20, paddingBottom: 16, flexDirection: "row", alignItems: "center", gap: 8 },
+  backButton: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
+  headerTitle: { flex: 1, paddingHorizontal: 10, textAlign: "center", fontFamily: theme.fontFamily.display, fontSize: 18, letterSpacing: -0.18, color: theme.colors.navy },
+  headerSpacer: { width: 44, height: 44 },
+  scroll: { flex: 1 },
+  content: { paddingTop: 6, paddingHorizontal: 16 },
+  // v6.9.2's .cp2-top: the answered count on ink, the intro beside it.
+  top: { flexDirection: "row", borderRadius: 20, borderWidth: 0.75, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, overflow: "hidden" },
+  count: { flex: 1, minHeight: 104, padding: 16, gap: 6, justifyContent: "flex-end", backgroundColor: theme.colors.navy },
+  countNumber: { fontFamily: theme.fontFamily.display, fontSize: 40, lineHeight: 40, letterSpacing: 40 * -0.03, color: theme.colors.orange, fontVariant: ["tabular-nums"] },
+  countLabel: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 12, lineHeight: 12 * 1.25, color: theme.colors.onDark, opacity: 0.8 },
+  intro: { flex: 1.5, alignSelf: "center", padding: 16, fontFamily: theme.fontFamily.body, fontSize: 13.5, lineHeight: 13.5 * 1.45, color: theme.colors.text },
+  value: { flexShrink: 0, maxWidth: 140, fontFamily: theme.fontFamily.bodySemiBold, fontSize: 13.5, lineHeight: 13.5 * 1.2, color: theme.colors.navy3 },
+  add: { flexShrink: 0, flexDirection: "row", alignItems: "center", gap: 2 },
+  addText: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 13.5, lineHeight: 13.5, color: theme.colors.textMedium },
 });

@@ -10,8 +10,8 @@ import { selectionFromRecipe } from "../src/lib/shopping/recipeMerge.ts";
 // rules must give exactly the same list (SL-06).
 const fixtures = JSON.parse(readFileSync(new URL("./fixtures-shopping-rules.json", import.meta.url), "utf8"));
 const units = new Map(fixtures.units.map((unit) => [unit.id, unit]));
-const subcategories = new Map(fixtures.ingredients.map((ingredient) => [ingredient.id, ingredient.subcategory]));
-const subcategoryOf = (ingredientId) => (ingredientId ? subcategories.get(ingredientId) ?? null : null);
+const ingredients = new Map(fixtures.ingredients.map((ingredient) => [ingredient.id, ingredient]));
+const ingredientOf = (ingredientId) => (ingredientId ? ingredients.get(ingredientId) ?? null : null);
 const amountText = (value) => (value === null || value === undefined ? null : String(Number(Number(value).toFixed(10))));
 const byNameThenUnit = (a, b) => a.name.localeCompare(b.name) || (a.unit ?? "").localeCompare(b.unit ?? "");
 
@@ -36,14 +36,14 @@ for (const fixture of fixtures.cases) {
       selections,
       units,
       pantryIngredientIds: new Set(fixture.pantryIngredientIds),
-      subcategoryOf,
+      ingredientOf,
     });
 
     const changed = new Map([...review.mergedRows, ...review.newRows].map((row) => [row.id, row]));
     const after = [...rows.map((row) => changed.get(row.id) ?? row), ...review.newRows].map((row) => {
       const existingRow = rows.findIndex((input) => input.id === row.id);
       const untouched = existingRow >= 0 && !changed.has(row.id);
-      const stored = toStoredItem(row, { listId: "list", createdAt: "", updatedAt: "" }, subcategoryOf(row.ingredientId ?? null));
+      const stored = toStoredItem(row, { listId: "list", createdAt: "", updatedAt: "" }, ingredientOf);
       return {
         id: row.id,
         name: row.name,

@@ -42,9 +42,9 @@ const row = (id, name, amount, unit, checked = false) => ({
   checked,
   sources: [],
 });
-const subcategories = { curry: "Spice blend" };
+const ingredients = { curry: { subcategory: "Spice blend", measures: [] } };
 const review = (rows, pantry = []) =>
-  reviewRecipeAdd({ rows, selections: [jollof], units, pantryIngredientIds: new Set(pantry), subcategoryOf: (id) => subcategories[id] ?? null });
+  reviewRecipeAdd({ rows, selections: [jollof], units, pantryIngredientIds: new Set(pantry), ingredientOf: (id) => ingredients[id] ?? null });
 
 test("SL-06: the server's recipeAmount text, exact to 2 places", () => {
   assert.equal(recipeAmountText([{ recipeId: "a", recipeName: "A", amount: "200", unit: "g" }, { recipeId: "b", recipeName: "B", amount: "100", unit: "g" }]), "300 g");

@@ -33,6 +33,8 @@ import { formatNaira } from "../../src/lib/formatters";
 import {
   createInitialIngredientUnitSelections,
 } from "../../src/lib/ingredientUnits";
+import { countRuleFor } from "../../src/lib/friendlyAmounts";
+import { measureAmountText, measureOptionLabel } from "../../src/lib/measures";
 import { formatScaledInstruction } from "../../src/lib/instructionScaling";
 import { getRecipeMeals, MEAL_LABELS } from "../../src/lib/mealTime";
 import { scaleAmountText, scaleCost } from "../../src/lib/scaling";
@@ -213,6 +215,11 @@ export default function RecipeDetailScreen() {
           context: ingredientContext,
           mode,
           servingFactor,
+          countRule: countRuleFor(
+            apiIngredient.ingredientId
+              ? ingredientsById.get(apiIngredient.ingredientId)
+              : undefined
+          ),
         }).map((option) => ({
           value: option.unit,
           unit: option.unit,
@@ -271,11 +278,61 @@ export default function RecipeDetailScreen() {
     };
   }
 
+  // The amount in pieces, cloves or bunches (P-17), when the line has one.
+  function getMeasureOption(
+    apiIngredient: ApiRecipeIngredient
+  ): IngredientUnitOption | null {
+    const measure = apiIngredient.measure;
+    if (!measure || measure.unit === "pinch") return null;
+    const baseServings =
+      Number.isFinite(recipe?.baseServings) && (recipe?.baseServings ?? 0) > 0
+        ? recipe!.baseServings
+        : 1;
+    const preview = measureAmountText(
+      measure,
+      servings / baseServings,
+      countRuleFor(
+        apiIngredient.ingredientId
+          ? ingredientsById.get(apiIngredient.ingredientId)
+          : undefined
+      )
+    );
+
+    return preview
+      ? {
+          value: MEASURE_OPTION,
+          label: measureOptionLabel({ unit: measure.unit, size: measure.size }),
+          preview,
+        }
+      : null;
+  }
+
   function getSelectedApiIngredientOption(apiIngredient: ApiRecipeIngredient) {
-    const { options, ingredientContext, storedQuantity, effectiveMode } =
-      getApiIngredientOptions(apiIngredient);
+    const {
+      options: unitOptions,
+      ingredientContext,
+      storedQuantity,
+      effectiveMode,
+    } = getApiIngredientOptions(apiIngredient);
+    const measureOption = getMeasureOption(apiIngredient);
+    const options = measureOption
+      ? [measureOption, ...unitOptions]
+      : unitOptions;
     const rawSelection =
       ingredientUnitSelections[apiIngredient.id] ?? globalUnitMode;
+
+    // Pieces by default in every unit mode; another unit only when picked.
+    if (
+      measureOption &&
+      (rawSelection === MEASURE_OPTION || isUnitMode(rawSelection))
+    ) {
+      return {
+        options,
+        selectedOption: measureOption,
+        selectedValue: MEASURE_OPTION,
+      };
+    }
+
     let selectedValue = String(rawSelection);
 
     if (
@@ -347,6 +404,33 @@ export default function RecipeDetailScreen() {
       return selectedUnit ? [[ingredient.id, selectedUnit] as const] : [];
     })
   );
+  const countRuleByIngredientId = new Map(
+    (recipeDetail?.ingredients ?? []).map((ingredient) => [
+      ingredient.id,
+      countRuleFor(
+        ingredient.ingredientId
+          ? ingredientsById.get(ingredient.ingredientId)
+          : undefined
+      ),
+    ])
+  );
+  const measureByIngredientId = new Map(
+    (recipeDetail?.ingredients ?? []).flatMap((ingredient) =>
+      ingredient.measure &&
+      getSelectedApiIngredientOption(ingredient).selectedValue === MEASURE_OPTION
+        ? [
+            [
+              ingredient.id,
+              {
+                measure: ingredient.measure,
+                quantity: Number(ingredient.exactQuantity ?? ingredient.quantity),
+                unit: ingredient.unit,
+              },
+            ] as const,
+          ]
+        : []
+    )
+  );
   const instructions = [...(recipeDetail?.instructions ?? [])]
     .sort((left, right) => left.stepNumber - right.stepNumber)
     .map((instruction) => ({
@@ -357,6 +441,8 @@ export default function RecipeDetailScreen() {
         selectedServings: servings,
         unitsById,
         selectedUnitByIngredientId: selectedInstructionUnits,
+        countRuleByIngredientId,
+        measureByIngredientId,
       }),
     }));
   const displayTags = getRecipeDetailTags(recipeDetail, recipe?.tags ?? []);
@@ -1080,6 +1166,9 @@ function readLearnStep(value: string | undefined) {
   const step = Number(value);
   return value !== undefined && Number.isInteger(step) && step >= 0 ? step : null;
 }
+
+// The unit sheet's value for an amount in the ingredient's own measure.
+const MEASURE_OPTION = "measure";
 
 type IngredientUnitOption = {
   value: string;

@@ -147,14 +147,14 @@ export function createShoppingCommands({ db, transact, now, newId, requestSync }
           const kept = mapShoppingListRowToItem(existing);
           await insertShoppingListItem(tx, {
             ...kept,
-            ...toStoredItem(row, { listId, createdAt: kept.createdAt, updatedAt: at }, review.subcategoryOf(row.ingredientId ?? null)),
+            ...toStoredItem(row, { listId, createdAt: kept.createdAt, updatedAt: at }, review.ingredientOf),
             emoji: kept.emoji,
             checked: kept.checked,
           });
         }
         for (const row of review.newRows) {
           await insertShoppingListItem(tx, {
-            ...toStoredItem({ ...row, id: localIds.get(row.id)! }, { listId, createdAt: at, updatedAt: at }, review.subcategoryOf(row.ingredientId ?? null)),
+            ...toStoredItem({ ...row, id: localIds.get(row.id)! }, { listId, createdAt: at, updatedAt: at }, review.ingredientOf),
             sourceRecipeId: row.recipeId,
             recipeBatchId: batchId,
           });

@@ -1,9 +1,15 @@
 // Conversion requires a shared base unit; context only limits which units are offered.
 
 import type { Ingredient, IngredientConversionContext, Unit } from "../types/api.ts";
-import { formatQuantityValue } from "./scaling.ts";
+import { friendlyQuantity, isBelowPinch, PINCH, tooSmallForUnit, type CountRule } from "./friendlyAmounts.ts";
 
 export type UnitMode = "metric" | "cups" | "imperial";
+
+// A milk cup or derica shows only from half a cup up (founder, 2026-10-16).
+const MIN_NIGERIAN_CUPS = 0.5;
+// Under a quarter cup, metric volumes read in spoons: "½ tsp", not "3 mL"
+// (founder, 2026-10-16).
+const METRIC_SPOONS_BELOW_ML = 60;
 
 interface ConvertedQuantity {
   quantity: number;
@@ -187,6 +193,7 @@ export function buildScaleUnitOptions({
   context,
   mode,
   servingFactor = 1,
+  countRule = "normal",
 }: {
   units: Unit[];
   quantity: number;
@@ -194,11 +201,31 @@ export function buildScaleUnitOptions({
   context: IngredientConversionContext;
   mode?: UnitMode;
   servingFactor?: number;
+  countRule?: CountRule;
 }): ScaleUnitOption[] {
   const unitsById = buildUnitLookup(units);
+  // The spoon or gram an amount under half a cup shows in, or the spoon a
+  // small metric volume shows in.
+  const belowCupsUnit =
+    mode === "cups" || mode === "metric"
+      ? unitsById.get(
+          convertIngredientQuantity({
+            unitsById,
+            quantity: quantity * servingFactor,
+            fromUnit,
+            context,
+            mode,
+          })?.unit ?? ""
+        )
+      : undefined;
 
   return getCompatibleScaleUnits({ units, fromUnit, context })
-    .filter((unit) => !mode || getUnitModeForUnitId(unit.id) === mode)
+    .filter(
+      (unit) =>
+        !mode ||
+        getUnitModeForUnitId(unit.id) === mode ||
+        (belowCupsUnit !== undefined && isSameMeasure(unit, belowCupsUnit))
+    )
     .flatMap((unit) => {
       const converted = convertQuantity({
         unitsById,
@@ -207,22 +234,49 @@ export function buildScaleUnitOptions({
         toUnit: unit.id,
       });
 
-      if (!converted) {
+      if (
+        !converted ||
+        (getUnitModeForUnitId(unit.id) === "cups" && converted.quantity < MIN_NIGERIAN_CUPS) ||
+        tooSmallForUnit(converted.quantity, unit.id)
+      ) {
         return [];
       }
-
-      const unitLabel = getUnitDisplayLabel(unitsById, unit.id);
 
       return [
         {
           ...converted,
           label: getUnitPickerLabel(unit),
-          preview: `${converted.isApproximate ? "≈" : ""}${formatScaleQuantity(
-            converted.quantity
-          )} ${unitLabel}`,
+          preview: formatAmountInUnit(unitsById, converted, undefined, countRule),
         },
       ];
     });
+}
+
+// The amount as it reads on the recipe: "≈1 ½ Milk cup", "38 g", "a pinch".
+export function formatAmountInUnit(
+  unitsById: Map<string, Unit>,
+  { quantity, unit, isApproximate }: ConvertedQuantity,
+  label = getUnitDisplayLabel(unitsById, unit),
+  countRule: CountRule = "normal"
+) {
+  const definition = unitsById.get(unit);
+
+  if (definition && isBelowPinch(quantity * averageUnitFactor(definition), definition.baseUnit)) {
+    return PINCH;
+  }
+
+  const amount = friendlyQuantity(quantity, unit, countRule);
+  // "3 Milk cups", "1 ½ Milk cups", but "¾ Small Derica cup".
+  const shownLabel = /^\d/.test(amount) && amount !== "1" ? label.replace(/\bcup$/i, "cups") : label;
+  return `${isApproximate ? "≈" : ""}${amount}${shownLabel ? ` ${shownLabel}` : ""}`;
+}
+
+function isSameMeasure(left: Unit, right: Unit) {
+  return (
+    left.baseUnit === right.baseUnit &&
+    Number(left.baseFactorMin) === Number(right.baseFactorMin) &&
+    Number(left.baseFactorMax) === Number(right.baseFactorMax)
+  );
 }
 
 export function getUnitModeForUnitId(unitId: string | null): UnitMode | null {
@@ -310,17 +364,47 @@ export function convertIngredientQuantity({
     return null;
   }
 
+  const fromDefinition = unitsById.get(fromUnit);
+  const measuredByVolume = fromDefinition?.baseUnit === "mL";
+
+  if (
+    mode === "metric" &&
+    fromDefinition &&
+    measuredByVolume &&
+    quantity * averageUnitFactor(fromDefinition) < METRIC_SPOONS_BELOW_ML
+  ) {
+    const spoons = inSpoons(unitsById, quantity, fromUnit);
+    if (spoons) return spoons;
+  }
+
   if (mode === "cups") {
-    if (!contextUnits.nigerianDefault) {
+    // Anything measured by volume (spices in mL too) goes in milk cups.
+    const nigerianUnit = measuredByVolume ? "milk_cup" : contextUnits.nigerianDefault;
+
+    if (!nigerianUnit) {
       return null;
     }
 
-    return convertQuantity({
+    const cups = convertQuantity({
       unitsById,
       quantity,
       fromUnit,
-      toUnit: contextUnits.nigerianDefault,
+      toUnit: nigerianUnit,
     });
+
+    // Under half a milk cup or derica, liquids show in spoons and dry food in
+    // grams, so no amount reads "0.07 milk cup".
+    if (!cups || cups.quantity >= MIN_NIGERIAN_CUPS) {
+      return cups;
+    }
+
+    if (measuredByVolume) {
+      return inSpoons(unitsById, quantity, fromUnit);
+    }
+
+    return contextUnits.metricSmall
+      ? convertQuantity({ unitsById, quantity, fromUnit, toUnit: contextUnits.metricSmall })
+      : null;
   }
 
   const smallUnit = mode === "metric" ? contextUnits.metricSmall : contextUnits.imperialSmall;
@@ -351,6 +435,14 @@ export function convertIngredientQuantity({
   return small;
 }
 
+// Tablespoons from one up, teaspoons under that.
+function inSpoons(unitsById: Map<string, Unit>, quantity: number, fromUnit: string) {
+  const tablespoons = convertQuantity({ unitsById, quantity, fromUnit, toUnit: "tbsp" });
+  return tablespoons && tablespoons.quantity >= 1
+    ? tablespoons
+    : convertQuantity({ unitsById, quantity, fromUnit, toUnit: "tsp" });
+}
+
 export function getAvailableModesForContext(
   context: IngredientConversionContext
 ): UnitMode[] {
@@ -373,14 +465,6 @@ export function getIngredientConversionContext(
   ingredient: Ingredient | undefined
 ): IngredientConversionContext {
   return ingredient?.conversionContext ?? "mass";
-}
-
-export function formatConvertedQuantity(quantity: number, _mode: UnitMode): string {
-  if (!Number.isFinite(quantity) || quantity <= 0) {
-    return "0";
-  }
-
-  return formatQuantityValue(quantity);
 }
 
 export function getUnitDisplayLabel(unitsById: Map<string, Unit>, unitId: string): string {
@@ -454,8 +538,4 @@ export function getUnitPickerLabel(unit: Unit): string {
 
 function averageUnitFactor(unit: Unit) {
   return (Number(unit.baseFactorMin) + Number(unit.baseFactorMax)) / 2;
-}
-
-function formatScaleQuantity(quantity: number) {
-  return formatQuantityValue(quantity);
 }
