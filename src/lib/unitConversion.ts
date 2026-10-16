@@ -258,7 +258,9 @@ export function formatAmountInUnit(
   }
 
   const amount = friendlyQuantity(quantity, unit);
-  return `${isApproximate ? "≈" : ""}${amount}${label ? ` ${label}` : ""}`;
+  // "3 Milk cups", "1 ½ Milk cups", but "¾ Small Derica cup".
+  const shownLabel = /^\d/.test(amount) && amount !== "1" ? label.replace(/\bcup$/i, "cups") : label;
+  return `${isApproximate ? "≈" : ""}${amount}${shownLabel ? ` ${shownLabel}` : ""}`;
 }
 
 function isSameMeasure(left: Unit, right: Unit) {

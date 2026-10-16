@@ -86,9 +86,10 @@ test("amounts read the way people cook", () => {
   const cases = [
     [{ quantity: 15, unit: "mL", context: "volume", mode: "cups" }, "1 tbsp"],
     [{ quantity: 10, unit: "mL", context: "volume", mode: "cups" }, "2 tsp"],
-    [{ quantity: 300, unit: "mL", context: "volume", mode: "cups" }, "≈2 Milk cup"],
+    [{ quantity: 300, unit: "mL", context: "volume", mode: "cups" }, "≈2 Milk cups"],
+    [{ quantity: 120, unit: "mL", context: "volume", mode: "cups" }, "≈¾ Milk cup"],
     [{ quantity: 100, unit: "g", context: "rice", mode: "cups" }, "100 g"],
-    [{ quantity: 600, unit: "g", context: "rice", mode: "cups" }, "≈1 ½ Small Derica cup"],
+    [{ quantity: 600, unit: "g", context: "rice", mode: "cups" }, "≈1 ½ Small Derica cups"],
     [{ quantity: 37.6, unit: "g", context: "mass", mode: "metric" }, "38 g"],
     [{ quantity: 1370, unit: "g", context: "mass", mode: "metric" }, "1 ¼ kg"],
     [{ quantity: 1.65, unit: "tsp", context: "volume", mode: "cups" }, "1 ⅔ tsp"],
