@@ -23,26 +23,16 @@ import {
   isApiClientError,
 } from "../src/lib/api/errors";
 import { isEmailAddress } from "../src/lib/emailAddress";
-import { getLagosDay } from "../src/lib/lagosDay";
-import {
-  agreementError,
-  readDateOfBirth,
-  type AgreementForm,
-} from "../src/lib/legal/agreement";
+import { agreementError, type AgreementForm } from "../src/lib/legal/agreement";
 import { getPasswordScore } from "../src/lib/passwordStrength";
 import { showToast } from "../src/store/uiStore";
 import { theme } from "../src/theme/theme";
 
 type AuthFieldErrors = Record<string, string | undefined>;
 
-// The server's refusals about the date of birth and the ticks, shown with
-// them rather than at the top.
-const AGREEMENT_ERROR_CODES = [
-  "TERMS_NOT_ACCEPTED",
-  "INVALID_DATE_OF_BIRTH",
-  "UNDER_MINIMUM_AGE",
-  "GUARDIAN_CONSENT_REQUIRED",
-];
+// The server's refusals about the ticks, shown with them rather than at the
+// top.
+const AGREEMENT_ERROR_CODES = ["AGE_NOT_CONFIRMED", "TERMS_NOT_ACCEPTED"];
 
 export default function AuthSignupScreen() {
   const signupMutation = useSignupMutation();
@@ -54,11 +44,7 @@ export default function AuthSignupScreen() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<AuthFieldErrors>({});
-  const [agreement, setAgreement] = useState<AgreementForm>({
-    dob: { d: "", m: "", y: "" },
-    terms: false,
-    parent: false,
-  });
+  const [agreement, setAgreement] = useState<AgreementForm>({ adult: false, terms: false });
   // Starts ticked, and the person can untick it (founder, 15 October 2026).
   const [marketingEmails, setMarketingEmails] = useState(true);
   const [agreementProblem, setAgreementProblem] = useState<string | null>(null);
@@ -72,9 +58,7 @@ export default function AuthSignupScreen() {
     const trimmedLastName = lastName.trim();
     const trimmedEmail = email.trim();
     // Checked with the other fields, so every problem shows at once.
-    const today = getLagosDay();
-    const problem = agreementError(agreement, today);
-    const dateOfBirth = readDateOfBirth(agreement.dob, today);
+    const problem = agreementError(agreement);
     setAgreementProblem(problem);
 
     if (
@@ -112,7 +96,7 @@ export default function AuthSignupScreen() {
       return;
     }
 
-    if (problem || dateOfBirth.state !== "ok") {
+    if (problem) {
       return;
     }
 
@@ -125,9 +109,8 @@ export default function AuthSignupScreen() {
         lastName: trimmedLastName,
         email: trimmedEmail,
         password,
-        dateOfBirth: dateOfBirth.iso,
         termsAccepted: agreement.terms,
-        guardianConsent: agreement.parent,
+        ageConfirmed: agreement.adult,
         marketingEmailsOptIn: marketingEmails,
       });
       // New accounts enter the code from their email before the app opens.

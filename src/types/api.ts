@@ -79,12 +79,8 @@ export interface User {
   emailVerifiedAt: ISODateTimeString | null;
   createdAt: ISODateTimeString;
   updatedAt: ISODateTimeString;
-  // "YYYY-MM-DD"; null for accounts made before sign-up asked.
-  dateOfBirth: string | null;
   termsAcceptedAt: ISODateTimeString | null;
   termsVersion: string | null;
-  // Set for ages 13 to 17 only.
-  guardianConsentAt: ISODateTimeString | null;
   // True until the person agrees to the current Terms: the agreement screen
   // shows before the app.
   agreementRequired: boolean;
@@ -94,12 +90,12 @@ export interface User {
   emailVerificationRequired: boolean;
 }
 
-// A date of birth and agreement to the Terms, at sign-up and once of older
-// accounts. guardianConsent must be true for ages 13 to 17.
+// The age tick and agreement to the Terms, at sign-up and when an account
+// must agree again. Both must be true.
 export interface AgreementRequest {
-  dateOfBirth: string;
   termsAccepted: boolean;
-  guardianConsent: boolean;
+  // "I confirm that I am 18 years or older."
+  ageConfirmed: boolean;
 }
 
 export interface DeleteAccountRequest {

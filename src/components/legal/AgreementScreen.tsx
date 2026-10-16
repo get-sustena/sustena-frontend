@@ -6,22 +6,13 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { markWelcomeSeen } from "../../db/appMetadataRepository";
 import { useAgreeToTermsMutation, useLogoutMutation } from "../../hooks/api/useAuth";
 import { getApiErrorMessage } from "../../lib/api/errors";
-import { getLagosDay } from "../../lib/lagosDay";
-import { agreementError, readDateOfBirth, type AgreementForm } from "../../lib/legal/agreement";
-import { useAuthStore } from "../../store/authStore";
+import { agreementError, type AgreementForm } from "../../lib/legal/agreement";
 import { closeSheet, openSheet, showToast } from "../../store/uiStore";
 import { theme } from "../../theme/theme";
 import { AppText } from "../ui/AppText";
 import { Icon } from "../ui/Icon";
 import { SignOutSheet } from "../profile/SignOutSheet";
 import { AgreementFields } from "./AgreementFields";
-
-// When the Terms change, the date of birth is already saved: it isn't asked
-// again, and the saved one is sent back (the server wants the same date).
-function startingForm(dateOfBirth: string | null | undefined): AgreementForm {
-  const [y = "", m = "", d = ""] = dateOfBirth?.split("-") ?? [];
-  return { dob: { d, m, y }, terms: false, parent: false };
-}
 
 // v6.9's one-time agreement (renderLegalAgree) for accounts made before
 // sign-up asked, or when the Terms change: shown before the app while
@@ -31,24 +22,21 @@ export function AgreementScreen() {
   const insets = useSafeAreaInsets();
   const agree = useAgreeToTermsMutation();
   const logout = useLogoutMutation();
-  const [savedDateOfBirth] = useState(() => useAuthStore.getState().user?.dateOfBirth ?? null);
-  const [form, setForm] = useState(() => startingForm(savedDateOfBirth));
+  const [form, setForm] = useState<AgreementForm>({ adult: false, terms: false });
   const [error, setError] = useState<string | null>(null);
   const scroll = useRef<ScrollView>(null);
 
   async function submit() {
-    const today = getLagosDay();
-    const problem = agreementError(form, today);
+    const problem = agreementError(form);
     setError(problem);
-    const read = readDateOfBirth(form.dob, today);
-    if (problem || read.state !== "ok") {
+    if (problem) {
       // The error sits under the ticks, below the fold on a short screen. A
       // repeat of the same error doesn't change the size, so it's scrolled here.
       scroll.current?.scrollToEnd();
       return;
     }
     try {
-      await agree.mutateAsync({ dateOfBirth: read.iso, termsAccepted: form.terms, guardianConsent: form.parent });
+      await agree.mutateAsync({ termsAccepted: form.terms, ageConfirmed: form.adult });
       router.replace("/(tabs)/home");
       showToast("Saved. Read both any time in Settings.", "success");
     } catch (failure) {
@@ -93,7 +81,6 @@ export function AgreementScreen() {
               setError(null);
             }}
             error={error}
-            hideDateOfBirth={savedDateOfBirth !== null}
           />
         </View>
       </ScrollView>
