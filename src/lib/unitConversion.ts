@@ -1,7 +1,7 @@
 // Conversion requires a shared base unit; context only limits which units are offered.
 
 import type { Ingredient, IngredientConversionContext, Unit } from "../types/api.ts";
-import { friendlyQuantity, isBelowPinch, PINCH, type CountRule } from "./friendlyAmounts.ts";
+import { friendlyQuantity, isBelowPinch, PINCH, tooSmallForUnit, type CountRule } from "./friendlyAmounts.ts";
 
 export type UnitMode = "metric" | "cups" | "imperial";
 
@@ -232,7 +232,8 @@ export function buildScaleUnitOptions({
 
       if (
         !converted ||
-        (getUnitModeForUnitId(unit.id) === "cups" && converted.quantity < MIN_NIGERIAN_CUPS)
+        (getUnitModeForUnitId(unit.id) === "cups" && converted.quantity < MIN_NIGERIAN_CUPS) ||
+        tooSmallForUnit(converted.quantity, unit.id)
       ) {
         return [];
       }

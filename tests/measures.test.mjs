@@ -7,9 +7,10 @@ const measure = (unit, size, exactQuantity) => ({ unit, size, quantity: exactQua
 // Founder, 2026-10-16: "we can display them default in pieces instead of grams".
 test("recipe amounts read in the pieces, cloves and bunches people count", () => {
   const cases = [
-    [measure("item", "medium", "1.364"), 1, "normal", "1 ½ medium pieces"],
-    [measure("item", "medium", "1.364"), 2, "normal", "3 medium pieces"],
-    [measure("item", "medium", "0.8"), 1, "normal", "1 medium piece"],
+    [measure("item", "medium", "1.364"), 1, "normal", "1 ½ medium"],
+    [measure("item", "medium", "1.364"), 2, "normal", "3 medium"],
+    [measure("item", "medium", "0.8"), 1, "normal", "1 medium"],
+    [measure("cube", "large", "2"), 1, "sensitive", "2 large cubes"],
     [measure("clove", null, "3"), 1, "normal", "3 cloves"],
     [measure("bunch", null, "0.333"), 1, "normal", "½ bunch"],
     [measure("bunch", null, "0.8"), 2, "normal", "2 bunches"],

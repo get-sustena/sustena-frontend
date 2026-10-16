@@ -59,6 +59,11 @@ const SENSITIVE_INGREDIENT_IDS = new Set(["scotch-bonnet-pepper", "chilli-pepper
 // sensitive ones go down when 0.1 or less over (1.6 → 1 ½), eggs go whole.
 export type CountRule = "normal" | "sensitive" | "whole";
 
+// Kilos and litres read in quarters, so under an eighth they'd show as ¼.
+export function tooSmallForUnit(value: number, unitId: string) {
+  return QUARTER_UNITS.test(unitId.toLowerCase()) && value < 1 / 8;
+}
+
 export function isBelowPinch(baseQuantity: number, baseUnit: string) {
   if (baseUnit === "mL") return baseQuantity < PINCH_BELOW_ML;
   if (baseUnit === "g") return baseQuantity < PINCH_BELOW_G;

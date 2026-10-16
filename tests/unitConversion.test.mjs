@@ -132,3 +132,8 @@ test("Nigerian units under half a cup never show in the unit picker", () => {
   const options = buildScaleUnitOptions({ units: kitchenUnits, quantity: 15, fromUnit: "mL", context: "volume", mode: "cups" });
   assert.deepEqual(options.map((option) => option.preview), ["1 tbsp"]);
 });
+
+test("kilograms and litres never show for an amount too small for them", () => {
+  const options = buildScaleUnitOptions({ units: kitchenUnits, quantity: 5, fromUnit: "g", context: "mass", mode: "metric" });
+  assert.deepEqual(options.map((option) => option.preview), ["5 g"]);
+});
