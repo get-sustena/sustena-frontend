@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, TextInput, View } from "react-native";
 import { useUpdateMeMutation } from "../../hooks/api/useAuth";
 import { useSettingsCommands } from "../../hooks/useSettingsCommands";
 import { getApiErrorMessage } from "../../lib/api/errors";
+import { isEmailAddress } from "../../lib/emailAddress";
 import { useAuthStore } from "../../store/authStore";
 import { useProfileAnswersStore } from "../../store/profileAnswersStore";
 import { closeSheet, showToast } from "../../store/uiStore";
@@ -29,7 +30,7 @@ export function ProfileDetailsSheet() {
     const nextErrors: typeof errors = {};
     if (!fullName.trim()) nextErrors.fullName = "Enter your full name.";
     if (!email.trim()) nextErrors.email = "Enter your email address.";
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) nextErrors.email = "Enter a valid email address.";
+    else if (!isEmailAddress(email)) nextErrors.email = "Enter a valid email address.";
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
     try {

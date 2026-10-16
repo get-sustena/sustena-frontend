@@ -22,6 +22,7 @@ import {
   useVerifyResetCodeMutation,
 } from "../src/hooks/api/useAuth";
 import { getApiErrorMessage, getApiValidationFieldErrors } from "../src/lib/api/errors";
+import { isEmailAddress } from "../src/lib/emailAddress";
 import { getPasswordScore } from "../src/lib/passwordStrength";
 import { theme } from "../src/theme/theme";
 
@@ -71,7 +72,7 @@ export default function AuthForgotScreen() {
   async function handleSendCode() {
     const trimmedEmail = email.trim();
 
-    if (!trimmedEmail || !trimmedEmail.includes("@")) {
+    if (!isEmailAddress(trimmedEmail)) {
       setError("Enter a valid email address.");
       return;
     }

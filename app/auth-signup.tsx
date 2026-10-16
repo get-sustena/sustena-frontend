@@ -22,6 +22,7 @@ import {
   getApiValidationFieldErrors,
   isApiClientError,
 } from "../src/lib/api/errors";
+import { isEmailAddress } from "../src/lib/emailAddress";
 import { getLagosDay } from "../src/lib/lagosDay";
 import {
   agreementError,
@@ -79,8 +80,7 @@ export default function AuthSignupScreen() {
     if (
       !trimmedFirstName ||
       !trimmedLastName ||
-      !trimmedEmail ||
-      !trimmedEmail.includes("@") ||
+      !isEmailAddress(trimmedEmail) ||
       !password
     ) {
       setFormError(
@@ -90,7 +90,7 @@ export default function AuthSignupScreen() {
         firstName: !trimmedFirstName ? "First name is required." : undefined,
         lastName: !trimmedLastName ? "Last name is required." : undefined,
         email:
-          !trimmedEmail || !trimmedEmail.includes("@")
+          !isEmailAddress(trimmedEmail)
             ? "Enter a valid email address."
             : undefined,
         password: !password ? "Password is required." : undefined,

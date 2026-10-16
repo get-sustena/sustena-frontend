@@ -14,6 +14,7 @@ import { AuthHeader } from "../src/components/auth/AuthHeader";
 import { AuthPrimaryButton } from "../src/components/auth/AuthPrimaryButton";
 import { AppText } from "../src/components/ui/AppText";
 import { useLoginMutation } from "../src/hooks/api/useAuth";
+import { isEmailAddress } from "../src/lib/emailAddress";
 import {
   getApiErrorMessage,
   getApiValidationFieldErrors,
@@ -38,11 +39,11 @@ export default function AuthScreen() {
   async function handleSubmit() {
     const trimmedEmail = email.trim();
 
-    if (!trimmedEmail || !trimmedEmail.includes("@") || !password) {
+    if (!isEmailAddress(trimmedEmail) || !password) {
       setFormError("Enter your email and password to sign in.");
       setFieldErrors({
         email:
-          !trimmedEmail || !trimmedEmail.includes("@")
+          !isEmailAddress(trimmedEmail)
             ? "Enter a valid email address."
             : undefined,
         password: !password ? "Password is required." : undefined,
