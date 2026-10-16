@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from "react-native";
 import { theme } from "../../../theme/theme";
 import type { ProfileAnswers } from "../../../types/profileAnswers";
@@ -27,19 +27,7 @@ import {
 export function ProfileQuestionSheet({ field, answers, onSave }: { field: ProfileQuestionField; answers: ProfileAnswers; onSave: (partial: Partial<ProfileAnswers>) => void }) {
   const { height } = useWindowDimensions();
   const meta = PROFILE_QUESTION_META[field];
-  const desiredHeight = {
-    nickname: 220,
-    gender: 235,
-    birthday: 340,
-    lifestyle: 620,
-    experience: 475,
-    habitFreq: 250,
-    habitWho: 250,
-    habitTime: 250,
-    goals: 590,
-    challenges: 590,
-    heard: 390,
-  }[field];
+  const scrollRef = useRef<ScrollView>(null);
   const [nickname, setNickname] = useState(answers.nickname ?? "");
   const [gender, setGender] = useState(answers.gender);
   const [birthdayMonth, setBirthdayMonth] = useState(answers.birthdayMonth ?? 6);
@@ -86,10 +74,12 @@ export function ProfileQuestionSheet({ field, answers, onSave }: { field: Profil
     }
   }
 
-  return <View style={[styles.sheet, { height: Math.min(desiredHeight, height * 0.82) }]}>
+  // The sheet fits its options, up to 82% of the screen; past that they scroll.
+  return <View style={[styles.sheet, { maxHeight: height * 0.82 }]}>
     <AppText style={styles.title}>{meta.question}</AppText>
     <AppText style={styles.why}>{meta.why}</AppText>
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.options} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+    {/* When "I work remotely" adds its follow-up below the list, scroll it into view. */}
+    <ScrollView ref={scrollRef} style={styles.scroll} contentContainerStyle={styles.options} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" onContentSizeChange={() => { if (field === "lifestyle" && lifestyle === "remote") scrollRef.current?.scrollToEnd({ animated: true }); }}>
       {field === "nickname" ? <TextInput value={nickname} onChangeText={setNickname} placeholder="e.g. Ada" placeholderTextColor={theme.colors.textDim} style={styles.input} autoFocus returnKeyType="done" onSubmitEditing={save} /> : null}
       {field === "gender" ? <View style={styles.genderRow}>{GENDER_OPTIONS.map((option) => {
         const active = gender === option.value;
@@ -116,7 +106,7 @@ const styles = StyleSheet.create({
   sheet: { paddingBottom: 20 },
   title: { fontFamily: theme.fontFamily.display, fontSize: 19, lineHeight: 24, color: theme.colors.text, marginBottom: 6 },
   why: { fontFamily: theme.fontFamily.body, fontSize: 13.5, lineHeight: 20, color: theme.colors.textMedium, marginBottom: 16 },
-  scroll: { flex: 1 },
+  scroll: { flexGrow: 0, flexShrink: 1 },
   options: { paddingBottom: 18 },
   input: { width: "100%", minHeight: 50, borderWidth: 1, borderColor: theme.colors.border, borderRadius: 12, backgroundColor: theme.colors.card2, paddingHorizontal: 16, fontFamily: theme.fontFamily.body, fontSize: 15, color: theme.colors.text },
   otherInput: { marginTop: 12 },

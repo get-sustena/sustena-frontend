@@ -29,10 +29,11 @@ export function ProfileBirthdayWheel({ month, day, onChange }: { month: number; 
   return <View style={styles.wrap}>
     <View pointerEvents="none" style={styles.highlight} />
     <View style={styles.wheels}>
-      <ScrollView ref={monthRef} style={styles.monthWheel} contentContainerStyle={styles.wheelContent} showsVerticalScrollIndicator={false} snapToInterval={ROW_HEIGHT} decelerationRate="fast" onMomentumScrollEnd={(event) => onChange(selectedIndex(event, MONTHS.length) + 1, day)}>
+      {/* onScroll, not onMomentumScrollEnd: the web never fires momentum events and phones skip them after a slow drag. */}
+      <ScrollView ref={monthRef} style={styles.monthWheel} contentContainerStyle={styles.wheelContent} showsVerticalScrollIndicator={false} snapToInterval={ROW_HEIGHT} decelerationRate="fast" scrollEventThrottle={16} onScroll={(event) => onChange(selectedIndex(event, MONTHS.length) + 1, day)}>
         {MONTHS.map((label) => <View key={label} style={styles.row}><AppText style={styles.value}>{label}</AppText></View>)}
       </ScrollView>
-      <ScrollView ref={dayRef} style={styles.dayWheel} contentContainerStyle={styles.wheelContent} showsVerticalScrollIndicator={false} snapToInterval={ROW_HEIGHT} decelerationRate="fast" onMomentumScrollEnd={(event) => onChange(month, selectedIndex(event, DAYS.length) + 1)}>
+      <ScrollView ref={dayRef} style={styles.dayWheel} contentContainerStyle={styles.wheelContent} showsVerticalScrollIndicator={false} snapToInterval={ROW_HEIGHT} decelerationRate="fast" scrollEventThrottle={16} onScroll={(event) => onChange(month, selectedIndex(event, DAYS.length) + 1)}>
         {DAYS.map((value) => <View key={value} style={styles.row}><AppText style={styles.value}>{value}</AppText></View>)}
       </ScrollView>
     </View>
