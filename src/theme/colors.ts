@@ -56,6 +56,8 @@ export const lightColors = {
   control: "#F1F1F1",
   // v6.9's --st-pressed: rows and tiles on press and hover.
   pressed: "rgba(23,41,30,0.05)",
+  // The same state on an ink tile: a slightly lighter ink (PRD v6.9 §21).
+  pressedInk: "#2A3D31",
   // v6.9's focus ring: brand green at 60%.
   focusRing: "rgba(31,112,72,0.6)",
   card: "#FFFFFF",

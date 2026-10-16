@@ -142,7 +142,7 @@ export function AccountSettingsScreen() {
 
         <SettingsSection title="Your activity">
           <View style={styles.stats}>
-            <SettingsPressable feedback="highlight" accessibilityRole="button" onPress={() => router.push("/saved-recipes" as Href)} style={styles.stat}>
+            <SettingsPressable feedback="highlight" highlightColor={theme.colors.pressedInk} accessibilityRole="button" onPress={() => router.push("/saved-recipes" as Href)} style={styles.stat}>
               <AppText style={styles.statNumber}>{favoriteRecipes.length}</AppText>
               <AppText style={styles.statLabel}>Saved recipes</AppText>
             </SettingsPressable>

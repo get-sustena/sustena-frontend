@@ -6,6 +6,8 @@ import { theme } from "../../theme/theme";
 type Props = Omit<PressableProps, "style" | "children"> & {
   // Rows and tiles highlight; buttons and cards shrink a little.
   feedback: "highlight" | "shrink";
+  // Ink tiles highlight lighter instead of the usual light wash.
+  highlightColor?: string;
   style?: StyleProp<ViewStyle>;
   children: ReactNode;
 };
@@ -13,7 +15,7 @@ type Props = Omit<PressableProps, "style" | "children"> & {
 // The Settings v6.9.2 states (PRD §21): rows and tiles highlight on press and
 // hover, buttons and cards scale to .96 (not with reduced motion), and all
 // show a focus ring.
-export function SettingsPressable({ feedback, style, children, onFocus, onBlur, ...props }: Props) {
+export function SettingsPressable({ feedback, highlightColor = theme.colors.pressed, style, children, onFocus, onBlur, ...props }: Props) {
   const reduceMotion = useReducedMotion();
   const [focused, setFocused] = useState(false);
 
@@ -30,7 +32,7 @@ export function SettingsPressable({ feedback, style, children, onFocus, onBlur, 
       }}
       style={({ pressed, hovered }) => [
         style,
-        feedback === "highlight" && (pressed || hovered) && styles.highlight,
+        feedback === "highlight" && (pressed || hovered) && { backgroundColor: highlightColor },
         feedback === "shrink" && pressed && !reduceMotion && styles.shrink,
         focused && styles.focused,
       ]}
@@ -41,7 +43,6 @@ export function SettingsPressable({ feedback, style, children, onFocus, onBlur, 
 }
 
 const styles = StyleSheet.create({
-  highlight: { backgroundColor: theme.colors.pressed },
   shrink: { transform: [{ scale: 0.96 }] },
   focused: { outlineWidth: 2, outlineStyle: "solid", outlineColor: theme.colors.focusRing, outlineOffset: 2 },
 });
