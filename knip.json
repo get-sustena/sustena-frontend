@@ -1,7 +1,7 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
-  "entry": ["tests/*.test.mjs", "src/**/*.web.{ts,tsx}", "scripts/*.{js,mjs}"],
-  "project": ["app/**/*.{ts,tsx}", "src/**/*.{ts,tsx}", "tests/**/*.mjs"],
+  "entry": ["api/*.ts", "tests/*.test.mjs", "src/**/*.web.{ts,tsx}", "scripts/*.{js,mjs}"],
+  "project": ["api/*.ts", "app/**/*.{ts,tsx}", "src/**/*.{ts,tsx}", "tests/**/*.mjs"],
   "ignore": ["src/hooks/api/useShoppingLists.ts"],
   "ignoreDependencies": ["expo-symbols"]
 }

@@ -19,7 +19,18 @@
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.getsustena.app",
-      "googleServicesFile": "./google-services.json"
+      "googleServicesFile": "./google-services.json",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            { "scheme": "https", "host": "app.getsustena.com", "pathPrefix": "/r/" },
+            { "scheme": "https", "host": "app.getsustena.com", "pathPrefix": "/c/" }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "web": {
       "output": "single",

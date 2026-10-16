@@ -24,6 +24,7 @@ import { getApiErrorMessage, isApiClientError } from "../src/lib/api/errors";
 import { useAuthStore } from "../src/store/authStore";
 import { openSheet, showToast } from "../src/store/uiStore";
 import { theme } from "../src/theme/theme";
+import { enterApp } from "../src/lib/navigation/sharedLinkReturn";
 
 // Sign-up sends the first code; the server allows a new one a minute later.
 const RESEND_SECONDS = 60;
@@ -53,7 +54,7 @@ export default function VerifyEmailScreen() {
     try {
       await verifyCode.mutateAsync(code.join(""));
       showToast("Your email is confirmed", "success");
-      router.replace("/(tabs)/home");
+      enterApp();
     } catch (verifyError) {
       // The API's own words: a wrong code, an expired one, or too many tries.
       setError(getApiErrorMessage(verifyError));
@@ -68,7 +69,7 @@ export default function VerifyEmailScreen() {
       if (result.alreadyVerified) {
         // Confirmed elsewhere (another device): the guard opens the app.
         setUser(await authApi.getMe());
-        router.replace("/(tabs)/home");
+        enterApp();
         return;
       }
       setCode(emptyCode());

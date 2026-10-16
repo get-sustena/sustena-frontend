@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuthoringVocabularyQuery, useCreateRecipeDraftMutation, useMyRecipesQuery } from "../../hooks/api/useCreatorRecipes";
 import { useMyCreatorProfileQuery } from "../../hooks/api/useCreators";
 import { useRecordActivity } from "../../hooks/useActivity";
+import { creatorShareUrl } from "../../lib/shareLinks";
 import { getApiErrorMessage } from "../../lib/api/errors";
 import { suggestedCreatorHandle } from "../../lib/creators/profileDefaults";
 import { createLocalId } from "../../lib/id";
@@ -105,7 +106,7 @@ export function CreatorProfileScreen() {
       router.push("/creator/edit-profile" as Href);
       return;
     }
-    const url = `https://sustena.app/@${savedProfile.handle}`;
+    const url = creatorShareUrl(savedProfile.handle);
     try {
       const result = await Share.share({ title: savedProfile.displayName, message: url, url });
       if (result.action !== Share.dismissedAction) {

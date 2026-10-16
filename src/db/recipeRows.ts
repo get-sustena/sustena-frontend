@@ -53,6 +53,12 @@ export async function getLocalRecipes(
   };
 }
 
+// A shared recipe link names the recipe by its slug.
+export async function getLocalRecipeIdBySlug(db: SQLiteDatabase, slug: string) {
+  const row = await db.getFirstAsync<{ id: string }>("SELECT id FROM recipes WHERE slug = ?", [slug]);
+  return row?.id ?? null;
+}
+
 export async function getLocalRecipeById(db: SQLiteDatabase, recipeId: string) {
   const row = await db.getFirstAsync<RecipeRow>(
     "SELECT raw_json FROM recipes WHERE id = ?",

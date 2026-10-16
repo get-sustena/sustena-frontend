@@ -27,6 +27,7 @@ import { agreementError, type AgreementForm } from "../src/lib/legal/agreement";
 import { getPasswordScore } from "../src/lib/passwordStrength";
 import { showToast } from "../src/store/uiStore";
 import { theme } from "../src/theme/theme";
+import { enterApp } from "../src/lib/navigation/sharedLinkReturn";
 
 type AuthFieldErrors = Record<string, string | undefined>;
 
@@ -50,7 +51,7 @@ export default function AuthSignupScreen() {
   const [agreementProblem, setAgreementProblem] = useState<string | null>(null);
 
   function continueAfterAuth() {
-    router.replace("/(tabs)/home");
+    enterApp();
   }
 
   async function handleSubmit() {

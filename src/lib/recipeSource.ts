@@ -12,6 +12,8 @@ export const RECIPE_SOURCES = [
   "creator_profile",
   "shopping_list",
   "meal_reminder",
+  // Opened from a shared recipe link (app/r).
+  "shared_link",
 ] as const;
 
 export type RecipeSource = (typeof RECIPE_SOURCES)[number];

@@ -7,7 +7,8 @@
 
 // What a signed-out visitor needs: the entry redirect, welcome, the intro
 // onboarding screen, sign-in, sign-up and password reset, and the Terms of
-// Service and Privacy Policy that sign-up links to.
+// Service and Privacy Policy that sign-up links to. Shared recipe and creator
+// links (r/, c/) open for anyone, and send a signed-out visitor to sign in.
 export const PUBLIC_ROUTES = [
   "index",
   "welcome",
@@ -16,6 +17,8 @@ export const PUBLIC_ROUTES = [
   "auth-signup",
   "auth-forgot",
   "legal/[doc]",
+  "r/[slug]",
+  "c/[handle]",
 ] as const;
 
 export const SIGNED_IN_ROUTES = [

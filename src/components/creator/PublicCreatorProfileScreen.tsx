@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuthoringVocabularyQuery } from "../../hooks/api/useCreatorRecipes";
 import { useCreatorProfileQuery, useCreatorRecipesQuery, useSaveCreatorMutation } from "../../hooks/api/useCreators";
 import { useRecordActivity } from "../../hooks/useActivity";
+import { creatorShareUrl } from "../../lib/shareLinks";
 import { getApiErrorMessage } from "../../lib/api/errors";
 import { closeSheet, openSheet, showToast } from "../../store/uiStore";
 import { theme } from "../../theme/theme";
@@ -54,7 +55,7 @@ export function PublicCreatorProfileScreen() {
 
   async function shareProfile() {
     if (!profile) return;
-    const url = `https://sustena.app/@${profile.handle}`;
+    const url = creatorShareUrl(profile.handle);
     try {
       const result = await Share.share({ title: profile.displayName, message: url, url });
       if (result.action !== Share.dismissedAction) {

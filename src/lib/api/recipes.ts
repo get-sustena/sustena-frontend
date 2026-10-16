@@ -40,6 +40,13 @@ export function getRecipeById(recipeId: string, source?: RecipeSource) {
   }).then(normalizeRecipeDetail);
 }
 
+export function getRecipeBySlug(slug: string) {
+  return apiRequest<RecipeDetail>({
+    url: `/recipes/slug/${encodeURIComponent(slug)}`,
+    method: "GET",
+  });
+}
+
 function normalizeRecipeDetail(recipe: RecipeDetail): RecipeDetail {
   return {
     ...recipe,
