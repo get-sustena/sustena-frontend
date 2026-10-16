@@ -15,19 +15,20 @@ const MEASURE_LABELS: Record<MeasureUnit, [string, string]> = {
   tin: ["tin", "tins"],
   cube: ["cube", "cubes"],
 };
-// Under a quarter of a piece reads better in grams.
-const SMALLEST_SHARE = 0.25;
+// Counted things never fall back to grams; the least shown is a quarter
+// (founder, 2026-10-16: "it should only use the counting pieces and stuff").
+const QUARTER = 0.25;
 
-// "1 ½ medium", "3 cloves" or "½ bunch"; null when the line keeps its own
-// amount (a pinch, or under a quarter of a piece). A sized piece reads like a
-// recipe ("2 medium"), which also fits the amount chip.
+// "1 ½ medium", "3 cloves", "¼ bunch"; null when the line keeps its own
+// amount (a pinch). A sized piece reads like a recipe ("2 medium"), which
+// also fits the amount chip. Eggs stay whole.
 export function measureAmountText(measure: RecipeLineMeasure, servingFactor: number, countRule: CountRule) {
   if (measure.unit === "pinch") return null;
   const share = Number(measure.exactQuantity) * servingFactor;
-  if (!(share >= SMALLEST_SHARE)) return null;
-  const amount = friendlyCount(share, countRule);
+  if (!(share > 0)) return null;
+  const amount = share <= QUARTER && countRule !== "whole" ? "¼" : friendlyCount(share, countRule);
   const [singular, plural] = MEASURE_LABELS[measure.unit];
-  const label = amount === "1" || amount === "½" ? singular : plural;
+  const label = amount === "1" || amount === "½" || amount === "¼" ? singular : plural;
   if (measure.size && measure.unit === "item") return `${amount} ${measure.size}`;
   return measure.size ? `${amount} ${measure.size} ${label}` : `${amount} ${label}`;
 }

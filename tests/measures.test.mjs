@@ -23,8 +23,17 @@ test("recipe amounts read in the pieces, cloves and bunches people count", () =>
   }
 });
 
-test("tiny shares and pinches keep the recipe's own amount", () => {
-  assert.equal(measureAmountText(measure("item", "medium", "0.4"), 0.5, "normal"), null);
+// Founder, 2026-10-16: "a step should not say grams..it should only use the counting pieces and stuff".
+test("small shares read as a quarter, never grams; pinches keep their own amount", () => {
+  const cases = [
+    [measure("item", "medium", "0.36"), 0.5, "normal", "¼ medium"], // Jollof onion, 19 g
+    [measure("bunch", null, "0.312"), 0.5, "normal", "¼ bunch"], // Ewedu, 75 g
+    [measure("clove", null, "0.2"), 1, "sensitive", "¼ clove"], // garlic, 1 g
+    [measure("item", null, "0.2"), 1, "whole", "1 piece"], // eggs stay whole
+  ];
+  for (const [line, servingFactor, rule, expected] of cases) {
+    assert.equal(measureAmountText(line, servingFactor, rule), expected, `${line.exactQuantity} ${line.unit}`);
+  }
   assert.equal(measureAmountText(measure("pinch", null, "1"), 1, "sensitive"), null);
 });
 
@@ -50,7 +59,7 @@ test("a step reads its amount in the same pieces as its ingredient line", async 
     });
   assert.equal(shown("7.5", 2), "Add 1 ½ pieces Scotch bonnet pepper");
   assert.equal(shown("7.5", 4), "Add 3 pieces Scotch bonnet pepper");
-  assert.equal(shown("1", 2), "Add 1g Scotch bonnet pepper");
+  assert.equal(shown("1", 2), "Add ¼ piece Scotch bonnet pepper");
 });
 
 // Founder, 2026-10-16: "1/2 tsp is better than 3ml".
