@@ -538,7 +538,12 @@ export default function RecipeDetailScreen() {
   // SL-06: pick a list, review what lands on it, then add; offline too.
   function chooseShoppingListDestination() {
     if (!recipe || !recipeDetail) return;
+    // Only a unit picked for that ingredient goes on the list; the Metric,
+    // Imperial or Nigerian tab is how the recipe reads, not what to buy
+    // (founder, 2026-10-16: water "should never show milk cups").
     const unitOverrides = recipeDetail.ingredients.flatMap((ingredient) => {
+      const picked = ingredientUnitSelections[ingredient.id];
+      if (picked === undefined || isUnitMode(picked)) return [];
       const unit = getSelectedApiIngredientOption(ingredient).selectedOption?.unit;
       return unit ? [{ ingredientId: ingredient.id, unit }] : [];
     });
