@@ -8,7 +8,6 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import { AuthAlternativeActions } from "../src/components/auth/AuthAlternativeActions";
 import { AuthField } from "../src/components/auth/AuthField";
 import { AuthHeader } from "../src/components/auth/AuthHeader";
 import { AuthPrimaryButton } from "../src/components/auth/AuthPrimaryButton";
@@ -266,8 +265,6 @@ export default function AuthSignupScreen() {
           onPress={handleSubmit}
           disabled={signupMutation.isPending}
         />
-
-        <AuthAlternativeActions />
 
         <View style={styles.switchRow}>
           <AppText style={styles.switchText}>Already have an account? </AppText>
