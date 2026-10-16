@@ -23,6 +23,8 @@ export function ProfileDetailsSheet() {
   const [email, setEmail] = useState(user?.email ?? "");
   const [month, setMonth] = useState(answers.birthdayMonth ?? 1);
   const [day, setDay] = useState(answers.birthdayDay ?? 1);
+  // January 1 only fills the empty fields; it's saved only if the person picks a date or already has one.
+  const [birthdayPicked, setBirthdayPicked] = useState(answers.birthdayMonth !== null && answers.birthdayDay !== null);
   const [picker, setPicker] = useState<"month" | "day" | null>(null);
   const [errors, setErrors] = useState<{ fullName?: string; email?: string }>({});
 
@@ -35,7 +37,7 @@ export function ProfileDetailsSheet() {
     if (Object.keys(nextErrors).length) return;
     try {
       await updateMe.mutateAsync({ fullName: fullName.trim(), email: email.trim() });
-      await settings.saveProfileAnswers({ birthdayMonth: month, birthdayDay: day });
+      if (birthdayPicked) await settings.saveProfileAnswers({ birthdayMonth: month, birthdayDay: day });
       showToast("Profile details updated", "success");
       closeSheet();
     } catch (error) {
@@ -57,8 +59,8 @@ export function ProfileDetailsSheet() {
         </View>
       </View>
       <Pressable disabled={pending} onPress={save} style={styles.save}><AppText style={styles.saveText}>Save changes</AppText></Pressable>
-      <ProfileDatePickerModal visible={picker === "month"} values={MONTHS.map((label, index) => ({ value: index + 1, label }))} selected={month} onSelect={setMonth} onClose={() => setPicker(null)} />
-      <ProfileDatePickerModal visible={picker === "day"} values={Array.from({ length: 31 }, (_, index) => ({ value: index + 1, label: String(index + 1) }))} selected={day} onSelect={setDay} onClose={() => setPicker(null)} />
+      <ProfileDatePickerModal visible={picker === "month"} values={MONTHS.map((label, index) => ({ value: index + 1, label }))} selected={month} onSelect={(value) => { setMonth(value); setBirthdayPicked(true); }} onClose={() => setPicker(null)} />
+      <ProfileDatePickerModal visible={picker === "day"} values={Array.from({ length: 31 }, (_, index) => ({ value: index + 1, label: String(index + 1) }))} selected={day} onSelect={(value) => { setDay(value); setBirthdayPicked(true); }} onClose={() => setPicker(null)} />
     </View>
   );
 }

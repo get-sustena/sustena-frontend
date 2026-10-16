@@ -21,6 +21,8 @@ import {
   PROFILE_COMPLETION_FIELD_COUNT,
   countAnsweredProfileFields,
 } from "../src/lib/profileCompletion";
+import { SERVINGS_BY_HABIT_WHO } from "../src/lib/plannerQuickSetup";
+import { usePreferencesStore } from "../src/store/preferencesStore";
 import { useProfileAnswersStore } from "../src/store/profileAnswersStore";
 import { closeSheet, openSheet, showToast } from "../src/store/uiStore";
 import { theme } from "../src/theme/theme";
@@ -41,6 +43,18 @@ export default function ProfileCompleteScreen() {
     closeSheet();
     showToast(getProfileSaveToast(partial, next), "success");
     await settings.saveProfileAnswers(partial);
+
+    // "Who you cook for" sets the default serving size, as the planner's quick setup does.
+    const defaultServingSize = partial.habitWho ? SERVINGS_BY_HABIT_WHO[partial.habitWho] : undefined;
+    if (defaultServingSize) {
+      const preferences = usePreferencesStore.getState();
+      await settings.savePreferences({
+        healthConditions: preferences.healthConditions,
+        dietaryPreference: preferences.dietaryPreference,
+        defaultUnitMode: preferences.defaultUnitMode,
+        defaultServingSize,
+      });
+    }
   }
 
   function openQuestion(field: ProfileQuestionField) {
