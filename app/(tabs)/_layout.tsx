@@ -18,6 +18,7 @@ import Animated, {
 import { UnsavedChangesNotice } from "../../src/components/sync/UnsavedChangesNotice";
 import { AppText } from "../../src/components/ui/AppText";
 import { Icon, IconName } from "../../src/components/ui/Icon";
+import { useToastLift } from "../../src/hooks/useToastLift";
 import { useShoppingListStore } from "../../src/store/shoppingListStore";
 import { theme } from "../../src/theme/theme";
 
@@ -28,6 +29,9 @@ const TAB_ICONS: Record<string, IconName> = {
   shopping: "shop",
   profile: "profile",
 };
+
+// The tab bar floats this far above the bottom of the screen.
+const TAB_BAR_GAP = Platform.select({ ios: 22, default: 16 });
 
 export default function TabsLayout() {
   return (
@@ -64,12 +68,14 @@ function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
     ],
   }));
 
+  const liftToast = useToastLift(TAB_BAR_GAP);
+
   function handleLayout(event: LayoutChangeEvent) {
     setBarWidth(event.nativeEvent.layout.width);
   }
 
   return (
-    <View style={styles.wrapper} pointerEvents="box-none">
+    <View style={styles.wrapper} pointerEvents="box-none" onLayout={liftToast}>
       <UnsavedChangesNotice />
       <View style={styles.barShadow}>
         <View style={styles.bar} onLayout={handleLayout}>
@@ -161,7 +167,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 14,
     right: 14,
-    bottom: Platform.select({ ios: 22, default: 16 }),
+    bottom: TAB_BAR_GAP,
   },
   // The shadow sits outside the clipped bar so the rounded clip can't cut it.
   barShadow: {

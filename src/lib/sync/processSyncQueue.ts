@@ -21,6 +21,8 @@ import { runCookedCommand } from "../cooked/cookedCommands";
 import { runFollowCommand } from "../creators/followCommands";
 import { runFavoriteCommand } from "../favorites/favoriteCommands";
 import { queryClient } from "../query/queryClient";
+import { runRatingCommand } from "../ratings/ratingCommands";
+import { followSent, ratingSent } from "../social/sentChanges";
 import { queryKeys } from "../query/queryKeys";
 import { runSettingsCommand } from "../settings/settingsCommands";
 import { runPlanCommand } from "../planner/planCommands";
@@ -88,6 +90,13 @@ async function runOperation(db: SQLiteDatabase, operation: SyncQueueOperation) {
       unsaveCreator: creatorsApi.unsaveCreator,
     })
   ) {
+    const { creatorId } = operation.payload as { creatorId: string };
+    followSent(creatorId, operation.kind === "creator_follow");
+    return;
+  }
+  if (await runRatingCommand(operation, { rateRecipe: recipesApi.rateRecipe })) {
+    const { recipeId, rating } = operation.payload as { recipeId: string; rating: number };
+    ratingSent(recipeId, rating);
     return;
   }
   if (

@@ -1,0 +1,32 @@
+// The words for following, saving, rating and sharing (PRD v6.9 section 20),
+// all approved by the founder on 16 October 2026.
+export const socialCopy = {
+  follow: "Follow",
+  following: "Following",
+  followers: (count: number) => (count === 1 ? "follower" : "followers"),
+  followingCount: "following",
+  saveRecipe: "Save recipe",
+  viewSavedRecipes: "View saved recipes",
+  saved: "Saved",
+  linkCopied: "Link copied",
+  sharedWithYou: "Shared with you on Sustena",
+  sharedRecipeBody: "Sign up free to see the ingredients, steps and cost.",
+  sharedRecipeSignUp: "Sign up to see the recipe",
+  signIn: "Sign in",
+  sharedCreatorBody: (name: string) => `Sign up free to follow ${name} and see their recipes.`,
+  sharedCreatorSignUp: "Sign up to follow",
+  rateThisRecipe: "Rate this recipe",
+  youGaveIt: (stars: number) => `You gave it ${stars} ${stars === 1 ? "star" : "stars"}`,
+  nothingSaved: "Nothing saved yet",
+  savedCount: (count: number) => `${count} ${count === 1 ? "recipe" : "recipes"}`,
+  // WAITING FOR THE FOUNDER'S APPROVAL: the error and offline lines below
+  // (PRD v6.9 "Loading, errors and offline") were placeholders in the design.
+  couldNotCopyLink: "Couldn’t copy the link",
+  tryAgain: "Try again",
+  couldNotFollow: (name: string) => `Couldn’t follow ${name}`,
+  couldNotUnfollow: (name: string) => `Couldn’t unfollow ${name}`,
+  couldNotSave: "Couldn’t save the recipe",
+  couldNotRemove: "Couldn’t remove the recipe",
+  couldNotRate: "Couldn’t save your rating",
+  offlineChanges: "You’re offline. Changes sync when you reconnect.",
+};

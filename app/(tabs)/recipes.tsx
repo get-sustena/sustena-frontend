@@ -1,5 +1,4 @@
 import { FlashList, type FlashListRef } from "@shopify/flash-list";
-import { router } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -9,6 +8,7 @@ import { Button } from "../../src/components/ui/Button";
 import { EmptyState } from "../../src/components/ui/EmptyState";
 import { FilterChip } from "../../src/components/ui/FilterChip";
 import { Icon } from "../../src/components/ui/Icon";
+import { SavedRecipesCard } from "../../src/components/recipe/SavedRecipesCard";
 import { SearchInput } from "../../src/components/ui/SearchInput";
 import { SkeletonBlock, SkeletonGroup } from "../../src/components/ui/Skeleton";
 import { RECIPE_FILTERS } from "../../src/data/recipeFilters";
@@ -97,18 +97,6 @@ export default function RecipesScreen() {
         <AppText style={styles.title}>
           {recipesQuery.data ? `${totalRecipes} Recipes` : "Recipes"}
         </AppText>
-
-        <Pressable
-          onPress={() => router.push("/saved-recipes")}
-          style={({ pressed }) => [
-            styles.bookmarkButton,
-            pressed && styles.pressed,
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel="Open saved recipes"
-        >
-          <Icon name="bookmark" size={19} color={theme.colors.text} />
-        </Pressable>
       </View>
 
       <View>
@@ -117,6 +105,8 @@ export default function RecipesScreen() {
           onChangeText={setSearch}
           placeholder="Search jollof, egusi, pasta..."
         />
+
+        <SavedRecipesCard />
 
         <View style={styles.filterWrapper}>
           <ScrollView
@@ -292,21 +282,6 @@ const styles = StyleSheet.create({
     fontSize: 26,
     letterSpacing: -0.39,
     color: theme.colors.navy,
-  },
-  bookmarkButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: theme.colors.card,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: theme.colors.text,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.14,
-    shadowRadius: 6,
-    elevation: 2,
   },
   filterWrapper: {
     marginBottom: 16,

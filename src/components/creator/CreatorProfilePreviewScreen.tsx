@@ -1,14 +1,15 @@
 import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
-import { Pressable, ScrollView, Share, StyleSheet, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuthoringVocabularyQuery } from "../../hooks/api/useCreatorRecipes";
 import { useCreatorRecipesQuery, useMyCreatorProfileQuery } from "../../hooks/api/useCreators";
 import { useRecordActivity } from "../../hooks/useActivity";
 import { creatorShareUrl } from "../../lib/shareLinks";
 import { useCreatorProfileEditStore } from "../../store/creatorProfileEditStore";
-import { closeSheet, openSheet, showToast } from "../../store/uiStore";
+import { closeSheet, openSheet } from "../../store/uiStore";
+import { shareWithFeedback } from "../../lib/shareWithFeedback";
 import { theme } from "../../theme/theme";
 import { AppText } from "../ui/AppText";
 import { Icon } from "../ui/Icon";
@@ -38,17 +39,16 @@ export function CreatorProfilePreviewScreen() {
   }).filter((item) => item.count > 0), [recipes, vocabulary?.categories]);
   const shown = collection ? recipes.filter((recipe) => (recipe.categories ?? []).includes(collection)) : recipes;
 
-  async function shareProfile() {
-    const url = creatorShareUrl(draft.handle);
-    try {
-      const result = await Share.share({ title: draft.displayName, message: url, url });
-      if (result.action !== Share.dismissedAction && currentProfile) {
-        recordActivity({ type: "creator_profile_shared", properties: { creatorProfileId: currentProfile.id } });
-      }
-      showToast("Profile link copied", "success");
-    } catch {
-      showToast("We couldn’t share this profile. Try again.", "danger");
-    }
+  function shareProfile() {
+    const creatorProfileId = currentProfile?.id;
+    void shareWithFeedback({
+      title: draft.displayName,
+      url: creatorShareUrl(draft.handle),
+      copiedMessage: "Profile link copied",
+      onShared: () => {
+        if (creatorProfileId) recordActivity({ type: "creator_profile_shared", properties: { creatorProfileId } });
+      },
+    });
   }
 
   return (

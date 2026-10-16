@@ -16,11 +16,12 @@ type Dependencies = {
 
 export function createFollowCommands({ db, newId, requestSync }: Dependencies) {
   return {
-    async setFollowing(creatorId: string, following: boolean) {
+    // The name is kept for the toast if the server says no.
+    async setFollowing(creatorId: string, following: boolean, name: string) {
       await enqueueSyncOperation(
         db,
         following ? "creator_follow" : "creator_unfollow",
-        { creatorId },
+        { creatorId, name },
         { mutationId: newId("follow_mutation"), entityId: creatorId }
       );
       requestSync();

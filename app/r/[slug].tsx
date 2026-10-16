@@ -1,15 +1,19 @@
+import { useQuery } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
-import { useCallback } from "react";
+import { useCallback, useEffect, useMemo } from "react";
+import { SharedRecipeScreen } from "../../src/components/shared/SharedRecipeScreen";
 import { ProgressLoader } from "../../src/components/ui/ProgressLoader";
 import { getLocalRecipeIdBySlug } from "../../src/db/recipeRows";
 import { useSharedLink } from "../../src/hooks/useSharedLink";
-import { getRecipeBySlug } from "../../src/lib/api/recipes";
+import { getPublicRecipeCard, getRecipeBySlug } from "../../src/lib/api/recipes";
+import { queryKeys } from "../../src/lib/query/queryKeys";
 
 // A shared recipe link, https://app.getsustena.com/r/{slug}.
 export default function SharedRecipeLink() {
   const db = useSQLiteContext();
   const { slug } = useLocalSearchParams<{ slug: string }>();
+  const link = useMemo(() => ({ pathname: "/r/[slug]" as const, params: { slug } }), [slug]);
 
   const open = useCallback(() => {
     void (async () => {
@@ -22,6 +26,21 @@ export default function SharedRecipeLink() {
     })();
   }, [db, slug]);
 
-  useSharedLink(`/r/${encodeURIComponent(slug)}`, open);
+  const { signedOut } = useSharedLink(link, open);
+  const card = useQuery({
+    queryKey: queryKeys.recipes.publicCard(slug),
+    queryFn: () => getPublicRecipeCard(slug),
+    enabled: signedOut,
+    retry: false,
+  });
+
+  // A recipe that isn't public, or isn't there: the usual way in.
+  useEffect(() => {
+    if (signedOut && card.isError) router.replace("/");
+  }, [card.isError, signedOut]);
+
+  if (signedOut && card.data) {
+    return <SharedRecipeScreen link={link} name={card.data.name} imageUrl={card.data.imageUrl} />;
+  }
   return <ProgressLoader variant="screen" />;
 }

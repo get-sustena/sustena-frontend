@@ -2,7 +2,12 @@
 import { ReactNode } from "react";
 import { create } from "zustand";
 
-type ToastTone = "default" | "success" | "danger";
+type ToastTone = "default" | "success" | "danger" | "offline";
+
+// How far above the bottom of the screen the toast sits, set by the screen
+// in front for the bar pinned to its bottom (the tab bar, Add to shopping
+// list). null when nothing is pinned there.
+type ToastLift = { owner: symbol; value: number } | null;
 
 type UIState = {
   sheetContent: ReactNode | null;
@@ -11,6 +16,7 @@ type UIState = {
   toastTone: ToastTone;
   toastActionLabel: string | null;
   toastAction: (() => void) | null;
+  toastLift: ToastLift;
 
   openSheet: (content: ReactNode, opts?: { onClose?: () => void }) => void;
   closeSheet: () => void;
@@ -29,6 +35,7 @@ export const useUIStore = create<UIState>((set) => ({
   toastTone: "default",
   toastActionLabel: null,
   toastAction: null,
+  toastLift: null,
 
   openSheet: (content, opts) => {
     set({ sheetContent: content, sheetOnClose: opts?.onClose });
@@ -69,3 +76,11 @@ export const showToast = (
 ) => useUIStore.getState().showToast(message, tone, action);
 
 export const hideToast = () => useUIStore.getState().hideToast();
+
+export const setToastLift = (owner: symbol, value: number) =>
+  useUIStore.setState({ toastLift: { owner, value } });
+
+// Only the screen that set the lift clears it, so a screen leaving can't
+// clear the one that just came in front.
+export const clearToastLift = (owner: symbol) =>
+  useUIStore.setState((state) => (state.toastLift?.owner === owner ? { toastLift: null } : state));

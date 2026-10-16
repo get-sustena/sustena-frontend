@@ -6,3 +6,7 @@ const WEB_APP_ORIGIN = "https://app.getsustena.com";
 export function creatorShareUrl(handle: string) {
   return `${WEB_APP_ORIGIN}/c/${encodeURIComponent(handle)}`;
 }
+
+export function recipeShareUrl(slug: string) {
+  return `${WEB_APP_ORIGIN}/r/${encodeURIComponent(slug)}`;
+}

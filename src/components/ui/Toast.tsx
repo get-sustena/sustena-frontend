@@ -1,82 +1,96 @@
-
-import { useEffect } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { useEffect, useState } from "react";
+import { Pressable, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, {
-  Easing,
   useAnimatedStyle,
+  useReducedMotion,
   useSharedValue,
   withTiming,
+  Easing,
 } from "react-native-reanimated";
 import { hideToast, useUIStore } from "../../store/uiStore";
 import { theme } from "../../theme/theme";
 import { AppText } from "./AppText";
+import { Icon, type IconName } from "./Icon";
 
-const AUTO_DISMISS_MS = 2600;
+// One wide card at the bottom (PRD v6.9, "Toasts"): 3 seconds, or 5 when it
+// offers an action.
+const SHOW_MS = 3000;
+const SHOW_WITH_ACTION_MS = 5000;
+const NO_BAR_GAP = 24;
+const ACTION_GREEN = "#8FD6AE";
 
-const TONE_COLORS: Record<"default" | "success" | "danger", string> = {
-  default: theme.colors.primary,
-  success: theme.colors.navy,
-  danger: theme.colors.red,
+const TONE_ICONS: Record<"default" | "success" | "danger" | "offline", { name: IconName; color: string }> = {
+  default: { name: "check", color: ACTION_GREEN },
+  success: { name: "check", color: ACTION_GREEN },
+  danger: { name: "alertTriangle", color: "#F2BE5C" },
+  offline: { name: "offline", color: "rgba(255,255,255,0.75)" },
 };
 
 export function ToastHost() {
   const insets = useSafeAreaInsets();
+  const reduceMotion = useReducedMotion();
   const message = useUIStore((state) => state.toastMessage);
   const tone = useUIStore((state) => state.toastTone);
   const actionLabel = useUIStore((state) => state.toastActionLabel);
   const action = useUIStore((state) => state.toastAction);
-  const progress = useSharedValue(0);
+  const lift = useUIStore((state) => state.toastLift?.value ?? null);
+  const opacity = useSharedValue(0);
+  const rise = useSharedValue(10);
   const isVisible = message !== null;
+  const hasAction = Boolean(actionLabel && action);
+  const [actionFocused, setActionFocused] = useState(false);
 
   useEffect(() => {
-    progress.value = withTiming(isVisible ? 1 : 0, {
-      duration: 220,
-      easing: Easing.out(Easing.cubic),
-    });
-
-    if (!isVisible) {
-      return;
-    }
-
-    const timer = setTimeout(hideToast, AUTO_DISMISS_MS);
+    opacity.value = withTiming(isVisible ? 1 : 0, { duration: 180, easing: Easing.out(Easing.quad) });
+    rise.value = reduceMotion
+      ? 0
+      : withTiming(isVisible ? 0 : 10, { duration: 220, easing: Easing.bezier(0.2, 0, 0, 1) });
+    if (!isVisible) return;
+    const timer = setTimeout(hideToast, hasAction ? SHOW_WITH_ACTION_MS : SHOW_MS);
     return () => clearTimeout(timer);
-  }, [isVisible, progress, message]);
+  }, [isVisible, hasAction, message, opacity, rise, reduceMotion]);
 
   const toastStyle = useAnimatedStyle(() => ({
-    opacity: progress.value,
-    transform: [{ translateY: (1 - progress.value) * -16 }],
+    opacity: opacity.value,
+    transform: [{ translateY: rise.value }],
   }));
 
-  if (!message) {
-    return null;
-  }
+  if (!message) return null;
+  const icon = TONE_ICONS[tone];
 
   return (
     <Animated.View
-      pointerEvents="box-none"
+      role="status"
+      accessibilityLiveRegion="polite"
       style={[
         styles.toast,
-        { top: insets.top + 18 },
-        { backgroundColor: TONE_COLORS[tone] },
+        hasAction && styles.toastWithAction,
+        { bottom: lift ?? insets.bottom + NO_BAR_GAP },
         toastStyle,
       ]}
     >
-      <View style={styles.content}>
-        <AppText style={styles.text}>{message}</AppText>
-        {actionLabel && action ? (
-          <Pressable
-            onPress={() => {
-              hideToast();
-              action();
-            }}
-            accessibilityRole="button"
-            accessibilityLabel={actionLabel}
-          >
-            <AppText style={styles.action}>{actionLabel}</AppText>
-          </Pressable>
-        ) : null}
-      </View>
+      <Icon name={icon.name} size={18} color={icon.color} strokeWidth={2} />
+      <AppText style={styles.text}>{message}</AppText>
+      {hasAction ? (
+        <Pressable
+          onPress={() => {
+            hideToast();
+            action?.();
+          }}
+          accessibilityRole="button"
+          onFocus={() => setActionFocused(true)}
+          onBlur={() => setActionFocused(false)}
+          style={({ pressed, hovered }) => [
+            styles.action,
+            hovered && styles.actionHovered,
+            pressed && styles.actionPressed,
+            actionFocused && styles.actionFocused,
+          ]}
+        >
+          <AppText style={styles.actionText}>{actionLabel}</AppText>
+        </Pressable>
+      ) : null}
     </Animated.View>
   );
 }
@@ -84,34 +98,40 @@ export function ToastHost() {
 const styles = StyleSheet.create({
   toast: {
     position: "absolute",
-    left: 18,
-    right: 18,
+    left: 16,
+    right: 16,
     zIndex: 300,
-    minHeight: 40,
-    maxWidth: 520,
-    alignSelf: "center",
-    borderRadius: 999,
-    paddingLeft: 13,
-    paddingRight: 16,
-    paddingVertical: 9,
+    flexDirection: "row",
     alignItems: "center",
-    boxShadow: "0 10px 26px -12px rgba(0,0,0,0.5)",
+    gap: 12,
+    minHeight: 52,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    backgroundColor: theme.colors.navy,
+    boxShadow: "0 14px 30px -14px rgba(23,41,30,0.55), 0 2px 6px rgba(23,41,30,0.14)",
   },
+  toastWithAction: { paddingRight: 6 },
   text: {
+    flex: 1,
+    minWidth: 0,
     fontFamily: theme.fontFamily.bodyMedium,
-    fontSize: theme.fontSize.md,
-    color: theme.colors.onDark,
-    textAlign: "left",
-    flexShrink: 1,
+    fontSize: 14.5,
+    lineHeight: 14.5 * 1.35,
+    color: theme.colors.white,
   },
-  content: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7 },
   action: {
-    marginLeft: 3,
-    paddingLeft: 12,
-    borderLeftWidth: 1,
-    borderLeftColor: "rgba(255,255,255,0.28)",
-    fontFamily: theme.fontFamily.bodyBold,
-    fontSize: theme.fontSize.md,
-    color: theme.colors.accent,
+    height: 40,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    justifyContent: "center",
+  },
+  actionHovered: { backgroundColor: "rgba(255,255,255,0.08)" },
+  actionPressed: { transform: [{ scale: 0.96 }] },
+  actionFocused: { outlineWidth: 2, outlineStyle: "solid", outlineColor: ACTION_GREEN, outlineOffset: 1 },
+  actionText: {
+    fontFamily: theme.fontFamily.bodySemiBold,
+    fontSize: 14.5,
+    color: ACTION_GREEN,
   },
 });

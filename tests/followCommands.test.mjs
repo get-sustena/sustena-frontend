@@ -23,9 +23,9 @@ const outbox = (db) => db.getAllAsync("SELECT kind FROM sync_queue");
 test("follow offline: the last tap shows at once with the count, and every tap reaches the server in order", async () => {
   const { db } = await openTestDatabase();
   const follow = commandsFor(db);
-  await follow.setFollowing("creator-ada", true);
-  await follow.setFollowing("creator-ada", false);
-  await follow.setFollowing("creator-ada", true);
+  await follow.setFollowing("creator-ada", true, "Ada");
+  await follow.setFollowing("creator-ada", false, "Ada");
+  await follow.setFollowing("creator-ada", true, "Ada");
 
   const pending = await pendingFollows(db);
   assert.deepEqual(followState({ following: false, followerCount: 12 }, pending.get("creator-ada")), {
@@ -44,7 +44,7 @@ test("follow offline: the last tap shows at once with the count, and every tap r
 
 test("follow offline: following your own profile is dropped by the server and doesn't block the outbox", async () => {
   const { db } = await openTestDatabase();
-  await commandsFor(db).setFollowing("creator-me", true);
+  await commandsFor(db).setFollowing("creator-me", true, "Me");
   await replay(db, {
     saveCreator: async () => {
       throw Object.assign(new Error("Cannot save self"), { status: 422, code: "CANNOT_SAVE_SELF" });

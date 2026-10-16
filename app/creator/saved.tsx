@@ -7,6 +7,7 @@ import { Icon } from "../../src/components/ui/Icon";
 import { ProgressLoader } from "../../src/components/ui/ProgressLoader";
 import { useSavedCreatorsQuery } from "../../src/hooks/api/useCreators";
 import { theme } from "../../src/theme/theme";
+import { socialCopy } from "../../src/lib/socialCopy";
 
 export default function SavedCreatorsScreen() {
   const insets = useSafeAreaInsets();
@@ -23,7 +24,7 @@ export default function SavedCreatorsScreen() {
         >
           <Icon name="chevronLeft" size={20} color={theme.colors.text} />
         </Pressable>
-        <AppText style={styles.headerTitle}>Saved creators</AppText>
+        <AppText style={styles.headerTitle}>{socialCopy.following}</AppText>
         <View style={styles.headerButton} />
       </View>
 

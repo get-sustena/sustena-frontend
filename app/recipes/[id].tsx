@@ -58,6 +58,15 @@ import type {
 } from "../../src/types/api";
 import { readRecipeSource } from "../../src/lib/recipeSource";
 import { CookedButton } from "../../src/components/recipe/CookedButton";
+import { RecipeActions } from "../../src/components/recipe/RecipeActions";
+import { RecipeRating } from "../../src/components/recipe/RecipeRating";
+import { FollowButton } from "../../src/components/creator/FollowButton";
+import { useCreatorFollow } from "../../src/hooks/useCreatorFollow";
+import { useRecipeRating } from "../../src/hooks/useRecipeRating";
+import { useToastLift } from "../../src/hooks/useToastLift";
+import { shareWithFeedback } from "../../src/lib/shareWithFeedback";
+import { recipeShareUrl } from "../../src/lib/shareLinks";
+import { socialCopy } from "../../src/lib/socialCopy";
 import {
   CaloriesEyeButton,
   IngredientCaloriesLine,
@@ -127,13 +136,24 @@ export default function RecipeDetailScreen() {
   const localIsFavorite = useFavoritesStore((state) =>
     recipe ? state.isFavorite(recipe.id) : false
   );
-  const [favoriteOverride, setFavoriteOverride] = useState<boolean | null>(null);
-  // The phone's copy of a recipe says "not saved" for everyone, so without
-  // the server's copy, the saved recipes kept on the phone decide.
+  // After a tap, the saved recipes kept on the phone decide (they also go
+  // back if the server says no). The phone's copy of a recipe says "not
+  // saved" for everyone, so before a tap the server's copy decides when
+  // there is one.
+  const [favoriteTapped, setFavoriteTapped] = useState(false);
   const isFavorite =
-    favoriteOverride ??
-    (shouldSyncApi && recipeDetail ? recipeDetail.isFavorited : localIsFavorite);
+    favoriteTapped || !shouldSyncApi || !recipeDetail ? localIsFavorite : recipeDetail.isFavorited;
   const favoriteCommands = useFavoriteCommands();
+  const follow = useCreatorFollow();
+  const rating = useRecipeRating();
+  const liftToast = useToastLift();
+  // Whether you follow the creator and your stars come from the server: they
+  // load while the saved copy shows.
+  const socialLoading = recipeQuery.isRefreshingSavedCopy;
+  const creator = recipeDetail?.creator ?? null;
+  const followingCreator = creator
+    ? follow.stateOf(creator.id, { following: creator.isFollowing ?? false }).following
+    : false;
 
   const [ingredientUnitSelections, setIngredientUnitSelections] = useState(
     () => {
@@ -370,8 +390,19 @@ export default function RecipeDetailScreen() {
     }
 
     const nextIsFavorite = !isFavorite;
-    setFavoriteOverride(nextIsFavorite);
+    setFavoriteTapped(true);
     await favoriteCommands.setFavorite(recipe.id, nextIsFavorite);
+  }
+
+  function handleShare() {
+    if (!recipe || !recipeDetail) return;
+    const recipeId = recipe.id;
+    void shareWithFeedback({
+      title: recipe.name,
+      url: recipeShareUrl(recipeDetail.slug),
+      copiedMessage: socialCopy.linkCopied,
+      onShared: () => recordActivity({ type: "recipe_shared", properties: { recipeId } }),
+    });
   }
 
   function selectGlobalUnitMode(mode: UnitMode) {
@@ -498,23 +529,8 @@ export default function RecipeDetailScreen() {
   return (
     <View style={styles.root}>
       <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
-        <Pressable onPress={() => router.back()} style={styles.topBarButton}>
+        <Pressable onPress={() => router.back()} style={styles.topBarButton} accessibilityRole="button" accessibilityLabel="Back">
           <Icon name="chevronLeft" size={24} color={theme.colors.text} />
-        </Pressable>
-
-        <Pressable
-          onPress={handleFavoritePress}
-          style={[
-            styles.topBarButton,
-            isFavorite && styles.favoriteButtonActive,
-          ]}
-        >
-          <Icon
-            name="bookmark"
-            size={22}
-            color={theme.colors.text}
-            filled={isFavorite}
-          />
         </Pressable>
       </View>
 
@@ -549,6 +565,7 @@ export default function RecipeDetailScreen() {
             {recipe.name}
           </AppText>
 
+          <View style={styles.authorLine}>
           <Pressable
             disabled={!recipeDetail?.creator}
             onPress={() => {
@@ -592,6 +609,16 @@ export default function RecipeDetailScreen() {
               </AppText>
             </View>
           </Pressable>
+          {creator && !creator.isOwner ? (
+            <FollowButton
+              following={followingCreator}
+              loading={socialLoading}
+              onPress={() => void follow.setFollowing(creator.id, !followingCreator, creator.displayName)}
+            />
+          ) : null}
+          </View>
+
+          <RecipeActions saved={isFavorite} onToggleSave={handleFavoritePress} onShare={handleShare} />
 
           <View style={styles.statsCard}>
             <StatCell
@@ -942,6 +969,13 @@ export default function RecipeDetailScreen() {
 
           <View style={styles.cooked}>
             <CookedButton recipeId={recipe.id} source={source} />
+            {recipeDetail?.canRate ? (
+              <RecipeRating
+                rating={rating.ratingOf(recipe.id, recipeDetail.currentUserRating)}
+                loading={socialLoading}
+                onRate={(stars) => void rating.rate(recipe.id, stars)}
+              />
+            ) : null}
           </View>
 
           {recipe.tools.length > 0 ? (
@@ -985,6 +1019,7 @@ export default function RecipeDetailScreen() {
       </ScrollView>
 
       <View
+        onLayout={liftToast}
         style={[
           styles.ctaBar,
           { paddingBottom: insets.bottom + 11 },
@@ -1343,9 +1378,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  favoriteButtonActive: {
-    backgroundColor: "transparent",
-  },
   titleBlock: {
     paddingHorizontal: 20,
     paddingTop: 22,
@@ -1377,8 +1409,16 @@ const styles = StyleSheet.create({
     color: theme.colors.navy,
     marginBottom: 12,
   },
-  creatorRow: {
+  authorLine: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
     marginBottom: 16,
+  },
+  creatorRow: {
+    flexShrink: 1,
+    minWidth: 0,
     flexDirection: "row",
     alignItems: "center",
     gap: 9,

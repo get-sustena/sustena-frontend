@@ -7,6 +7,7 @@ import { StyleSheet, View } from "react-native";
 import { useActivityTracker } from "../../hooks/useActivity";
 import { useAppBootstrap } from "../../hooks/useAppBootstrap";
 import { useAuthBootstrap } from "../../hooks/useAuthBootstrap";
+import { useSocialRefusals } from "../../hooks/useSocialRefusals";
 import { clearLocalAccountData } from "../../db/accountDataRepository";
 import { resetLocalAccountStores } from "../../lib/accountSession";
 import { waitForAccountBackgroundTasks } from "../../lib/accountBackgroundTasks";
@@ -34,6 +35,7 @@ export function AppBootstrapGate({ children }: Props) {
     !isHydratingAuth && isAuthenticated && !isSigningOut && !emailVerificationRequired
   );
   useActivityTracker(!isHydratingAuth && !isBootstrapping);
+  useSocialRefusals();
   const queryClient = useQueryClient();
   const clearAuth = useAuthStore((state) => state.clearAuth);
   const beginSignOut = useAuthStore((state) => state.beginSignOut);

@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import { runWriteTransaction } from "../db/writeTransaction";
 import { createFavoriteCommands } from "../lib/favorites/favoriteCommands";
 import { createLocalId } from "../lib/id";
+import { noteOfflineChange } from "../lib/sync/offlineNotice";
 import { requestSync } from "../lib/sync/syncEvents";
 import { useFavoritesStore } from "../store/favoritesStore";
 
@@ -23,6 +24,7 @@ export function useFavoriteCommands() {
         const store = useFavoritesStore.getState();
         if (favorite) store.addFavorite(recipeId);
         else store.removeFavorite(recipeId);
+        noteOfflineChange();
         await commands.setFavorite(recipeId, favorite);
       },
     };

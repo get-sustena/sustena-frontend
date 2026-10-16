@@ -46,6 +46,7 @@ import {
   Timer,
   Trash2,
   TriangleAlert,
+  UserPlus,
   UserRound,
   UsersRound,
   Utensils,
@@ -115,7 +116,8 @@ export type IconName =
   | "fat"
   | "circleCheck"
   | "fileText"
-  | "shieldCheck";
+  | "shieldCheck"
+  | "userPlus";
 
 const ICONS: Record<IconName, LucideIcon> = {
   discover: Search,
@@ -175,6 +177,7 @@ const ICONS: Record<IconName, LucideIcon> = {
   circleCheck: CircleCheck,
   fileText: FileText,
   shieldCheck: ShieldCheck,
+  userPlus: UserPlus,
 };
 
 type IconProps = {

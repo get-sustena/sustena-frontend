@@ -1,14 +1,15 @@
 import { Href, router, useLocalSearchParams } from "expo-router";
 import { useMemo, useState } from "react";
-import { Pressable, ScrollView, Share, StyleSheet, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuthoringVocabularyQuery } from "../../hooks/api/useCreatorRecipes";
 import { useCreatorProfileQuery, useCreatorRecipesQuery } from "../../hooks/api/useCreators";
 import { useRecordActivity } from "../../hooks/useActivity";
 import { useCreatorFollow } from "../../hooks/useCreatorFollow";
 import { creatorShareUrl } from "../../lib/shareLinks";
-import { getApiErrorMessage } from "../../lib/api/errors";
-import { closeSheet, openSheet, showToast } from "../../store/uiStore";
+import { socialCopy } from "../../lib/socialCopy";
+import { closeSheet, openSheet } from "../../store/uiStore";
+import { shareWithFeedback } from "../../lib/shareWithFeedback";
 import { theme } from "../../theme/theme";
 import { AppText } from "../ui/AppText";
 import { Icon } from "../ui/Icon";
@@ -33,7 +34,11 @@ export function PublicCreatorProfileScreen() {
   const vocabularyQuery = useAuthoringVocabularyQuery();
   const follow = useCreatorFollow();
   const profile = profileQuery.data;
-  const following = profile ? follow.stateOf(profile.id, { following: profile.isSaved }).following : false;
+  const followState = profile
+    ? follow.stateOf(profile.id, { following: profile.isSaved, followerCount: profile.followerCount })
+    : { following: false, followerCount: 0 };
+  const following = followState.following;
+  const followerCount = followState.followerCount ?? 0;
   const recordActivity = useRecordActivity();
   const recipes = useMemo(() => recipesQuery.data?.items ?? [], [recipesQuery.data?.items]);
   const categories = useMemo(() => vocabularyQuery.data?.categories ?? [], [vocabularyQuery.data?.categories]);
@@ -45,28 +50,21 @@ export function PublicCreatorProfileScreen() {
   }).filter((item) => item.count > 0), [categories, recipes]);
   const shown = collection ? recipes.filter((recipe) => (recipe.categories ?? []).includes(collection)) : recipes;
 
-  async function toggleSavedCreator() {
+  // The button changing to Following is the only feedback: no toast.
+  function toggleFollow() {
     if (!profile || profile.isOwner) return;
-    try {
-      await follow.setFollowing(profile.id, !following);
-      showToast(following ? "Removed from your creators" : `Saved ${profile.displayName}`, "success");
-    } catch (error) {
-      showToast(getApiErrorMessage(error), "danger");
-    }
+    void follow.setFollowing(profile.id, !following, profile.displayName);
   }
 
-  async function shareProfile() {
+  function shareProfile() {
     if (!profile) return;
-    const url = creatorShareUrl(profile.handle);
-    try {
-      const result = await Share.share({ title: profile.displayName, message: url, url });
-      if (result.action !== Share.dismissedAction) {
-        recordActivity({ type: "creator_profile_shared", properties: { creatorProfileId: profile.id } });
-      }
-      showToast("Profile link copied", "success");
-    } catch {
-      showToast("We couldn’t share this profile. Try again.", "danger");
-    }
+    const creatorProfileId = profile.id;
+    void shareWithFeedback({
+      title: profile.displayName,
+      url: creatorShareUrl(profile.handle),
+      copiedMessage: "Profile link copied",
+      onShared: () => recordActivity({ type: "creator_profile_shared", properties: { creatorProfileId } }),
+    });
   }
 
   function selectSort(value: CreatorRecipeSort) {
@@ -101,6 +99,10 @@ export function PublicCreatorProfileScreen() {
                 {profile.averageRating ? <View style={styles.rating}><Icon name="star" size={11} color="#E3A62E" filled /><AppText style={styles.ratingText}>{profile.averageRating.toFixed(1)}</AppText></View> : null}
               </View>
               <AppText style={styles.handle}>@{profile.handle}</AppText>
+              <View style={styles.counts}>
+                <AppText style={styles.count}><AppText style={styles.countNumber}>{followerCount}</AppText> {socialCopy.followers(followerCount)}</AppText>
+                <AppText style={styles.count}><AppText style={styles.countNumber}>{profile.followingCount}</AppText> {socialCopy.followingCount}</AppText>
+              </View>
             </View>
           </View>
           {profile.bio ? <AppText style={styles.bio}>{profile.bio}</AppText> : null}
@@ -109,7 +111,7 @@ export function PublicCreatorProfileScreen() {
             {profile.isOwner ? (
               <Pressable onPress={() => router.push("/creator/edit-profile" as Href)} style={[styles.saveButton, styles.ownerButton]}><Icon name="pencil" size={16} /><AppText style={styles.ownerButtonText}>Edit profile</AppText></Pressable>
             ) : (
-              <Pressable onPress={toggleSavedCreator} style={[styles.saveButton, following && styles.savedButton]}>{following ? <Icon name="check" size={17} color="#1f7048" strokeWidth={2.2} /> : <Icon name="bookmark" size={16} color="#FBFBF7" />}<AppText style={[styles.saveButtonText, following && styles.savedButtonText]}>{following ? "Saved" : "Save creator"}</AppText></Pressable>
+              <Pressable onPress={toggleFollow} accessibilityRole="button" aria-pressed={following} style={({ pressed }) => [styles.saveButton, following && styles.savedButton, pressed && styles.pressed]}>{following ? <Icon name="check" size={17} color="#1f7048" strokeWidth={2.2} /> : <Icon name="userPlus" size={16} color="#FBFBF7" strokeWidth={2} />}<AppText style={[styles.saveButtonText, following && styles.savedButtonText]}>{following ? socialCopy.following : socialCopy.follow}</AppText></Pressable>
             )}
             <Pressable accessibilityLabel="Share profile" onPress={shareProfile} style={styles.shareButton}><Icon name="share" size={18} /></Pressable>
           </View>
@@ -171,6 +173,10 @@ const styles = StyleSheet.create({
   rating: { flexDirection: "row", alignItems: "center", gap: 4 },
   ratingText: { fontFamily: theme.fontFamily.body, fontSize: 12, color: theme.colors.text },
   handle: { fontSize: 14, color: "#5C6459" },
+  counts: { flexDirection: "row", gap: 14, marginTop: 6 },
+  count: { fontSize: 13.5, lineHeight: 13.5 * 1.3, color: "#5C6459" },
+  countNumber: { fontFamily: theme.fontFamily.bodySemiBold, fontSize: 13.5, color: "#17291E", fontVariant: ["tabular-nums"] },
+  pressed: { transform: [{ scale: 0.96 }] },
   bio: { marginBottom: 10, fontSize: 14.5, lineHeight: 21.75, color: "#1B211C" },
   specialities: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 16 },
   speciality: { paddingHorizontal: 11, paddingVertical: 5, borderRadius: 999, borderWidth: 1, borderColor: "#E1E1E1", backgroundColor: "#EEF2E7", fontFamily: theme.fontFamily.bodySemiBold, fontSize: 12, color: "#1f7048" },
