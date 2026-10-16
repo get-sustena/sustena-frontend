@@ -53,7 +53,31 @@ const SENSITIVE_SUBCATEGORIES = new Set([
   "Raising agent",
   "Yeast",
 ]);
-const SENSITIVE_INGREDIENT_IDS = new Set(["scotch-bonnet-pepper", "chilli-pepper", "cayenne-pepper", "shombo-pepper"]);
+// Founder, 2026-10-16: strong flavours by id; bitter leaf stays normal.
+const SENSITIVE_INGREDIENT_IDS = new Set([
+  "scotch-bonnet-pepper",
+  "chilli-pepper",
+  "cayenne-pepper",
+  "shombo-pepper",
+  "fresh-ginger",
+  "turmeric",
+  "vanilla-extract",
+  "almond-extract",
+  "african-oil-bean",
+  "chicken-stock",
+  "fish-stock",
+  "meat-stock",
+  "vegetable-stock",
+  "african-basil",
+  "utazi-leaf",
+  "uziza-leaf",
+  "curry-leaf",
+  "fresh-mint",
+  "basil",
+  "coriander-leaf",
+  "parsley",
+  "rosemary",
+]);
 
 // How a counted ingredient rounds: most go up to the next half (1.6 → 2),
 // sensitive ones go down when 0.1 or less over (1.6 → 1 ½), eggs go whole.

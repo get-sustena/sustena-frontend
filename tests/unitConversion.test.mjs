@@ -124,6 +124,8 @@ test("strong ingredients round counts down, everything else rounds up", () => {
     [{ id: "salt", subcategory: "Basic seasoning" }, "sensitive"],
     [{ id: "red-bell-pepper", subcategory: "Pepper" }, "normal"],
     [{ id: "onion", subcategory: "Allium" }, "normal"],
+    [{ id: "uziza-leaf", subcategory: "Leafy vegetable" }, "sensitive"],
+    [{ id: "bitter-leaf", subcategory: "Leafy vegetable" }, "normal"],
     [{ id: "egg", subcategory: "Egg" }, "whole"],
     [{ id: "onion", subcategory: "Allium", countRule: "sensitive" }, "sensitive"],
     [undefined, "normal"],
