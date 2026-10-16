@@ -52,3 +52,24 @@ test("a step reads its amount in the same pieces as its ingredient line", async 
   assert.equal(shown("7.5", 4), "Add 3 pieces Scotch bonnet pepper");
   assert.equal(shown("1", 2), "Add 1g Scotch bonnet pepper");
 });
+
+// Founder, 2026-10-16: "1/2 tsp is better than 3ml".
+test("a step at the recipe's own servings reads like its ingredient line", async () => {
+  const { formatScaledInstruction } = await import("../src/lib/instructionScaling.ts");
+  const tsp = { id: "tsp", name: "Teaspoon", context: "volume", baseUnit: "mL", baseFactorMin: 5, baseFactorMax: 5, isApproximate: false };
+  const shown = formatScaledInstruction({
+    instruction: {
+      text: "",
+      segments: [
+        { type: "text", text: "Add " },
+        { type: "quantity", text: "0.5 teaspoons", recipeIngredientId: "iru", ingredientPosition: 1, baseQuantity: "0.5", unit: "tsp", scalesWithServings: true },
+        { type: "text", text: " iru" },
+      ],
+    },
+    baseServings: 2,
+    selectedServings: 2,
+    unitsById: new Map([["tsp", tsp]]),
+    selectedUnitByIngredientId: new Map([["iru", "tsp"]]),
+  });
+  assert.equal(shown, "Add ½ tsp iru");
+});

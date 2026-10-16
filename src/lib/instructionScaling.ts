@@ -153,9 +153,14 @@ function formatQuantitySegment({
     return inMeasure;
   }
 
+  // A unit the app doesn't know keeps the recipe's own words; known ones read
+  // like the ingredient line ("½ tsp", not "0.5 teaspoons").
   if (
     selectedServings === baseServings &&
-    (!selectedUnit || selectedUnit === segment.unit)
+    (!selectedUnit || selectedUnit === segment.unit) &&
+    segment.unit &&
+    segment.unit.trim().toLowerCase() !== "item" &&
+    !unitsById.has(segment.unit)
   ) {
     return formatQuantityText(segment.text);
   }

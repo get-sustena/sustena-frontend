@@ -96,6 +96,9 @@ test("amounts read the way people cook", () => {
     [{ quantity: 5, unit: "mL", context: "mass", mode: "cups" }, "1 tsp"],
     [{ quantity: 0.1, unit: "tsp", context: "volume", mode: "cups" }, "a pinch"],
     [{ quantity: 0.3, unit: "g", context: "mass", mode: "metric" }, "a pinch"],
+    [{ quantity: 2.5, unit: "mL", context: "volume", mode: "metric" }, "½ tsp"],
+    [{ quantity: 30, unit: "mL", context: "volume", mode: "metric" }, "2 tbsp"],
+    [{ quantity: 250, unit: "mL", context: "volume", mode: "metric" }, "250 mL"],
   ];
   for (const [amount, expected] of cases) assert.equal(shown(amount), expected, JSON.stringify(amount));
 
@@ -136,4 +139,10 @@ test("Nigerian units under half a cup never show in the unit picker", () => {
 test("kilograms and litres never show for an amount too small for them", () => {
   const options = buildScaleUnitOptions({ units: kitchenUnits, quantity: 5, fromUnit: "g", context: "mass", mode: "metric" });
   assert.deepEqual(options.map((option) => option.preview), ["5 g"]);
+});
+
+// Founder, 2026-10-16: "1/2 tsp is better than 3ml".
+test("a small metric volume can be picked in spoons", () => {
+  const options = buildScaleUnitOptions({ units: kitchenUnits, quantity: 2.5, fromUnit: "mL", context: "volume", mode: "metric" });
+  assert.ok(options.some((option) => option.preview === "½ tsp"));
 });

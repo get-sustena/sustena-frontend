@@ -7,6 +7,9 @@ export type UnitMode = "metric" | "cups" | "imperial";
 
 // A milk cup or derica shows only from half a cup up (founder, 2026-10-16).
 const MIN_NIGERIAN_CUPS = 0.5;
+// Under a quarter cup, metric volumes read in spoons: "½ tsp", not "3 mL"
+// (founder, 2026-10-16).
+const METRIC_SPOONS_BELOW_ML = 60;
 
 interface ConvertedQuantity {
   quantity: number;
@@ -201,9 +204,10 @@ export function buildScaleUnitOptions({
   countRule?: CountRule;
 }): ScaleUnitOption[] {
   const unitsById = buildUnitLookup(units);
-  // In Nigerian units, the spoon or gram an amount under half a cup shows in.
+  // The spoon or gram an amount under half a cup shows in, or the spoon a
+  // small metric volume shows in.
   const belowCupsUnit =
-    mode === "cups"
+    mode === "cups" || mode === "metric"
       ? unitsById.get(
           convertIngredientQuantity({
             unitsById,
@@ -360,9 +364,21 @@ export function convertIngredientQuantity({
     return null;
   }
 
+  const fromDefinition = unitsById.get(fromUnit);
+  const measuredByVolume = fromDefinition?.baseUnit === "mL";
+
+  if (
+    mode === "metric" &&
+    fromDefinition &&
+    measuredByVolume &&
+    quantity * averageUnitFactor(fromDefinition) < METRIC_SPOONS_BELOW_ML
+  ) {
+    const spoons = inSpoons(unitsById, quantity, fromUnit);
+    if (spoons) return spoons;
+  }
+
   if (mode === "cups") {
     // Anything measured by volume (spices in mL too) goes in milk cups.
-    const measuredByVolume = unitsById.get(fromUnit)?.baseUnit === "mL";
     const nigerianUnit = measuredByVolume ? "milk_cup" : contextUnits.nigerianDefault;
 
     if (!nigerianUnit) {
@@ -383,10 +399,7 @@ export function convertIngredientQuantity({
     }
 
     if (measuredByVolume) {
-      const tablespoons = convertQuantity({ unitsById, quantity, fromUnit, toUnit: "tbsp" });
-      return tablespoons && tablespoons.quantity >= 1
-        ? tablespoons
-        : convertQuantity({ unitsById, quantity, fromUnit, toUnit: "tsp" });
+      return inSpoons(unitsById, quantity, fromUnit);
     }
 
     return contextUnits.metricSmall
@@ -420,6 +433,14 @@ export function convertIngredientQuantity({
   }
 
   return small;
+}
+
+// Tablespoons from one up, teaspoons under that.
+function inSpoons(unitsById: Map<string, Unit>, quantity: number, fromUnit: string) {
+  const tablespoons = convertQuantity({ unitsById, quantity, fromUnit, toUnit: "tbsp" });
+  return tablespoons && tablespoons.quantity >= 1
+    ? tablespoons
+    : convertQuantity({ unitsById, quantity, fromUnit, toUnit: "tsp" });
 }
 
 export function getAvailableModesForContext(
