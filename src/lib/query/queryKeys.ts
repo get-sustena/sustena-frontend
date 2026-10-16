@@ -66,6 +66,8 @@ export const queryKeys = {
     recipes: (handle: string, params?: CreatorRecipeListParams) =>
       ["creators", "recipes", handle, params ?? {}] as const,
     saved: ["creators", "saved"] as const,
+    // Follows and unfollows waiting in the outbox (local only).
+    pendingFollows: ["creators", "pending-follows"] as const,
   },
   creatorRecipes: {
     all: ["creator-recipes"] as const,

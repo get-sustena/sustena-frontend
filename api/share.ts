@@ -6,6 +6,9 @@
 
 const API_BASE_URL = process.env.SUSTENA_API_BASE_URL ?? "https://api.getsustena.com/api/v1";
 const SITE_NAME = "Sustena";
+// The founder's words, 16 October 2026.
+const RECIPE_DESCRIPTION = "See the ingredients and how to cook it on Sustena.";
+const PLAIN_DESCRIPTION = "Plan your meals and your shopping list on Sustena.";
 // The app icon, for a link to something that isn't there or has no photo.
 const BRAND_IMAGE_PATH = "/share/sustena.png";
 // Chat apps give up on a slow preview, so a slow card shows the plain one.
@@ -46,15 +49,19 @@ export default {
 };
 
 async function previewFor(kind: string | null, key: string, brandImage: string): Promise<Preview> {
-  const plain = { title: SITE_NAME, image: brandImage, wide: false };
+  const plain = { title: SITE_NAME, description: PLAIN_DESCRIPTION, image: brandImage, wide: false };
   if (!key) return plain;
 
   if (kind === "recipe") {
     const recipe = await publicCard<RecipeCard>(`/public/recipes/${encodeURIComponent(key)}`);
     if (!recipe) return plain;
-    return recipe.imageUrl
-      ? { title: recipe.name, image: sized(recipe.imageUrl, "c_fill,g_auto,w_1200,h_630"), wide: true }
-      : { ...plain, title: recipe.name };
+    return {
+      title: recipe.name,
+      description: RECIPE_DESCRIPTION,
+      ...(recipe.imageUrl
+        ? { image: sized(recipe.imageUrl, "c_fill,g_auto,w_1200,h_630"), wide: true }
+        : { image: brandImage, wide: false }),
+    };
   }
 
   if (kind === "creator") {
@@ -62,7 +69,6 @@ async function previewFor(kind: string | null, key: string, brandImage: string):
     if (!creator) return plain;
     return {
       title: creator.displayName,
-      // The founder's words, 16 October 2026.
       description: `Follow ${creator.displayName} on Sustena and see their recipes`,
       image: creator.avatarUrl ? sized(creator.avatarUrl, "c_fill,g_face,w_600,h_600") : brandImage,
       wide: false,

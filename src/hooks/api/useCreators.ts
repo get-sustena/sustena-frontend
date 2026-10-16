@@ -97,20 +97,6 @@ export function useUpsertCreatorProfileMutation() {
   });
 }
 
-export function useSaveCreatorMutation() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ creatorId, save }: { creatorId: string; save: boolean }) =>
-      save
-        ? creatorsApi.saveCreator(creatorId)
-        : creatorsApi.unsaveCreator(creatorId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.creators.all });
-    },
-  });
-}
-
 export function useReportCreatorMutation(creatorId: string) {
   return useMutation({
     mutationFn: (payload: CreatorReportRequest) =>

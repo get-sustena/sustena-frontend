@@ -6,6 +6,7 @@ import { runWriteTransaction } from "../../db/writeTransaction";
 import { useAuthStore } from "../../store/authStore";
 import { ShoppingListItemCreateRequest } from "../../types/api";
 import {
+  creatorsApi,
   favoritesApi,
   mealPlansApi,
   plannerApi,
@@ -17,6 +18,7 @@ import {
 } from "../api";
 import { apiShoppingItemToLocalItem } from "../api/adapters";
 import { runCookedCommand } from "../cooked/cookedCommands";
+import { runFollowCommand } from "../creators/followCommands";
 import { runFavoriteCommand } from "../favorites/favoriteCommands";
 import { queryClient } from "../query/queryClient";
 import { queryKeys } from "../query/queryKeys";
@@ -80,6 +82,14 @@ async function runOperation(db: SQLiteDatabase, operation: SyncQueueOperation) {
     return;
   }
   if (await runCookedCommand(operation, { markRecipeCooked: recipesApi.markRecipeCooked })) return;
+  if (
+    await runFollowCommand(operation, {
+      saveCreator: creatorsApi.saveCreator,
+      unsaveCreator: creatorsApi.unsaveCreator,
+    })
+  ) {
+    return;
+  }
   if (
     await runSettingsCommand(operation, {
       updatePreferences: preferencesApi.updatePreferences,

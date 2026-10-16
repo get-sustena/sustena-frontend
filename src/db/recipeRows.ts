@@ -555,7 +555,7 @@ export async function getLocalCreatorRecipes(
 }
 
 // What the saved recipes say about their creator: name, photo and how many
-// recipes. The rest of the profile (bio, cover) needs a connection.
+// recipes. The rest of the profile (bio, cover, followers) needs a connection.
 export async function getLocalCreatorProfile(db: SQLiteDatabase, handle: string): Promise<CreatorProfile | null> {
   const recipes = await getSavedRecipesBy(db, handle);
   const creator = recipes[0]?.creator;
@@ -570,6 +570,8 @@ export async function getLocalCreatorProfile(db: SQLiteDatabase, handle: string)
     specialities: [],
     isOwner: false,
     isSaved: false,
+    followerCount: 0,
+    followingCount: 0,
     publishedRecipeCount: recipes.length,
     totalRecipeSaves: 0,
     averageRating: null,

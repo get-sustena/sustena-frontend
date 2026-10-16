@@ -3,8 +3,9 @@ import { useMemo, useState } from "react";
 import { Pressable, ScrollView, Share, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuthoringVocabularyQuery } from "../../hooks/api/useCreatorRecipes";
-import { useCreatorProfileQuery, useCreatorRecipesQuery, useSaveCreatorMutation } from "../../hooks/api/useCreators";
+import { useCreatorProfileQuery, useCreatorRecipesQuery } from "../../hooks/api/useCreators";
 import { useRecordActivity } from "../../hooks/useActivity";
+import { useCreatorFollow } from "../../hooks/useCreatorFollow";
 import { creatorShareUrl } from "../../lib/shareLinks";
 import { getApiErrorMessage } from "../../lib/api/errors";
 import { closeSheet, openSheet, showToast } from "../../store/uiStore";
@@ -30,8 +31,9 @@ export function PublicCreatorProfileScreen() {
   const profileQuery = useCreatorProfileQuery(handle);
   const recipesQuery = useCreatorRecipesQuery(handle, { sort, page: 1, pageSize: 500 });
   const vocabularyQuery = useAuthoringVocabularyQuery();
-  const saveMutation = useSaveCreatorMutation();
+  const follow = useCreatorFollow();
   const profile = profileQuery.data;
+  const following = profile ? follow.stateOf(profile.id, { following: profile.isSaved }).following : false;
   const recordActivity = useRecordActivity();
   const recipes = useMemo(() => recipesQuery.data?.items ?? [], [recipesQuery.data?.items]);
   const categories = useMemo(() => vocabularyQuery.data?.categories ?? [], [vocabularyQuery.data?.categories]);
@@ -46,8 +48,8 @@ export function PublicCreatorProfileScreen() {
   async function toggleSavedCreator() {
     if (!profile || profile.isOwner) return;
     try {
-      await saveMutation.mutateAsync({ creatorId: profile.id, save: !profile.isSaved });
-      showToast(profile.isSaved ? "Removed from your creators" : `Saved ${profile.displayName}`, "success");
+      await follow.setFollowing(profile.id, !following);
+      showToast(following ? "Removed from your creators" : `Saved ${profile.displayName}`, "success");
     } catch (error) {
       showToast(getApiErrorMessage(error), "danger");
     }
@@ -107,7 +109,7 @@ export function PublicCreatorProfileScreen() {
             {profile.isOwner ? (
               <Pressable onPress={() => router.push("/creator/edit-profile" as Href)} style={[styles.saveButton, styles.ownerButton]}><Icon name="pencil" size={16} /><AppText style={styles.ownerButtonText}>Edit profile</AppText></Pressable>
             ) : (
-              <Pressable disabled={saveMutation.isPending} onPress={toggleSavedCreator} style={[styles.saveButton, profile.isSaved && styles.savedButton]}>{profile.isSaved ? <Icon name="check" size={17} color="#1f7048" strokeWidth={2.2} /> : <Icon name="bookmark" size={16} color="#FBFBF7" />}<AppText style={[styles.saveButtonText, profile.isSaved && styles.savedButtonText]}>{profile.isSaved ? "Saved" : "Save creator"}</AppText></Pressable>
+              <Pressable onPress={toggleSavedCreator} style={[styles.saveButton, following && styles.savedButton]}>{following ? <Icon name="check" size={17} color="#1f7048" strokeWidth={2.2} /> : <Icon name="bookmark" size={16} color="#FBFBF7" />}<AppText style={[styles.saveButtonText, following && styles.savedButtonText]}>{following ? "Saved" : "Save creator"}</AppText></Pressable>
             )}
             <Pressable accessibilityLabel="Share profile" onPress={shareProfile} style={styles.shareButton}><Icon name="share" size={18} /></Pressable>
           </View>

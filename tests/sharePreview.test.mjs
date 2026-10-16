@@ -38,7 +38,7 @@ test("a creator link previews the name, the approved line and the photo, with th
   assert.ok(page.includes('<div id="root"></div>'));
 });
 
-test("a recipe link previews its name and a wide photo only; an unknown one previews Sustena", async () => {
+test("a recipe link previews its name, the approved line and a wide photo; an unknown one previews Sustena", async () => {
   serve({
     "/public/recipes/jollof-rice": {
       slug: "jollof-rice",
@@ -50,9 +50,10 @@ test("a recipe link previews its name and a wide photo only; an unknown one prev
   assert.ok(page.includes("<title>Jollof Rice</title>"));
   assert.ok(page.includes('content="https://res.cloudinary.com/rslnsqyc/image/upload/c_fill,g_auto,w_1200,h_630,f_jpg,q_auto/v1/jollof.webp"'));
   assert.ok(page.includes('<meta name="twitter:card" content="summary_large_image" />'));
-  assert.ok(!page.includes("og:description"));
+  assert.ok(page.includes('<meta property="og:description" content="See the ingredients and how to cook it on Sustena." />'));
 
   const unknown = await open("kind=recipe&key=gone");
   assert.ok(unknown.includes('<meta property="og:title" content="Sustena" />'));
+  assert.ok(unknown.includes('<meta property="og:description" content="Plan your meals and your shopping list on Sustena." />'));
   assert.ok(unknown.includes('<meta property="og:image" content="https://app.getsustena.com/share/sustena.png" />'));
 });
