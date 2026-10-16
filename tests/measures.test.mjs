@@ -27,3 +27,28 @@ test("tiny shares and pinches keep the recipe's own amount", () => {
   assert.equal(measureAmountText(measure("item", "medium", "0.4"), 0.5, "normal"), null);
   assert.equal(measureAmountText(measure("pinch", null, "1"), 1, "sensitive"), null);
 });
+
+// Founder, 2026-10-16: a step showed "7 1/2g Scotch bonnet pepper" beside a line in pieces.
+test("a step reads its amount in the same pieces as its ingredient line", async () => {
+  const { formatScaledInstruction } = await import("../src/lib/instructionScaling.ts");
+  const segment = (baseQuantity) => ({
+    type: "quantity", text: `${baseQuantity}g`, recipeIngredientId: "rodo", ingredientPosition: 1,
+    baseQuantity, unit: "g", scalesWithServings: true,
+  });
+  const step = (quantity) => ({
+    text: "", segments: [{ type: "text", text: "Add " }, segment(quantity), { type: "text", text: " Scotch bonnet pepper" }],
+  });
+  const shown = (quantity, selectedServings) =>
+    formatScaledInstruction({
+      instruction: step(quantity),
+      baseServings: 2,
+      selectedServings,
+      unitsById: new Map(),
+      selectedUnitByIngredientId: new Map(),
+      countRuleByIngredientId: new Map([["rodo", "sensitive"]]),
+      measureByIngredientId: new Map([["rodo", { measure: measure("item", null, "1.5"), quantity: 7.5, unit: "g" }]]),
+    });
+  assert.equal(shown("7.5", 2), "Add 1 ½ pieces Scotch bonnet pepper");
+  assert.equal(shown("7.5", 4), "Add 3 pieces Scotch bonnet pepper");
+  assert.equal(shown("1", 2), "Add 1g Scotch bonnet pepper");
+});

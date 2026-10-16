@@ -414,6 +414,23 @@ export default function RecipeDetailScreen() {
       ),
     ])
   );
+  const measureByIngredientId = new Map(
+    (recipeDetail?.ingredients ?? []).flatMap((ingredient) =>
+      ingredient.measure &&
+      getSelectedApiIngredientOption(ingredient).selectedValue === MEASURE_OPTION
+        ? [
+            [
+              ingredient.id,
+              {
+                measure: ingredient.measure,
+                quantity: Number(ingredient.exactQuantity ?? ingredient.quantity),
+                unit: ingredient.unit,
+              },
+            ] as const,
+          ]
+        : []
+    )
+  );
   const instructions = [...(recipeDetail?.instructions ?? [])]
     .sort((left, right) => left.stepNumber - right.stepNumber)
     .map((instruction) => ({
@@ -425,6 +442,7 @@ export default function RecipeDetailScreen() {
         unitsById,
         selectedUnitByIngredientId: selectedInstructionUnits,
         countRuleByIngredientId,
+        measureByIngredientId,
       }),
     }));
   const displayTags = getRecipeDetailTags(recipeDetail, recipe?.tags ?? []);

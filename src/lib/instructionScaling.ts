@@ -1,9 +1,11 @@
 import type {
   RecipeInstruction,
   RecipeInstructionQuantitySegment,
+  RecipeLineMeasure,
   Unit,
 } from "../types/api.ts";
 import { friendlyCount, type CountRule } from "./friendlyAmounts.ts";
+import { measureAmountText } from "./measures.ts";
 import {
   convertQuantity,
   formatAmountInUnit,
@@ -20,6 +22,7 @@ export function formatScaledInstruction({
   unitsById,
   selectedUnitByIngredientId,
   countRuleByIngredientId = new Map(),
+  measureByIngredientId = new Map(),
 }: {
   instruction: RecipeInstruction;
   baseServings: number | null;
@@ -28,6 +31,8 @@ export function formatScaledInstruction({
   selectedUnitByIngredientId: Map<string, string>;
   // How each recipe ingredient's count rounds (see countRuleFor).
   countRuleByIngredientId?: Map<string, CountRule>;
+  // Lines shown in pieces, cloves or bunches (P-17); their steps read the same.
+  measureByIngredientId?: Map<string, LineMeasure>;
 }) {
   if (
     !instruction.segments?.length ||
@@ -54,9 +59,27 @@ export function formatScaledInstruction({
         unitsById,
         selectedUnitByIngredientId,
         countRuleByIngredientId,
+        measureByIngredientId,
       });
     })
     .join("");
+}
+
+// A recipe line's amount, with the share of its measure it comes to.
+type LineMeasure = { measure: RecipeLineMeasure; quantity: number; unit: string | null };
+
+// The step's amount in the line's measure ("1 ½ pieces"): its share of the
+// line, so a step that uses half the onion reads half of it. Null keeps the
+// step's own amount (another unit, or too small a share to count).
+function measureSegmentText(
+  segment: RecipeInstructionQuantitySegment,
+  line: LineMeasure | undefined,
+  servingFactor: number,
+  countRule: CountRule
+) {
+  if (!line || !(line.quantity > 0) || segment.unit !== line.unit) return null;
+  const share = (Number(segment.baseQuantity) / line.quantity) * Number(line.measure.exactQuantity);
+  return measureAmountText({ ...line.measure, exactQuantity: String(share) }, servingFactor, countRule);
 }
 
 function scaleDecimalString(
@@ -95,6 +118,7 @@ function formatQuantitySegment({
   unitsById,
   selectedUnitByIngredientId,
   countRuleByIngredientId,
+  measureByIngredientId,
 }: {
   segment: RecipeInstructionQuantitySegment;
   baseServings: number;
@@ -102,6 +126,7 @@ function formatQuantitySegment({
   unitsById: Map<string, Unit>;
   selectedUnitByIngredientId: Map<string, string>;
   countRuleByIngredientId: Map<string, CountRule>;
+  measureByIngredientId: Map<string, LineMeasure>;
 }) {
   const scaledQuantity = scaleDecimalString(
     segment.baseQuantity,
@@ -117,6 +142,16 @@ function formatQuantitySegment({
     ? selectedUnitByIngredientId.get(segment.recipeIngredientId)
     : undefined;
   const countRule = (segment.recipeIngredientId && countRuleByIngredientId.get(segment.recipeIngredientId)) || "normal";
+  const inMeasure = measureSegmentText(
+    segment,
+    segment.recipeIngredientId ? measureByIngredientId.get(segment.recipeIngredientId) : undefined,
+    selectedServings / baseServings,
+    countRule
+  );
+
+  if (inMeasure) {
+    return inMeasure;
+  }
 
   if (
     selectedServings === baseServings &&
