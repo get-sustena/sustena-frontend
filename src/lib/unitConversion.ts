@@ -1,7 +1,7 @@
 // Conversion requires a shared base unit; context only limits which units are offered.
 
 import type { Ingredient, IngredientConversionContext, Unit } from "../types/api.ts";
-import { friendlyQuantity, isBelowPinch, PINCH } from "./friendlyAmounts.ts";
+import { friendlyQuantity, isBelowPinch, PINCH, type CountRule } from "./friendlyAmounts.ts";
 
 export type UnitMode = "metric" | "cups" | "imperial";
 
@@ -190,6 +190,7 @@ export function buildScaleUnitOptions({
   context,
   mode,
   servingFactor = 1,
+  countRule = "normal",
 }: {
   units: Unit[];
   quantity: number;
@@ -197,6 +198,7 @@ export function buildScaleUnitOptions({
   context: IngredientConversionContext;
   mode?: UnitMode;
   servingFactor?: number;
+  countRule?: CountRule;
 }): ScaleUnitOption[] {
   const unitsById = buildUnitLookup(units);
   // In Nigerian units, the spoon or gram an amount under half a cup shows in.
@@ -239,7 +241,7 @@ export function buildScaleUnitOptions({
         {
           ...converted,
           label: getUnitPickerLabel(unit),
-          preview: formatAmountInUnit(unitsById, converted),
+          preview: formatAmountInUnit(unitsById, converted, undefined, countRule),
         },
       ];
     });
@@ -249,7 +251,8 @@ export function buildScaleUnitOptions({
 export function formatAmountInUnit(
   unitsById: Map<string, Unit>,
   { quantity, unit, isApproximate }: ConvertedQuantity,
-  label = getUnitDisplayLabel(unitsById, unit)
+  label = getUnitDisplayLabel(unitsById, unit),
+  countRule: CountRule = "normal"
 ) {
   const definition = unitsById.get(unit);
 
@@ -257,7 +260,7 @@ export function formatAmountInUnit(
     return PINCH;
   }
 
-  const amount = friendlyQuantity(quantity, unit);
+  const amount = friendlyQuantity(quantity, unit, countRule);
   // "3 Milk cups", "1 ½ Milk cups", but "¾ Small Derica cup".
   const shownLabel = /^\d/.test(amount) && amount !== "1" ? label.replace(/\bcup$/i, "cups") : label;
   return `${isApproximate ? "≈" : ""}${amount}${shownLabel ? ` ${shownLabel}` : ""}`;

@@ -62,7 +62,7 @@ test("an unrecognized server context cannot crash recipe rendering", () => {
   );
 });
 
-const { friendlyCount } = require("../src/lib/friendlyAmounts.ts");
+const { countRuleFor, friendlyCount } = require("../src/lib/friendlyAmounts.ts");
 const { formatAmountInUnit } = require("../src/lib/unitConversion.ts");
 
 const kitchenUnits = [
@@ -99,8 +99,32 @@ test("amounts read the way people cook", () => {
   ];
   for (const [amount, expected] of cases) assert.equal(shown(amount), expected, JSON.stringify(amount));
 
-  const counts = [[1.05, false, "1"], [1.364, false, "1 ½"], [1.55, false, "1 ½"], [1.7, false, "2"], [0.2, false, "½"], [0.5, true, "1"], [2.3, true, "3"]];
-  for (const [value, whole, expected] of counts) assert.equal(friendlyCount(value, { whole }), expected, String(value));
+  const counts = [
+    [1.6, "normal", "2"],
+    [1.05, "normal", "1 ½"],
+    [1.5, "normal", "1 ½"],
+    [0.2, "normal", "½"],
+    [1.6, "sensitive", "1 ½"],
+    [1.05, "sensitive", "1"],
+    [1.7, "sensitive", "2"],
+    [0.5, "whole", "1"],
+    [2.3, "whole", "3"],
+  ];
+  for (const [value, rule, expected] of counts) assert.equal(friendlyCount(value, rule), expected, `${value} ${rule}`);
+});
+
+// Founder, 2026-10-16: "1.6 should be 2 as long as it's not a sensitive ingredient".
+test("strong ingredients round counts down, everything else rounds up", () => {
+  const rules = [
+    [{ id: "scotch-bonnet-pepper", subcategory: "Pepper" }, "sensitive"],
+    [{ id: "seasoning-cube", subcategory: "Seasoning" }, "sensitive"],
+    [{ id: "salt", subcategory: "Basic seasoning" }, "sensitive"],
+    [{ id: "red-bell-pepper", subcategory: "Pepper" }, "normal"],
+    [{ id: "onion", subcategory: "Allium" }, "normal"],
+    [{ id: "egg", subcategory: "Egg" }, "whole"],
+    [undefined, "normal"],
+  ];
+  for (const [ingredient, expected] of rules) assert.equal(countRuleFor(ingredient), expected, ingredient?.id);
 });
 
 test("Nigerian units under half a cup never show in the unit picker", () => {

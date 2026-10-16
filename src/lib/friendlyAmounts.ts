@@ -27,6 +27,37 @@ const QUARTER_UNITS = /^(kg|l|dl|lb)$|_(kg|lb)$/;
 // Eggs are cooked whole, so they never show as ½ an egg.
 const WHOLE_ITEM_INGREDIENT_IDS = new Set(["egg", "duck-egg", "quail-egg"]);
 
+// Strong ingredients, where a little too much spoils the dish: their counts
+// round down when only a little over (founder, 2026-10-16). Whole catalogue
+// subcategories, plus the hot peppers from "Pepper", which also holds bell
+// peppers. Moves to the ingredient data if Backend's measures carry a flag.
+const SENSITIVE_SUBCATEGORIES = new Set([
+  "Alkaline ingredient",
+  "Basic seasoning",
+  "Seasoning",
+  "Pepper spice",
+  "Spice",
+  "Spice blend",
+  "Nigerian spice blend",
+  "Drink spice blend",
+  "Dried spice",
+  "Seed spice",
+  "Bark spice",
+  "Berry spice",
+  "Flower spice",
+  "Pod spice",
+  "West African spice",
+  "Dried herb",
+  "Fermented seasoning",
+  "Raising agent",
+  "Yeast",
+]);
+const SENSITIVE_INGREDIENT_IDS = new Set(["scotch-bonnet-pepper", "chilli-pepper", "cayenne-pepper", "shombo-pepper"]);
+
+// How a counted ingredient rounds: most go up to the next half (1.6 → 2),
+// sensitive ones go down when 0.1 or less over (1.6 → 1 ½), eggs go whole.
+export type CountRule = "normal" | "sensitive" | "whole";
+
 export function isBelowPinch(baseQuantity: number, baseUnit: string) {
   if (baseUnit === "mL") return baseQuantity < PINCH_BELOW_ML;
   if (baseUnit === "g") return baseQuantity < PINCH_BELOW_G;
@@ -35,7 +66,7 @@ export function isBelowPinch(baseQuantity: number, baseUnit: string) {
 
 // The number to show for an amount in this unit: grams and millilitres
 // whole, kilos and litres in quarters, everything else in kitchen fractions.
-export function friendlyQuantity(value: number, unitId: string) {
+export function friendlyQuantity(value: number, unitId: string, countRule: CountRule = "normal") {
   const id = unitId.toLowerCase();
 
   if (WHOLE_UNITS.test(id)) {
@@ -43,7 +74,7 @@ export function friendlyQuantity(value: number, unitId: string) {
   }
 
   if (id === "item") {
-    return friendlyCount(value, { whole: false });
+    return friendlyCount(value, countRule);
   }
 
   return friendlyNumber(
@@ -53,14 +84,14 @@ export function friendlyQuantity(value: number, unitId: string) {
   );
 }
 
-// Counted items show whole or with a half, never 1.364 (founder, 2026-10-16):
-// up to 0.1 over a whole or a half rounds down, anything more rounds up to
-// the next half. Eggs round up to the next whole egg instead. Never below ½.
-export function friendlyCount(value: number, { whole }: { whole: boolean }) {
-  const step = whole ? 1 : 0.5;
+// Counted items show whole or with a half, never 1.364 (founder, 2026-10-16).
+// Never below ½, or one whole egg.
+export function friendlyCount(value: number, rule: CountRule) {
+  const step = rule === "whole" ? 1 : 0.5;
+  const roundDownWithin = rule === "normal" ? 0 : COUNT_ROUND_DOWN;
   const steps = Math.floor(value / step + 1e-9);
   const over = value - steps * step;
-  const rounded = (over <= COUNT_ROUND_DOWN + 1e-9 ? steps : steps + 1) * step;
+  const rounded = (over <= roundDownWithin + 1e-9 ? steps : steps + 1) * step;
   const shown = Math.max(step, rounded);
   const wholes = Math.floor(shown);
 
@@ -68,8 +99,11 @@ export function friendlyCount(value: number, { whole }: { whole: boolean }) {
   return wholes === 0 ? "½" : `${wholes} ½`;
 }
 
-export function countsInWholes(ingredientId: string | null | undefined) {
-  return Boolean(ingredientId && WHOLE_ITEM_INGREDIENT_IDS.has(ingredientId));
+export function countRuleFor(ingredient: { id: string; subcategory: string | null } | undefined): CountRule {
+  if (!ingredient) return "normal";
+  if (WHOLE_ITEM_INGREDIENT_IDS.has(ingredient.id)) return "whole";
+  if (SENSITIVE_INGREDIENT_IDS.has(ingredient.id)) return "sensitive";
+  return ingredient.subcategory && SENSITIVE_SUBCATEGORIES.has(ingredient.subcategory) ? "sensitive" : "normal";
 }
 
 function friendlyNumber(value: number, steps: number[], allowEighth: boolean) {

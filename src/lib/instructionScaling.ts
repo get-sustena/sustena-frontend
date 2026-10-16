@@ -3,7 +3,7 @@ import type {
   RecipeInstructionQuantitySegment,
   Unit,
 } from "../types/api.ts";
-import { friendlyCount } from "./friendlyAmounts.ts";
+import { friendlyCount, type CountRule } from "./friendlyAmounts.ts";
 import {
   convertQuantity,
   formatAmountInUnit,
@@ -19,15 +19,15 @@ export function formatScaledInstruction({
   selectedServings,
   unitsById,
   selectedUnitByIngredientId,
-  wholeItemIngredientIds = new Set(),
+  countRuleByIngredientId = new Map(),
 }: {
   instruction: RecipeInstruction;
   baseServings: number | null;
   selectedServings: number;
   unitsById: Map<string, Unit>;
   selectedUnitByIngredientId: Map<string, string>;
-  // Recipe ingredients counted in wholes (eggs), never as halves.
-  wholeItemIngredientIds?: Set<string>;
+  // How each recipe ingredient's count rounds (see countRuleFor).
+  countRuleByIngredientId?: Map<string, CountRule>;
 }) {
   if (
     !instruction.segments?.length ||
@@ -53,7 +53,7 @@ export function formatScaledInstruction({
         selectedServings,
         unitsById,
         selectedUnitByIngredientId,
-        wholeItemIngredientIds,
+        countRuleByIngredientId,
       });
     })
     .join("");
@@ -94,14 +94,14 @@ function formatQuantitySegment({
   selectedServings,
   unitsById,
   selectedUnitByIngredientId,
-  wholeItemIngredientIds,
+  countRuleByIngredientId,
 }: {
   segment: RecipeInstructionQuantitySegment;
   baseServings: number;
   selectedServings: number;
   unitsById: Map<string, Unit>;
   selectedUnitByIngredientId: Map<string, string>;
-  wholeItemIngredientIds: Set<string>;
+  countRuleByIngredientId: Map<string, CountRule>;
 }) {
   const scaledQuantity = scaleDecimalString(
     segment.baseQuantity,
@@ -116,6 +116,7 @@ function formatQuantitySegment({
   const selectedUnit = segment.recipeIngredientId
     ? selectedUnitByIngredientId.get(segment.recipeIngredientId)
     : undefined;
+  const countRule = (segment.recipeIngredientId && countRuleByIngredientId.get(segment.recipeIngredientId)) || "normal";
 
   if (
     selectedServings === baseServings &&
@@ -136,24 +137,21 @@ function formatQuantitySegment({
       return formatAmountInUnit(
         unitsById,
         converted,
-        getInstructionUnitLabel(unitsById, converted.unit)
+        getInstructionUnitLabel(unitsById, converted.unit),
+        countRule
       );
     }
   }
 
   if (!segment.unit || segment.unit.trim().toLowerCase() === "item") {
-    return friendlyCount(Number(scaledQuantity), {
-      whole: Boolean(
-        segment.recipeIngredientId &&
-          wholeItemIngredientIds.has(segment.recipeIngredientId)
-      ),
-    });
+    return friendlyCount(Number(scaledQuantity), countRule);
   }
 
   return formatAmountInUnit(
     unitsById,
     { quantity: Number(scaledQuantity), unit: segment.unit, isApproximate: false },
-    getInstructionUnitLabel(unitsById, segment.unit)
+    getInstructionUnitLabel(unitsById, segment.unit),
+    countRule
   );
 }
 
