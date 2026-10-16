@@ -68,11 +68,6 @@ const FAQS = [
     answer:
       "Yes, create as many as you like from the Shopping tab, and rename or delete them anytime.",
   },
-  {
-    question: "How do I update my date of birth?",
-    answer:
-      "Go to Profile › Profile Details and edit it directly. Changes save immediately.",
-  },
 ];
 
 export default function SupportScreen() {

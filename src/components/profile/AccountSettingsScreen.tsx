@@ -116,7 +116,7 @@ export function AccountSettingsScreen() {
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 120 }]} showsVerticalScrollIndicator={false}>
         <Section title="Account & creator profile" first>
           <SettingsRow icon="chefHat" label="Edit creator profile" subtitle="Update your public name, photo, handle and bio." onPress={() => router.push("/creator/edit-profile" as Href)} />
-          <SettingsRow icon="profile" label="Profile details" subtitle="Full name, email & date of birth" onPress={() => openSheet(<ProfileDetailsSheet />)} />
+          <SettingsRow icon="profile" label="Profile details" subtitle="Full name and email" onPress={() => openSheet(<ProfileDetailsSheet />)} />
           <ConfirmEmailRow />
           <View style={styles.completionCard}>
             <ProfileCompletionCard answered={answered} total={PROFILE_COMPLETION_FIELD_COUNT} onPress={() => router.push("/profile-complete" as Href)} />
