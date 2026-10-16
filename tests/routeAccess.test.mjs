@@ -4,6 +4,8 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import {
+  AGREEMENT_ROUTES,
+  EMAIL_CODE_ROUTES,
   PUBLIC_ROUTES,
   SIGNED_IN_ROUTES,
 } from "../src/lib/navigation/routeAccess.ts";
@@ -30,21 +32,22 @@ function collectRoutes(dir, prefix = "") {
 }
 
 const routesOnDisk = collectRoutes(appDir).sort();
-const listedRoutes = [...PUBLIC_ROUTES, ...SIGNED_IN_ROUTES].sort();
+const listedRoutes = [...PUBLIC_ROUTES, ...SIGNED_IN_ROUTES, ...AGREEMENT_ROUTES, ...EMAIL_CODE_ROUTES].sort();
 
-test("every screen in app/ is listed as public or signed-in", () => {
+test("every screen in app/ is listed as public, signed-in, the agreement or the email code", () => {
   assert.deepEqual(listedRoutes, routesOnDisk);
 });
 
-test("no screen is both public and signed-in", () => {
-  const overlap = PUBLIC_ROUTES.filter((route) =>
-    SIGNED_IN_ROUTES.includes(route)
-  );
-  assert.deepEqual(overlap, []);
+test("no screen is in two lists", () => {
+  assert.equal(new Set(listedRoutes).size, listedRoutes.length);
 });
 
 test("recipes are only reachable after sign-in", () => {
   assert.ok(SIGNED_IN_ROUTES.includes("(tabs)"));
   assert.ok(SIGNED_IN_ROUTES.includes("recipes/[id]"));
   assert.ok(SIGNED_IN_ROUTES.includes("creators/[handle]"));
+});
+
+test("the Terms and Privacy Policy open from sign-up, so they are public", () => {
+  assert.ok(PUBLIC_ROUTES.includes("legal/[doc]"));
 });

@@ -1,15 +1,19 @@
 
 import {
+  AgreementRequest,
   AuthResponse,
   ChangePasswordRequest,
   CurrentUserUpdateRequest,
+  DeleteAccountRequest,
   ForgotPasswordRequest,
   ForgotPasswordResponse,
   LoginRequest,
   LogoutRequest,
   LogoutResponse,
+  ResendConfirmationResponse,
   ResetPasswordRequest,
   ResetPasswordResponse,
+  SendEmailCodeResponse,
   SignupRequest,
   User,
   VerifyResetCodeRequest,
@@ -64,6 +68,47 @@ export function updateMe(payload: CurrentUserUpdateRequest) {
   return apiRequest<User>({
     url: "/auth/me",
     method: "PUT",
+    data: payload,
+  });
+}
+
+export function agreeToTerms(payload: AgreementRequest) {
+  return apiRequest<User>({
+    url: "/auth/me/agreement",
+    method: "POST",
+    data: payload,
+  });
+}
+
+export function resendConfirmationEmail() {
+  return apiRequest<ResendConfirmationResponse>({
+    url: "/auth/verify-email/resend",
+    method: "POST",
+  });
+}
+
+export function sendEmailCode() {
+  return apiRequest<SendEmailCodeResponse>({
+    url: "/auth/verify-email/code/send",
+    method: "POST",
+  });
+}
+
+// Answers with the account, now confirmed.
+export function verifyEmailCode(code: string) {
+  return apiRequest<User>({
+    url: "/auth/verify-email/code",
+    method: "POST",
+    data: { code },
+  });
+}
+
+// Deletes the account and everything in it on the server, and signs out
+// every device.
+export function deleteMe(payload: DeleteAccountRequest) {
+  return apiRequest<void>({
+    url: "/auth/me",
+    method: "DELETE",
     data: payload,
   });
 }

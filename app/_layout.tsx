@@ -17,7 +17,7 @@ import { migrateDbIfNeeded } from "../src/db/migrations";
 import { useLearnTimerAlerts } from "../src/hooks/useLearnTimerAlerts";
 import { useMealReminders } from "../src/hooks/useMealReminders";
 import { configureForegroundNotifications } from "../src/lib/notifications/foregroundNotifications";
-import { SIGNED_IN_ROUTES } from "../src/lib/navigation/routeAccess";
+import { AGREEMENT_ROUTES, EMAIL_CODE_ROUTES, SIGNED_IN_ROUTES } from "../src/lib/navigation/routeAccess";
 import { queryClient } from "../src/lib/query/queryClient";
 import { setupNetworkStatusListener } from "../src/lib/query/networkStatus";
 import { useAuthStore } from "../src/store/authStore";
@@ -73,6 +73,11 @@ export default function RootLayout() {
 // and send a signed-in user to the welcome screen.
 function RootNavigator() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  // Accounts that haven't agreed to the current Terms see only the agreement.
+  const agreementRequired = useAuthStore((state) => Boolean(state.user?.agreementRequired));
+  // A new account enters its emailed code first, before the agreement too.
+  const emailCodeRequired = useAuthStore((state) => Boolean(state.user?.emailVerificationRequired));
+  const signedIn = isAuthenticated && !emailCodeRequired;
   useMealReminders();
   useLearnTimerAlerts();
 
@@ -88,8 +93,18 @@ function RootNavigator() {
       {/* Listed first so a signed-out visitor sent away from a signed-in
           screen lands here and is redirected onward. */}
       <Stack.Screen name="index" />
-      <Stack.Protected guard={isAuthenticated}>
+      <Stack.Protected guard={signedIn && !agreementRequired}>
         {SIGNED_IN_ROUTES.map((name) => (
+          <Stack.Screen key={name} name={name} />
+        ))}
+      </Stack.Protected>
+      <Stack.Protected guard={signedIn && agreementRequired}>
+        {AGREEMENT_ROUTES.map((name) => (
+          <Stack.Screen key={name} name={name} />
+        ))}
+      </Stack.Protected>
+      <Stack.Protected guard={isAuthenticated && emailCodeRequired}>
+        {EMAIL_CODE_ROUTES.map((name) => (
           <Stack.Screen key={name} name={name} />
         ))}
       </Stack.Protected>

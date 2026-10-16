@@ -1,24 +1,27 @@
 
 import { AxiosError } from "axios";
 import { ApiError, ApiValidationError } from "../../types/api";
-import { API_BASE_URL } from "./config";
 import { validationFieldErrors } from "./validationErrors";
 
 class ApiClientError extends Error {
   status: number;
   code?: string;
   payload?: unknown;
+  // From a 429's Retry-After header, when the browser is allowed to read it.
+  retryAfterSeconds?: number;
 
   constructor({
     message,
     status,
     code,
     payload,
+    retryAfterSeconds,
   }: {
     message: string;
     status: number;
     code?: string;
     payload?: unknown;
+    retryAfterSeconds?: number;
   }) {
     super(message);
 
@@ -26,6 +29,7 @@ class ApiClientError extends Error {
     this.status = status;
     this.code = code;
     this.payload = payload;
+    this.retryAfterSeconds = retryAfterSeconds;
   }
 }
 
@@ -71,6 +75,7 @@ export function toApiClientError(error: unknown): ApiClientError {
       status,
       code: getErrorCode(payload),
       payload,
+      retryAfterSeconds: readRetryAfterSeconds(error.response?.headers?.["retry-after"]),
     });
   }
 
@@ -89,12 +94,18 @@ export function toApiClientError(error: unknown): ApiClientError {
   });
 }
 
+// Retry-After in seconds; the HTTP-date form isn't sent by this API.
+function readRetryAfterSeconds(header: unknown) {
+  const seconds = Number(header);
+  return Number.isFinite(seconds) && seconds > 0 ? Math.ceil(seconds) : undefined;
+}
+
 function getNetworkErrorMessage(error: AxiosError) {
   if (error.code === "ECONNABORTED") {
-    return "The API request timed out. Check that the backend is running and reachable from this device.";
+    return "This is taking longer than expected. Check your connection and try again.";
   }
 
-  return `Could not reach the API at ${API_BASE_URL}. Check that the backend is running, the port is correct, and this device can access that host.`;
+  return "Could not connect. Check your internet connection and try again.";
 }
 
 function parseErrorPayload(payload: unknown) {

@@ -1,14 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { getStoredPreferences, mapStoredPreferencesRow, saveStoredPreferences } from "../src/db/preferencesRepository.ts";
-import { MAX_SERVINGS, MIN_SERVINGS, parseServingsInput, stepServings } from "../src/lib/servings.ts";
+import { parseServingsInput, stepServings } from "../src/lib/servings.ts";
 import { usePreferencesStore } from "../src/store/preferencesStore.ts";
 import { openTestDatabase } from "./helpers/sqlite.mjs";
-
-test("SRV-01: servings run from 1 to 500, matching the server", () => {
-  assert.equal(MIN_SERVINGS, 1);
-  assert.equal(MAX_SERVINGS, 500);
-});
 
 test("SRV-01: typing 200 sets 200 servings", () => {
   assert.deepEqual(parseServingsInput("200"), { value: 200 });

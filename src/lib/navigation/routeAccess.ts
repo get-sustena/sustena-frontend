@@ -6,7 +6,8 @@
 // to refuse signed-out requests on its own.
 
 // What a signed-out visitor needs: the entry redirect, welcome, the intro
-// onboarding screen, and sign-in, sign-up and password reset.
+// onboarding screen, sign-in, sign-up and password reset, and the Terms of
+// Service and Privacy Policy that sign-up links to.
 export const PUBLIC_ROUTES = [
   "index",
   "welcome",
@@ -14,6 +15,7 @@ export const PUBLIC_ROUTES = [
   "auth",
   "auth-signup",
   "auth-forgot",
+  "legal/[doc]",
 ] as const;
 
 export const SIGNED_IN_ROUTES = [
@@ -25,6 +27,7 @@ export const SIGNED_IN_ROUTES = [
   "meal-plans/index",
   "meal-plans/[id]",
   "creators/[handle]",
+  "delete-account",
   "creator/edit-profile",
   "creator/profile-preview",
   "creator/recipes/[id]",
@@ -32,7 +35,6 @@ export const SIGNED_IN_ROUTES = [
   "creator/specialities",
   "creator/unit-picker",
   "creator/vocabulary-picker",
-  "onboarding/health",
   "onboarding/preferences",
   "profile-complete",
   "settings",
@@ -41,3 +43,11 @@ export const SIGNED_IN_ROUTES = [
   "support",
   "unsaved-changes",
 ] as const;
+
+// Signed in, while /auth/me says agreementRequired: the agreement comes
+// before the rest of the app.
+export const AGREEMENT_ROUTES = ["legal-agree"] as const;
+
+// Signed in, while /auth/me says emailVerificationRequired: a new account
+// enters the code from its email before anything else.
+export const EMAIL_CODE_ROUTES = ["verify-email"] as const;

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { captureAccountTables, clearAccountTables, restoreAccountTables } from "../src/db/accountSnapshots.ts";
+import { captureAccountTables, clearAccountTables, forgetAccount, restoreAccountTables } from "../src/db/accountSnapshots.ts";
 import { createShoppingCommands } from "../src/lib/shopping/shoppingCommands.ts";
 import { queueOldRecipeBatch } from "./helpers/oldRecipeBatch.mjs";
 import { openTestDatabase } from "./helpers/sqlite.mjs";
@@ -70,4 +70,30 @@ test("a snapshot saved before the outbox had its newer columns restores with the
   ]);
   const [item] = await database.db.getAllAsync("SELECT price_status FROM shopping_list_items");
   assert.equal(item.price_status, "unknown");
+});
+
+test("a deleted account leaves nothing on the phone: its tables and the copy kept for its return", async () => {
+  const database = await openTestDatabase();
+  await commandsFor(database).addItem({ listId: "list-1", name: "Rice", quantity: "1" });
+  await database.db.runAsync(
+    "INSERT INTO account_data_snapshots (user_id, snapshot_json, updated_at) VALUES ('deleted-user', '{}', 'now'), ('other-user', '{}', 'now')"
+  );
+  await database.db.runAsync(
+    `INSERT INTO local_metadata (key, value, updated_at) VALUES
+     ('email_reminder:deleted-user', '2026-10-15', 'now'),
+     ('recipe_cooked:deleted-user:recipe-1', '2026-10-15', 'now'),
+     ('email_reminder:other-user', '', 'now'),
+     ('welcome_seen', '1', 'now')`
+  );
+
+  await database.transact((tx) => forgetAccount(tx, "deleted-user"));
+
+  assert.deepEqual(await items(database.db), []);
+  assert.deepEqual(await outbox(database.db), []);
+  assert.deepEqual(await database.db.getAllAsync("SELECT user_id FROM account_data_snapshots"), [{ user_id: "other-user" }]);
+  // What the phone remembered for that person goes; other people's and the phone's own stay.
+  assert.deepEqual(
+    (await database.db.getAllAsync("SELECT key FROM local_metadata ORDER BY key")).map((row) => row.key),
+    ["email_reminder:other-user", "welcome_seen"]
+  );
 });

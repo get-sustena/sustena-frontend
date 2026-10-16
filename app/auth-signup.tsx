@@ -14,17 +14,25 @@ import { AuthHeader } from "../src/components/auth/AuthHeader";
 import { AuthPrimaryButton } from "../src/components/auth/AuthPrimaryButton";
 import { PasswordMatchIndicator } from "../src/components/auth/PasswordMatchIndicator";
 import { PasswordStrengthMeter } from "../src/components/auth/PasswordStrengthMeter";
+import { AgreementFields } from "../src/components/legal/AgreementFields";
 import { AppText } from "../src/components/ui/AppText";
 import { useSignupMutation } from "../src/hooks/api/useAuth";
 import {
   getApiErrorMessage,
   getApiValidationFieldErrors,
+  isApiClientError,
 } from "../src/lib/api/errors";
+import { isEmailAddress } from "../src/lib/emailAddress";
+import { agreementError, type AgreementForm } from "../src/lib/legal/agreement";
 import { getPasswordScore } from "../src/lib/passwordStrength";
 import { showToast } from "../src/store/uiStore";
 import { theme } from "../src/theme/theme";
 
 type AuthFieldErrors = Record<string, string | undefined>;
+
+// The server's refusals about the ticks, shown with them rather than at the
+// top.
+const AGREEMENT_ERROR_CODES = ["AGE_NOT_CONFIRMED", "TERMS_NOT_ACCEPTED"];
 
 export default function AuthSignupScreen() {
   const signupMutation = useSignupMutation();
@@ -36,6 +44,10 @@ export default function AuthSignupScreen() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<AuthFieldErrors>({});
+  const [agreement, setAgreement] = useState<AgreementForm>({ adult: false, terms: false });
+  // Starts ticked, and the person can untick it (founder, 15 October 2026).
+  const [marketingEmails, setMarketingEmails] = useState(true);
+  const [agreementProblem, setAgreementProblem] = useState<string | null>(null);
 
   function continueAfterAuth() {
     router.replace("/(tabs)/home");
@@ -45,12 +57,14 @@ export default function AuthSignupScreen() {
     const trimmedFirstName = firstName.trim();
     const trimmedLastName = lastName.trim();
     const trimmedEmail = email.trim();
+    // Checked with the other fields, so every problem shows at once.
+    const problem = agreementError(agreement);
+    setAgreementProblem(problem);
 
     if (
       !trimmedFirstName ||
       !trimmedLastName ||
-      !trimmedEmail ||
-      !trimmedEmail.includes("@") ||
+      !isEmailAddress(trimmedEmail) ||
       !password
     ) {
       setFormError(
@@ -60,7 +74,7 @@ export default function AuthSignupScreen() {
         firstName: !trimmedFirstName ? "First name is required." : undefined,
         lastName: !trimmedLastName ? "Last name is required." : undefined,
         email:
-          !trimmedEmail || !trimmedEmail.includes("@")
+          !isEmailAddress(trimmedEmail)
             ? "Enter a valid email address."
             : undefined,
         password: !password ? "Password is required." : undefined,
@@ -82,22 +96,38 @@ export default function AuthSignupScreen() {
       return;
     }
 
+    if (problem) {
+      return;
+    }
+
     setFormError(null);
     setFieldErrors({});
 
     try {
-      await signupMutation.mutateAsync({
+      const { user } = await signupMutation.mutateAsync({
         firstName: trimmedFirstName,
         lastName: trimmedLastName,
         email: trimmedEmail,
         password,
+        termsAccepted: agreement.terms,
+        ageConfirmed: agreement.adult,
+        marketingEmailsOptIn: marketingEmails,
       });
+      // New accounts enter the code from their email before the app opens.
+      if (user.emailVerificationRequired) {
+        router.replace({ pathname: "/verify-email", params: { sent: "1" } });
+        return;
+      }
       showToast(
         "You're in. We've sent a verification email so you can verify your account.",
         "success"
       );
       continueAfterAuth();
     } catch (error) {
+      if (isApiClientError(error) && error.code && AGREEMENT_ERROR_CODES.includes(error.code)) {
+        setAgreementProblem(error.message);
+        return;
+      }
       // A message about one field shows under it, not again at the top.
       const fieldErrors = getApiValidationFieldErrors(error);
       setFieldErrors(fieldErrors);
@@ -210,6 +240,18 @@ export default function AuthSignupScreen() {
           confirmPassword={confirmPassword}
         />
 
+        <View style={styles.agreement}>
+          <AgreementFields
+            form={agreement}
+            onChange={(next) => {
+              setAgreement(next);
+              setAgreementProblem(null);
+            }}
+            error={agreementProblem}
+            marketing={{ value: marketingEmails, onChange: setMarketingEmails }}
+          />
+        </View>
+
         {formError && !Object.values(fieldErrors).some(Boolean) ? (
           <AppText accessibilityRole="alert" style={styles.formError}>
             {formError}
@@ -272,6 +314,10 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     color: theme.colors.textMedium,
     marginBottom: 28,
+  },
+  // v6.9's #signup-consent.
+  agreement: {
+    marginBottom: 22,
   },
   formError: {
     marginTop: -6,

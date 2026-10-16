@@ -63,6 +63,12 @@ export async function disableMealReminders(db: SQLiteDatabase) {
   await clearStoredMealReminderToken(db).catch(() => undefined);
 }
 
+// After Delete account: the server has already removed the phone's token.
+export async function forgetMealReminders(db: SQLiteDatabase) {
+  phoneRegistration.forget();
+  await clearStoredMealReminderToken(db).catch(() => undefined);
+}
+
 // Registers the new token when the push service replaces this phone's token.
 // The listener also hears the token every time it's fetched; see
 // phoneRegistration.ts for why that's ignored.

@@ -79,6 +79,41 @@ export interface User {
   emailVerifiedAt: ISODateTimeString | null;
   createdAt: ISODateTimeString;
   updatedAt: ISODateTimeString;
+  termsAcceptedAt: ISODateTimeString | null;
+  termsVersion: string | null;
+  // True until the person agrees to the current Terms: the agreement screen
+  // shows before the app.
+  agreementRequired: boolean;
+  // True for a new account until the emailed code is entered: the code
+  // screen shows before the app, and the API refuses the rest with
+  // EMAIL_NOT_VERIFIED. Older accounts confirm by link and are never blocked.
+  emailVerificationRequired: boolean;
+}
+
+// The age tick and agreement to the Terms, at sign-up and when an account
+// must agree again. Both must be true.
+export interface AgreementRequest {
+  termsAccepted: boolean;
+  // "I confirm that I am 18 years or older."
+  ageConfirmed: boolean;
+}
+
+export interface DeleteAccountRequest {
+  password: string;
+}
+
+// POST /auth/verify-email/resend: a fresh 7-day link, unless the email is
+// already confirmed.
+export interface ResendConfirmationResponse {
+  sent: boolean;
+  alreadyVerified: boolean;
+}
+
+// "Resend code" on the email code screen. A new code replaces the last one.
+export interface SendEmailCodeResponse {
+  sent: boolean;
+  alreadyVerified: boolean;
+  retryAfterSeconds: number;
 }
 
 export interface CurrentUserUpdateRequest {
@@ -875,11 +910,13 @@ export interface SavedMealPlan {
   updatedAt: ISODateTimeString;
 }
 
-export interface SignupRequest {
+export interface SignupRequest extends AgreementRequest {
   email: string;
   password: string;
   firstName: string;
   lastName: string;
+  // The sign-up box, which starts ticked; the person can untick it.
+  marketingEmailsOptIn: boolean;
 }
 
 export interface LoginRequest {

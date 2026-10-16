@@ -17,6 +17,8 @@ export async function refreshMealReminders(_db: SQLiteDatabase) {
 
 export async function disableMealReminders(_db: SQLiteDatabase) {}
 
+export async function forgetMealReminders(_db: SQLiteDatabase) {}
+
 export function registerNewPushTokens(_db: SQLiteDatabase) {
   return () => {};
 }

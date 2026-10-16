@@ -17,6 +17,9 @@ type Props = {
   iconBackground?: string;
   iconColor?: string;
   valueColor?: string;
+  labelColor?: string;
+  // Shown after the label, like v6.9's "Not confirmed" pill.
+  labelAccessory?: ReactNode;
 };
 
 export function SettingsRow({
@@ -31,6 +34,8 @@ export function SettingsRow({
   iconBackground = "#EEF2E7",
   iconColor = "#17291E",
   valueColor = "#279a5f",
+  labelColor,
+  labelAccessory,
 }: Props) {
   return (
     <Pressable
@@ -48,7 +53,10 @@ export function SettingsRow({
       </View>
 
       <View style={styles.info}>
-        <AppText style={styles.label}>{label}</AppText>
+        <View style={styles.labelRow}>
+          <AppText style={[styles.label, labelColor ? { color: labelColor } : null]}>{label}</AppText>
+          {labelAccessory}
+        </View>
 
         {subtitle ? (
           <AppText style={styles.subtitle}>{subtitle}</AppText>
@@ -92,6 +100,12 @@ const styles = StyleSheet.create({
   },
   info: {
     flex: 1,
+  },
+  labelRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 6,
   },
   // v6.8 renders settings row labels at Inter Medium ([data-label]).
   label: {

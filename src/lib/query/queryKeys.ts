@@ -9,6 +9,11 @@ export const queryKeys = {
   auth: {
     me: ["auth", "me"] as const,
   },
+  // What this phone remembers about the Home reminders, per person.
+  reminders: {
+    email: (userId: string) => ["reminders", "email", userId] as const,
+    profile: (userId: string) => ["reminders", "profile", userId] as const,
+  },
   start: ["me", "start"] as const,
   units: {
     all: ["units"] as const,

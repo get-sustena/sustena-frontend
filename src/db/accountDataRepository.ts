@@ -5,6 +5,7 @@ import { runWriteTransaction } from "./writeTransaction";
 import {
   captureAccountTables,
   clearAccountTables,
+  forgetAccount,
   restoreAccountTables,
   type AccountSnapshot,
 } from "./accountSnapshots";
@@ -37,6 +38,17 @@ export async function prepareLocalAccountData(
 
 export async function clearLocalAccountData(db: SQLiteDatabase) {
   await replaceLocalAccountData(db, null);
+}
+
+// After Delete account: unlike signing out, nothing is kept for a return.
+export async function forgetLocalAccountData(db: SQLiteDatabase, userId: string) {
+  await runWithSqliteRetry(async () => {
+    await runWriteTransaction(db, async (transactionDb) => {
+      await forgetAccount(transactionDb, userId);
+      await insertDefaultShoppingList(transactionDb, new Date().toISOString());
+      await transactionDb.runAsync("DELETE FROM local_metadata WHERE key = ?", [ACCOUNT_DATA_OWNER_KEY]);
+    });
+  });
 }
 
 async function replaceLocalAccountData(

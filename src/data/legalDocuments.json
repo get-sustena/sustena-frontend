@@ -1,0 +1,1792 @@
+{
+ "terms": {
+  "name": "Terms of Service",
+  "updated": [
+   {
+    "text": "16 October 2026"
+   }
+  ],
+  "intro": [
+   {
+    "kind": "p",
+    "runs": [
+     {
+      "text": "These Terms of Service (\"Terms\") are an agreement between you and Sustena Foods Limited, RC 9740925 (\"Sustena\", \"we\", \"us\"). The Privacy Policy forms part of these Terms."
+     }
+    ]
+   }
+  ],
+  "sections": [
+   {
+    "heading": "1. Acceptance",
+    "blocks": [
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "1.1. You accept these Terms by ticking the acceptance box and creating an account or confirming your agreement. If you do not accept them, you must not use the App."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "heading": "2. Definitions",
+    "blocks": [
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "2.1. In these Terms:"
+       }
+      ]
+     },
+     {
+      "kind": "item",
+      "runs": [
+       {
+        "text": "(a) \""
+       },
+       {
+        "text": "App",
+        "bold": true
+       },
+       {
+        "text": "\" means the Sustena mobile apps, app.getsustena.com and getsustena.com;"
+       }
+      ]
+     },
+     {
+      "kind": "item",
+      "runs": [
+       {
+        "text": "(b) \""
+       },
+       {
+        "text": "Services",
+        "bold": true
+       },
+       {
+        "text": "\" means the App and everything provided through it;"
+       }
+      ]
+     },
+     {
+      "kind": "item",
+      "runs": [
+       {
+        "text": "(c) \""
+       },
+       {
+        "text": "Content",
+        "bold": true
+       },
+       {
+        "text": "\" means recipes, photos, text, nutrition information and other material in the App;"
+       }
+      ]
+     },
+     {
+      "kind": "item",
+      "runs": [
+       {
+        "text": "(d) \""
+       },
+       {
+        "text": "Creator",
+        "bold": true
+       },
+       {
+        "text": "\" means a user who publishes recipes in the App;"
+       }
+      ]
+     },
+     {
+      "kind": "item",
+      "runs": [
+       {
+        "text": "(e) \""
+       },
+       {
+        "text": "Your Content",
+        "bold": true
+       },
+       {
+        "text": "\" means Content you publish or upload."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "heading": "3. The Services",
+    "blocks": [
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "3.1. We may modify, suspend or discontinue any part of the Services at any time."
+       }
+      ]
+     },
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "3.2. We do not warrant that the Services will be uninterrupted or error-free."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "heading": "4. Your account",
+    "blocks": [
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "4.1. You must be at least 13 to use Sustena. If you're under 18, you need permission from a parent or guardian."
+       }
+      ]
+     },
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "4.2. We may close any account that does not meet clause 4.1."
+       }
+      ]
+     },
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "4.3. You must provide accurate information and keep it up to date."
+       }
+      ]
+     },
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "4.4. You are responsible for keeping your password confidential and for all activity on your account. You must notify support@getsustena.com promptly of any unauthorised use."
+       }
+      ]
+     },
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "4.5. Your account is personal and may not be transferred."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "heading": "5. Nutrition and health",
+    "blocks": [
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "5.1. The App does not provide medical advice and is not a substitute for advice from a qualified health professional."
+       }
+      ]
+     },
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "5.2. Nutrition values are estimates and may differ from the food you prepare."
+       }
+      ]
+     },
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "5.3. The App does not check recipes against allergies. You are responsible for checking ingredients for allergens."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "heading": "6. Content",
+    "blocks": [
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "6.1. "
+       },
+       {
+        "text": "Our Content:",
+        "bold": true
+       },
+       {
+        "text": " Content other than Your Content is owned by Sustena or its licensors. You may use it for personal, non-commercial purposes within the App only."
+       }
+      ]
+     },
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "6.2. "
+       },
+       {
+        "text": "Your Content:",
+        "bold": true
+       },
+       {
+        "text": " you retain ownership of Your Content. You grant Sustena a free, non-exclusive, worldwide licence to host, store, display, adapt for display and share Your Content through the App while it is published. The licence ends when you remove Your Content or delete your account, except for copies already shared by other users and backups until overwritten."
+       }
+      ]
+     },
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "6.3. By publishing Your Content, you warrant that:"
+       }
+      ]
+     },
+     {
+      "kind": "item",
+      "runs": [
+       {
+        "text": "(a) you own it or have the right to publish it;"
+       }
+      ]
+     },
+     {
+      "kind": "item",
+      "runs": [
+       {
+        "text": "(b) it does not infringe any third-party rights;"
+       }
+      ]
+     },
+     {
+      "kind": "item",
+      "runs": [
+       {
+        "text": "(c) its ingredients and steps are, to your knowledge, accurate and list common allergens;"
+       }
+      ]
+     },
+     {
+      "kind": "item",
+      "runs": [
+       {
+        "text": "(d) it complies with the law and section 7."
+       }
+      ]
+     },
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "6.4. We may remove Content or hide a Creator profile that we reasonably believe breaches these Terms or the law."
+       }
+      ]
+     },
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "6.5. You may report Content in the App or at support@getsustena.com."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "heading": "7. Prohibited use",
+    "blocks": [
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "7.1. You must not:"
+       }
+      ]
+     },
+     {
+      "kind": "item",
+      "runs": [
+       {
+        "text": "(a) use the App unlawfully, including in breach of the Cybercrimes (Prohibition, Prevention, etc.) Act 2015;"
+       }
+      ]
+     },
+     {
+      "kind": "item",
+      "runs": [
+       {
+        "text": "(b) access another person's account or any restricted part of our systems;"
+       }
+      ]
+     },
+     {
+      "kind": "item",
+      "runs": [
+       {
+        "text": "(c) scrape or collect Content or user data by automated means;"
+       }
+      ]
+     },
+     {
+      "kind": "item",
+      "runs": [
+       {
+        "text": "(d) copy, modify or reverse-engineer the App, except as permitted by law;"
+       }
+      ]
+     },
+     {
+      "kind": "item",
+      "runs": [
+       {
+        "text": "(e) introduce malware or overload the App;"
+       }
+      ]
+     },
+     {
+      "kind": "item",
+      "runs": [
+       {
+        "text": "(f) publish false, misleading, hateful, abusive or sexually explicit Content, or Content harmful to children;"
+       }
+      ]
+     },
+     {
+      "kind": "item",
+      "runs": [
+       {
+        "text": "(g) impersonate any person;"
+       }
+      ]
+     },
+     {
+      "kind": "item",
+      "runs": [
+       {
+        "text": "(h) send spam or advertising."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "heading": "8. Communications",
+    "blocks": [
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "8.1. We may send you service emails and in-app messages, including notices of changes to these Terms."
+       }
+      ]
+     },
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "8.2. You may opt out of marketing emails at any time."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "heading": "9. Third-party services",
+    "blocks": [
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "9.1. We are not responsible for third-party services or websites linked from the App. Their use is subject to their own terms."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "heading": "10. Termination",
+    "blocks": [
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "10.1. You may delete your account at any time in Settings."
+       }
+      ]
+     },
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "10.2. We may suspend or close your account if:"
+       }
+      ]
+     },
+     {
+      "kind": "item",
+      "runs": [
+       {
+        "text": "(a) you materially or repeatedly breach these Terms;"
+       }
+      ]
+     },
+     {
+      "kind": "item",
+      "runs": [
+       {
+        "text": "(b) we are required to by law or by order of a court or authority;"
+       }
+      ]
+     },
+     {
+      "kind": "item",
+      "runs": [
+       {
+        "text": "(c) your account is used for fraud or poses a risk to others or to Sustena."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "heading": "11. Disclaimer",
+    "blocks": [
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "11.1. To the extent permitted by law, the Services are provided \"as is\" and \"as available\", without warranties of any kind, including as to the accuracy or suitability of recipes, meal plans or nutrition information."
+       }
+      ]
+     },
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "11.2. Creator recipes are the responsibility of their Creators."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "heading": "12. Limitation of liability",
+    "blocks": [
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "12.1. Nothing in these Terms limits liability for death or personal injury caused by negligence, for fraud, or any liability that cannot be limited under the Federal Competition and Consumer Protection Act 2018 or other law."
+       }
+      ]
+     },
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "12.2. Subject to clause 12.1, we are not liable for:"
+       }
+      ]
+     },
+     {
+      "kind": "item",
+      "runs": [
+       {
+        "text": "(a) loss that was not reasonably foreseeable;"
+       }
+      ]
+     },
+     {
+      "kind": "item",
+      "runs": [
+       {
+        "text": "(b) loss of profit, business or opportunity;"
+       }
+      ]
+     },
+     {
+      "kind": "item",
+      "runs": [
+       {
+        "text": "(c) loss caused by your breach of these Terms;"
+       }
+      ]
+     },
+     {
+      "kind": "item",
+      "runs": [
+       {
+        "text": "(d) events beyond our reasonable control."
+       }
+      ]
+     },
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "12.3. Subject to clause 12.1, our total liability is limited to the amount you paid us in the 12 months before the claim arose."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "heading": "13. Indemnity",
+    "blocks": [
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "13.1. You shall indemnify Sustena, its directors and employees against all claims, losses and costs, including reasonable legal fees, arising from your breach of these Terms or the law, or from Your Content."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "heading": "14. Force majeure",
+    "blocks": [
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "14.1. We are not liable for any delay or failure caused by events beyond our reasonable control."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "heading": "15. Changes",
+    "blocks": [
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "15.1. We may amend these Terms and will notify you of material changes by email or in the App. Continued use after a change takes effect constitutes acceptance."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "heading": "16. Disputes",
+    "blocks": [
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "16.1. Complaints should be sent to support@getsustena.com."
+       }
+      ]
+     },
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "16.2. A dispute not resolved within 30 days may be referred by either party to arbitration under the Arbitration and Mediation Act 2023, before a sole arbitrator agreed by the parties or, failing agreement within 14 days, appointed by the Chartered Institute of Arbitrators (UK), Nigeria Branch. The seat is Lagos, the language is English, and the award is final and binding."
+       }
+      ]
+     },
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "16.3. This section does not prevent a complaint to the Nigeria Data Protection Commission, or either party seeking urgent relief from a court."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "heading": "17. Governing law",
+    "blocks": [
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "17.1. These Terms are governed by the laws of the Federal Republic of Nigeria."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "heading": "18. General",
+    "blocks": [
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "18.1. These Terms and the Privacy Policy are the entire agreement between you and Sustena regarding the Services."
+       }
+      ]
+     },
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "18.2. If any provision is held invalid, the remainder continues in effect."
+       }
+      ]
+     },
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "18.3. A delay in enforcing a right is not a waiver of it."
+       }
+      ]
+     },
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "18.4. We may assign these Terms in a sale or reorganisation of Sustena. You may not assign them."
+       }
+      ]
+     },
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "18.5. The English version of these Terms prevails."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "heading": "19. Contact",
+    "blocks": [
+     {
+      "kind": "address",
+      "runs": [
+       {
+        "text": "Sustena Foods Limited\nEmail: support@getsustena.com"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "privacy": {
+  "name": "Privacy Policy",
+  "updated": [
+   {
+    "text": "16 October 2026"
+   }
+  ],
+  "intro": [
+   {
+    "kind": "p",
+    "runs": [
+     {
+      "text": "This Privacy Policy applies to the processing of personal data by Sustena Foods Limited (\"Sustena\", \"we\", \"us\") through the Sustena mobile apps, app.getsustena.com and getsustena.com (the \"App\"). It is issued under the Nigeria Data Protection Act 2023 (the \"NDPA\")."
+     }
+    ]
+   }
+  ],
+  "sections": [
+   {
+    "heading": "1. Data controller",
+    "blocks": [
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "1.1. Sustena Foods Limited, RC 9740925, Lagos, Nigeria, is the data controller. Contact: support@getsustena.com."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "heading": "2. Personal data we collect",
+    "blocks": [
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "2.1. "
+       },
+       {
+        "text": "Account data:",
+        "bold": true
+       },
+       {
+        "text": " name, email address, password hash, confirmation that you are at least 18 or have permission from a parent or guardian, the date you accepted the Terms of Service, and your marketing preference."
+       }
+      ]
+     },
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "2.2. "
+       },
+       {
+        "text": "Data you provide in the App:",
+        "bold": true
+       }
+      ]
+     },
+     {
+      "kind": "item",
+      "runs": [
+       {
+        "text": "(a) optional profile answers: nickname, gender, birthday (day and month), lifestyle, cooking experience, cooking goals, household and how you heard about Sustena;"
+       }
+      ]
+     },
+     {
+      "kind": "item",
+      "runs": [
+       {
+        "text": "(b) food preferences: diet type, household size, state, city and measurement settings;"
+       }
+      ]
+     },
+     {
+      "kind": "item",
+      "runs": [
+       {
+        "text": "(c) pantry items, shopping lists, meal plans, saved, rated and cooked recipes, and creators you follow;"
+       }
+      ]
+     },
+     {
+      "kind": "item",
+      "runs": [
+       {
+        "text": "(d) creator data: handle, bio, profile photo, published recipes and photos, and reports you submit;"
+       }
+      ]
+     },
+     {
+      "kind": "item",
+      "runs": [
+       {
+        "text": "(e) messages you send us."
+       }
+      ]
+     },
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "2.3. "
+       },
+       {
+        "text": "Data generated by your use of the App:",
+        "bold": true
+       }
+      ]
+     },
+     {
+      "kind": "item",
+      "runs": [
+       {
+        "text": "(a) in-app activity records (action, time and related item or search term);"
+       }
+      ]
+     },
+     {
+      "kind": "item",
+      "runs": [
+       {
+        "text": "(b) sign-in data: IP address, device type and browser type;"
+       }
+      ]
+     },
+     {
+      "kind": "item",
+      "runs": [
+       {
+        "text": "(c) for meal reminders: notification token, device operating system, time zone and reminder history;"
+       }
+      ]
+     },
+     {
+      "kind": "item",
+      "runs": [
+       {
+        "text": "(d) technical connection data, including IP address."
+       }
+      ]
+     },
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "2.4. We do not obtain personal data from third parties."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "heading": "3. Purposes and lawful basis",
+    "blocks": [
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "3.1. We process personal data on the following lawful bases under section 25 of the NDPA:"
+       }
+      ]
+     },
+     {
+      "kind": "table",
+      "rows": [
+       [
+        {
+         "label": "Purpose",
+         "runs": [
+          {
+           "text": "Account creation, sign-in and password reset"
+          }
+         ]
+        },
+        {
+         "label": "Data",
+         "runs": [
+          {
+           "text": "Account data"
+          }
+         ]
+        },
+        {
+         "label": "Lawful basis",
+         "runs": [
+          {
+           "text": "Contract"
+          }
+         ]
+        }
+       ],
+       [
+        {
+         "label": "Purpose",
+         "runs": [
+          {
+           "text": "Providing the App's features"
+          }
+         ]
+        },
+        {
+         "label": "Data",
+         "runs": [
+          {
+           "text": "Clauses 2.2(b) and 2.2(c)"
+          }
+         ]
+        },
+        {
+         "label": "Lawful basis",
+         "runs": [
+          {
+           "text": "Contract"
+          }
+         ]
+        }
+       ],
+       [
+        {
+         "label": "Purpose",
+         "runs": [
+          {
+           "text": "Confirming age or parental permission"
+          }
+         ]
+        },
+        {
+         "label": "Data",
+         "runs": [
+          {
+           "text": "Age confirmation"
+          }
+         ]
+        },
+        {
+         "label": "Lawful basis",
+         "runs": [
+          {
+           "text": "Legal obligation (NDPA section 31)"
+          }
+         ]
+        }
+       ],
+       [
+        {
+         "label": "Purpose",
+         "runs": [
+          {
+           "text": "Recipe and meal suggestions"
+          }
+         ]
+        },
+        {
+         "label": "Data",
+         "runs": [
+          {
+           "text": "Preferences, profile answers, activity"
+          }
+         ]
+        },
+        {
+         "label": "Lawful basis",
+         "runs": [
+          {
+           "text": "Contract; consent for optional profile answers"
+          }
+         ]
+        }
+       ],
+       [
+        {
+         "label": "Purpose",
+         "runs": [
+          {
+           "text": "Publishing creator profiles and recipes"
+          }
+         ]
+        },
+        {
+         "label": "Data",
+         "runs": [
+          {
+           "text": "Clause 2.2(d)"
+          }
+         ]
+        },
+        {
+         "label": "Lawful basis",
+         "runs": [
+          {
+           "text": "Contract"
+          }
+         ]
+        }
+       ],
+       [
+        {
+         "label": "Purpose",
+         "runs": [
+          {
+           "text": "Account emails"
+          }
+         ]
+        },
+        {
+         "label": "Data",
+         "runs": [
+          {
+           "text": "Name, email address"
+          }
+         ]
+        },
+        {
+         "label": "Lawful basis",
+         "runs": [
+          {
+           "text": "Contract"
+          }
+         ]
+        }
+       ],
+       [
+        {
+         "label": "Purpose",
+         "runs": [
+          {
+           "text": "Meal reminders"
+          }
+         ]
+        },
+        {
+         "label": "Data",
+         "runs": [
+          {
+           "text": "Notification token, time zone, meal plan"
+          }
+         ]
+        },
+        {
+         "label": "Lawful basis",
+         "runs": [
+          {
+           "text": "Consent"
+          }
+         ]
+        }
+       ],
+       [
+        {
+         "label": "Purpose",
+         "runs": [
+          {
+           "text": "Marketing emails"
+          }
+         ]
+        },
+        {
+         "label": "Data",
+         "runs": [
+          {
+           "text": "Name, email address"
+          }
+         ]
+        },
+        {
+         "label": "Lawful basis",
+         "runs": [
+          {
+           "text": "Legitimate interests"
+          }
+         ]
+        }
+       ],
+       [
+        {
+         "label": "Purpose",
+         "runs": [
+          {
+           "text": "Responding to messages and complaints"
+          }
+         ]
+        },
+        {
+         "label": "Data",
+         "runs": [
+          {
+           "text": "Messages, account data"
+          }
+         ]
+        },
+        {
+         "label": "Lawful basis",
+         "runs": [
+          {
+           "text": "Contract"
+          }
+         ]
+        }
+       ],
+       [
+        {
+         "label": "Purpose",
+         "runs": [
+          {
+           "text": "Security and fraud prevention"
+          }
+         ]
+        },
+        {
+         "label": "Data",
+         "runs": [
+          {
+           "text": "Sign-in and connection data"
+          }
+         ]
+        },
+        {
+         "label": "Lawful basis",
+         "runs": [
+          {
+           "text": "Legitimate interests"
+          }
+         ]
+        }
+       ],
+       [
+        {
+         "label": "Purpose",
+         "runs": [
+          {
+           "text": "Improving the App"
+          }
+         ]
+        },
+        {
+         "label": "Data",
+         "runs": [
+          {
+           "text": "Activity records"
+          }
+         ]
+        },
+        {
+         "label": "Lawful basis",
+         "runs": [
+          {
+           "text": "Legitimate interests"
+          }
+         ]
+        }
+       ],
+       [
+        {
+         "label": "Purpose",
+         "runs": [
+          {
+           "text": "Legal claims"
+          }
+         ]
+        },
+        {
+         "label": "Data",
+         "runs": [
+          {
+           "text": "Relevant data"
+          }
+         ]
+        },
+        {
+         "label": "Lawful basis",
+         "runs": [
+          {
+           "text": "Legitimate interests"
+          }
+         ]
+        }
+       ]
+      ]
+     },
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "3.2. You may object to processing based on legitimate interests and withdraw consent at any time (section 9)."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "heading": "4. Automated processing",
+    "blocks": [
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "4.1. We use your preferences, pantry and the time of day to rank recipe suggestions. This processing has no legal or similarly significant effect on you."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "heading": "5. Recipients",
+    "blocks": [
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "5.1. We do not sell personal data."
+       }
+      ]
+     },
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "5.2. We disclose personal data to the following processors:"
+       }
+      ]
+     },
+     {
+      "kind": "table",
+      "rows": [
+       [
+        {
+         "label": "Processor",
+         "runs": [
+          {
+           "text": "Amazon Web Services"
+          }
+         ]
+        },
+        {
+         "label": "Service",
+         "runs": [
+          {
+           "text": "Hosting, database, photo storage"
+          }
+         ]
+        },
+        {
+         "label": "Data",
+         "runs": [
+          {
+           "text": "All data in section 2"
+          }
+         ]
+        },
+        {
+         "label": "Location",
+         "runs": [
+          {
+           "text": "Sweden; edge servers near you"
+          }
+         ]
+        }
+       ],
+       [
+        {
+         "label": "Processor",
+         "runs": [
+          {
+           "text": "Vercel"
+          }
+         ]
+        },
+        {
+         "label": "Service",
+         "runs": [
+          {
+           "text": "Web app and website hosting"
+          }
+         ]
+        },
+        {
+         "label": "Data",
+         "runs": [
+          {
+           "text": "IP address, requested pages and data"
+          }
+         ]
+        },
+        {
+         "label": "Location",
+         "runs": [
+          {
+           "text": "United States; edge servers near you"
+          }
+         ]
+        }
+       ],
+       [
+        {
+         "label": "Processor",
+         "runs": [
+          {
+           "text": "Cloudinary"
+          }
+         ]
+        },
+        {
+         "label": "Service",
+         "runs": [
+          {
+           "text": "Recipe image delivery"
+          }
+         ]
+        },
+        {
+         "label": "Data",
+         "runs": [
+          {
+           "text": "IP address"
+          }
+         ]
+        },
+        {
+         "label": "Location",
+         "runs": [
+          {
+           "text": "United States"
+          }
+         ]
+        }
+       ],
+       [
+        {
+         "label": "Processor",
+         "runs": [
+          {
+           "text": "Resend"
+          }
+         ]
+        },
+        {
+         "label": "Service",
+         "runs": [
+          {
+           "text": "Email delivery"
+          }
+         ]
+        },
+        {
+         "label": "Data",
+         "runs": [
+          {
+           "text": "Name, email address, email content"
+          }
+         ]
+        },
+        {
+         "label": "Location",
+         "runs": [
+          {
+           "text": "Ireland, United States"
+          }
+         ]
+        }
+       ],
+       [
+        {
+         "label": "Processor",
+         "runs": [
+          {
+           "text": "Expo, Apple, Google"
+          }
+         ]
+        },
+        {
+         "label": "Service",
+         "runs": [
+          {
+           "text": "Push notifications"
+          }
+         ]
+        },
+        {
+         "label": "Data",
+         "runs": [
+          {
+           "text": "Notification token, reminder content"
+          }
+         ]
+        },
+        {
+         "label": "Location",
+         "runs": [
+          {
+           "text": "United States"
+          }
+         ]
+        }
+       ]
+      ]
+     },
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "5.3. Creator profiles and published recipes are visible to other users. Content you share is visible to its recipient. Recipe links opened outside the App show only the recipe name and photo."
+       }
+      ]
+     },
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "5.4. We may disclose personal data where required by law, court order or a lawful request of a public authority, or to a successor in a merger, acquisition or reorganisation."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "heading": "6. Cross-border transfers",
+    "blocks": [
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "6.1. Personal data is transferred to Sweden, Ireland and the United States, and may pass through edge servers in other countries. Transfers are made on a basis permitted by sections 41 to 43 of the NDPA, including where necessary to perform our contract with you."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "heading": "7. Retention",
+    "blocks": [
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "7.1. We retain personal data only as long as necessary for the purposes in section 3, then delete or anonymise it."
+       }
+      ]
+     },
+     {
+      "kind": "table",
+      "rows": [
+       [
+        {
+         "label": "Data",
+         "runs": [
+          {
+           "text": "Account, preferences, pantry, lists, meal plans, saved recipes, activity records"
+          }
+         ]
+        },
+        {
+         "label": "Retention period",
+         "runs": [
+          {
+           "text": "Until account deletion"
+          }
+         ]
+        }
+       ],
+       [
+        {
+         "label": "Data",
+         "runs": [
+          {
+           "text": "Sign-in data"
+          }
+         ]
+        },
+        {
+         "label": "Retention period",
+         "runs": [
+          {
+           "text": "[90]",
+           "bold": true
+          },
+          {
+           "text": " days after the session ends"
+          }
+         ]
+        }
+       ],
+       [
+        {
+         "label": "Data",
+         "runs": [
+          {
+           "text": "Notification token"
+          }
+         ]
+        },
+        {
+         "label": "Retention period",
+         "runs": [
+          {
+           "text": "Until reminders are turned off or the token expires"
+          }
+         ]
+        }
+       ],
+       [
+        {
+         "label": "Data",
+         "runs": [
+          {
+           "text": "Messages and problem reports"
+          }
+         ]
+        },
+        {
+         "label": "Retention period",
+         "runs": [
+          {
+           "text": "[2]",
+           "bold": true
+          },
+          {
+           "text": " years after closure"
+          }
+         ]
+        }
+       ],
+       [
+        {
+         "label": "Data",
+         "runs": [
+          {
+           "text": "Published recipes"
+          }
+         ]
+        },
+        {
+         "label": "Retention period",
+         "runs": [
+          {
+           "text": "Until removed or account deletion"
+          }
+         ]
+        }
+       ],
+       [
+        {
+         "label": "Data",
+         "runs": [
+          {
+           "text": "Backups"
+          }
+         ]
+        },
+        {
+         "label": "Retention period",
+         "runs": [
+          {
+           "text": "Overwritten within "
+          },
+          {
+           "text": "[X]",
+           "bold": true
+          },
+          {
+           "text": " days"
+          }
+         ]
+        }
+       ]
+      ]
+     },
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "7.2. On account deletion we delete your personal data, except data we must retain by law or for legal claims."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "heading": "8. Security",
+    "blocks": [
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "8.1. We apply appropriate technical and organisational measures to protect personal data. No transmission or storage method is fully secure."
+       }
+      ]
+     },
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "8.2. We will notify the Nigeria Data Protection Commission and, where required, affected users of a personal data breach as the NDPA requires."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "heading": "9. Your rights",
+    "blocks": [
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "9.1. Subject to the NDPA, you have the right to:"
+       }
+      ]
+     },
+     {
+      "kind": "item",
+      "runs": [
+       {
+        "text": "(a) access your personal data and information about its processing;"
+       }
+      ]
+     },
+     {
+      "kind": "item",
+      "runs": [
+       {
+        "text": "(b) rectification of inaccurate or incomplete data;"
+       }
+      ]
+     },
+     {
+      "kind": "item",
+      "runs": [
+       {
+        "text": "(c) erasure;"
+       }
+      ]
+     },
+     {
+      "kind": "item",
+      "runs": [
+       {
+        "text": "(d) restriction of processing;"
+       }
+      ]
+     },
+     {
+      "kind": "item",
+      "runs": [
+       {
+        "text": "(e) object to processing, including direct marketing;"
+       }
+      ]
+     },
+     {
+      "kind": "item",
+      "runs": [
+       {
+        "text": "(f) data portability;"
+       }
+      ]
+     },
+     {
+      "kind": "item",
+      "runs": [
+       {
+        "text": "(g) withdraw consent at any time, without affecting prior processing;"
+       }
+      ]
+     },
+     {
+      "kind": "item",
+      "runs": [
+       {
+        "text": "(h) not be subject to a decision based solely on automated processing with legal or similarly significant effects;"
+       }
+      ]
+     },
+     {
+      "kind": "item",
+      "runs": [
+       {
+        "text": "(i) lodge a complaint with the Nigeria Data Protection Commission."
+       }
+      ]
+     },
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "9.2. To exercise a right, email support@getsustena.com from your account's email address. We may verify your identity and will respond within the period the NDPA requires. You may delete your account in Settings."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "heading": "10. Communications",
+    "blocks": [
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "10.1. Account emails are necessary for the service and cannot be turned off."
+       }
+      ]
+     },
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "10.2. You may opt out of marketing emails in Settings or through the unsubscribe link."
+       }
+      ]
+     },
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "10.3. Meal reminders are sent only if you turn them on and may be turned off in Settings or your device settings."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "heading": "11. Cookies and local storage",
+    "blocks": [
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "11.1. The web app stores data in your browser that is strictly necessary for it to work, such as your sign-in and settings."
+       }
+      ]
+     },
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "11.2. The website uses Vercel Web Analytics, which sets no cookies and does not identify you, only if you select \"Accept all\" in the cookie banner. You may change your choice through \"Cookie settings\"."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "heading": "12. Children",
+    "blocks": [
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "12.1. You must be at least 13 to use Sustena. If you're under 18, you need permission from a parent or guardian."
+       }
+      ]
+     },
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "12.2. We do not knowingly process personal data of a child under 13, or of a child under 18 without parental or guardian permission, and will delete any such data we discover. A parent or guardian may exercise the child's rights under section 9."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "heading": "13. Third-party links",
+    "blocks": [
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "13.1. This policy does not cover third-party websites or services linked from the App."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "heading": "14. Changes",
+    "blocks": [
+     {
+      "kind": "p",
+      "runs": [
+       {
+        "text": "14.1. We may amend this policy. We will notify you of material changes by email or in the App and seek consent where required."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "heading": "15. Contact",
+    "blocks": [
+     {
+      "kind": "address",
+      "runs": [
+       {
+        "text": "Sustena Foods Limited\nLagos, Nigeria\nEmail: support@getsustena.com"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

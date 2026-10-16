@@ -1,16 +1,16 @@
 import { router } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
-  TextInput,
   View,
 } from "react-native";
 import { AuthField } from "../src/components/auth/AuthField";
 import { AuthHeader } from "../src/components/auth/AuthHeader";
+import { CodeBoxes, emptyCode } from "../src/components/auth/CodeBoxes";
 import { AuthPrimaryButton } from "../src/components/auth/AuthPrimaryButton";
 import { PasswordMatchIndicator } from "../src/components/auth/PasswordMatchIndicator";
 import { PasswordStrengthMeter } from "../src/components/auth/PasswordStrengthMeter";
@@ -22,18 +22,18 @@ import {
   useVerifyResetCodeMutation,
 } from "../src/hooks/api/useAuth";
 import { getApiErrorMessage, getApiValidationFieldErrors } from "../src/lib/api/errors";
+import { isEmailAddress } from "../src/lib/emailAddress";
 import { getPasswordScore } from "../src/lib/passwordStrength";
 import { theme } from "../src/theme/theme";
 
 type ForgotStep = "email" | "code" | "password" | "done";
 
-const OTP_LENGTH = 6;
 const RESEND_SECONDS = 60;
 
 export default function AuthForgotScreen() {
   const [step, setStep] = useState<ForgotStep>("email");
   const [email, setEmail] = useState("");
-  const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(""));
+  const [otp, setOtp] = useState<string[]>(emptyCode);
   const [resetToken, setResetToken] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -72,7 +72,7 @@ export default function AuthForgotScreen() {
   async function handleSendCode() {
     const trimmedEmail = email.trim();
 
-    if (!trimmedEmail || !trimmedEmail.includes("@")) {
+    if (!isEmailAddress(trimmedEmail)) {
       setError("Enter a valid email address.");
       return;
     }
@@ -81,7 +81,7 @@ export default function AuthForgotScreen() {
 
     try {
       await forgotPasswordMutation.mutateAsync({ email: trimmedEmail });
-      setOtp(Array(OTP_LENGTH).fill(""));
+      setOtp(emptyCode());
       setResendSecondsLeft(RESEND_SECONDS);
       setStep("code");
     } catch (submitError) {
@@ -97,7 +97,7 @@ export default function AuthForgotScreen() {
 
     try {
       await forgotPasswordMutation.mutateAsync({ email: trimmedEmail });
-      setOtp(Array(OTP_LENGTH).fill(""));
+      setOtp(emptyCode());
       setResetToken(null);
       setResendSecondsLeft(RESEND_SECONDS);
     } catch (resendError) {
@@ -296,41 +296,7 @@ function CodeStep({
   onSubmit: () => void;
   onResend: () => void;
 }) {
-  const inputRefs = useRef<(TextInput | null)[]>([]);
   const canResend = resendSecondsLeft <= 0 && !isResending;
-
-  function handleDigitChange(index: number, value: string) {
-    const digits = value.replace(/[^0-9]/g, "");
-
-    if (digits.length > 1) {
-      const next = [...otp];
-      let cursor = index;
-
-      for (const digit of digits) {
-        if (cursor >= OTP_LENGTH) break;
-        next[cursor] = digit;
-        cursor += 1;
-      }
-
-      onChangeOtp(next);
-      inputRefs.current[Math.min(cursor, OTP_LENGTH - 1)]?.focus();
-      return;
-    }
-
-    const next = [...otp];
-    next[index] = digits;
-    onChangeOtp(next);
-
-    if (digits && index < OTP_LENGTH - 1) {
-      inputRefs.current[index + 1]?.focus();
-    }
-  }
-
-  function handleKeyPress(index: number, key: string) {
-    if (key === "Backspace" && !otp[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus();
-    }
-  }
 
   return (
     <View>
@@ -343,23 +309,7 @@ function CodeStep({
         .
       </AppText>
 
-      <View style={styles.otpRow}>
-        {otp.map((digit, index) => (
-          <TextInput
-            key={index}
-            ref={(ref) => {
-              inputRefs.current[index] = ref;
-            }}
-            value={digit}
-            onChangeText={(value) => handleDigitChange(index, value)}
-            onKeyPress={({ nativeEvent }) =>
-              handleKeyPress(index, nativeEvent.key)
-            }
-            keyboardType="number-pad"
-            style={[styles.otpBox, error && styles.otpBoxError]}
-          />
-        ))}
-      </View>
+      <CodeBoxes code={otp} onChange={onChangeOtp} invalid={Boolean(error)} />
 
       {error ? (
         <AppText accessibilityRole="alert" style={styles.codeError}>
@@ -522,29 +472,6 @@ const styles = StyleSheet.create({
     fontFamily: theme.fontFamily.bodyBold,
     fontSize: 15,
     color: theme.colors.navy,
-  },
-  otpRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 10,
-    marginBottom: 8,
-  },
-  otpBox: {
-    width: 46,
-    minWidth: 36,
-    flexShrink: 1,
-    height: 56,
-    textAlign: "center",
-    backgroundColor: "#FFFFFF",
-    borderWidth: 0.75,
-    borderColor: "#E1E1E1",
-    borderRadius: 14,
-    fontFamily: theme.fontFamily.bodyBold,
-    fontSize: 22,
-    color: theme.colors.navy,
-  },
-  otpBoxError: {
-    borderColor: theme.colors.red,
   },
   codeError: {
     marginTop: 0,
