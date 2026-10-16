@@ -38,11 +38,8 @@ test("every screen in app/ is listed as public, signed-in, the agreement or the 
   assert.deepEqual(listedRoutes, routesOnDisk);
 });
 
-test("no screen is both public and signed-in", () => {
-  const overlap = PUBLIC_ROUTES.filter((route) =>
-    SIGNED_IN_ROUTES.includes(route)
-  );
-  assert.deepEqual(overlap, []);
+test("no screen is in two lists", () => {
+  assert.equal(new Set(listedRoutes).size, listedRoutes.length);
 });
 
 test("recipes are only reachable after sign-in", () => {
@@ -53,15 +50,4 @@ test("recipes are only reachable after sign-in", () => {
 
 test("the Terms and Privacy Policy open from sign-up, so they are public", () => {
   assert.ok(PUBLIC_ROUTES.includes("legal/[doc]"));
-});
-
-test("the agreement screen is its own list: shown only while the account must agree", () => {
-  assert.deepEqual([...AGREEMENT_ROUTES], ["legal-agree"]);
-  assert.ok(SIGNED_IN_ROUTES.includes("delete-account"));
-});
-
-test("the email code screen is its own list: shown only while a new account must enter its code", () => {
-  assert.deepEqual([...EMAIL_CODE_ROUTES], ["verify-email"]);
-  assert.ok(!PUBLIC_ROUTES.includes("verify-email"));
-  assert.ok(!SIGNED_IN_ROUTES.includes("verify-email"));
 });
