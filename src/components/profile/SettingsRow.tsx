@@ -1,7 +1,7 @@
-
 import { ReactNode } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { theme } from "../../theme/theme";
+import { SettingsPressable } from "../settings/SettingsPressable";
 import { AppText } from "../ui/AppText";
 import { Icon, IconName } from "../ui/Icon";
 
@@ -9,70 +9,34 @@ type Props = {
   icon: IconName;
   label: string;
   subtitle?: string;
-  value?: string;
+  // A switch in place of the chevron; rows with one aren't tappable.
   rightElement?: ReactNode;
   onPress?: () => void;
   showDivider?: boolean;
-  showChevron?: boolean;
-  iconBackground?: string;
-  iconColor?: string;
-  valueColor?: string;
-  labelColor?: string;
-  // Shown after the label, like v6.9's "Not confirmed" pill.
-  labelAccessory?: ReactNode;
+  danger?: boolean;
 };
 
-export function SettingsRow({
-  icon,
-  label,
-  subtitle,
-  value,
-  rightElement,
-  onPress,
-  showDivider = true,
-  showChevron = true,
-  iconBackground = "#EEF2E7",
-  iconColor = "#17291E",
-  valueColor = "#279a5f",
-  labelColor,
-  labelAccessory,
-}: Props) {
+// v6.9.2's .sv2-row: a brand-green icon, a bold label and a hairline under it.
+export function SettingsRow({ icon, label, subtitle, rightElement, onPress, showDivider = true, danger = false }: Props) {
+  const content = (
+    <>
+      <Icon name={icon} size={18} color={danger ? theme.colors.red : theme.colors.navy3} />
+      <View style={styles.main}>
+        <AppText style={[styles.label, danger && styles.danger]}>{label}</AppText>
+        {subtitle ? <AppText style={styles.subtitle}>{subtitle}</AppText> : null}
+      </View>
+      {rightElement ?? (onPress ? <Icon name="chevronRight" size={16} color={theme.colors.textMuted} /> : null)}
+    </>
+  );
+
+  if (!onPress) {
+    return <View style={[styles.row, !showDivider && styles.last]}>{content}</View>;
+  }
+
   return (
-    <Pressable
-      onPress={onPress}
-      disabled={!onPress}
-      style={({ pressed }) => [
-        styles.row,
-        !showDivider && styles.rowWithoutDivider,
-        pressed && styles.pressed,
-      ]}
-      accessibilityRole={onPress ? "button" : undefined}
-    >
-      <View style={[styles.iconBox, { backgroundColor: iconBackground }]}>
-        <Icon name={icon} size={18} color={iconColor} />
-      </View>
-
-      <View style={styles.info}>
-        <View style={styles.labelRow}>
-          <AppText style={[styles.label, labelColor ? { color: labelColor } : null]}>{label}</AppText>
-          {labelAccessory}
-        </View>
-
-        {subtitle ? (
-          <AppText style={styles.subtitle}>{subtitle}</AppText>
-        ) : null}
-      </View>
-
-      {rightElement ? (
-        rightElement
-      ) : value ? (
-        <AppText style={[styles.value, { color: valueColor }]}>{value}</AppText>
-      ) : null}
-
-      {onPress && showChevron ? (
-        <Icon name="chevronRight" size={16} color={theme.colors.textDim} />
-      ) : null}
-    </Pressable>
+    <SettingsPressable feedback="highlight" accessibilityRole="button" onPress={onPress} style={[styles.row, !showDivider && styles.last]}>
+      {content}
+    </SettingsPressable>
   );
 }
 
@@ -80,47 +44,15 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
+    gap: 14,
+    minHeight: 54,
+    paddingVertical: 10,
+    borderBottomWidth: 0.75,
     borderBottomColor: theme.colors.border,
   },
-  pressed: {
-    opacity: 0.75,
-  },
-  rowWithoutDivider: {
-    borderBottomWidth: 0,
-  },
-  iconBox: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  info: {
-    flex: 1,
-  },
-  labelRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "center",
-    gap: 6,
-  },
-  // v6.8 renders settings row labels at Inter Medium ([data-label]).
-  label: {
-    fontFamily: theme.fontFamily.bodyMedium,
-    fontSize: 14,
-    color: theme.colors.navy,
-  },
-  subtitle: {
-    fontFamily: theme.fontFamily.body,
-    fontSize: 12,
-    color: "#5C6459",
-    marginTop: 2,
-  },
-  value: {
-    fontFamily: theme.fontFamily.bodyBold,
-    fontSize: 12,
-  },
+  last: { borderBottomWidth: 0 },
+  main: { flex: 1, minWidth: 0 },
+  label: { fontFamily: theme.fontFamily.bodyBold, fontSize: 14.5, lineHeight: 14.5 * 1.3, color: theme.colors.navy },
+  danger: { color: theme.colors.red },
+  subtitle: { marginTop: 2, fontFamily: theme.fontFamily.body, fontSize: 12, lineHeight: 12 * 1.35, color: theme.colors.textMedium },
 });
