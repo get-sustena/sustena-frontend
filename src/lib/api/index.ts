@@ -2,6 +2,7 @@
 export * as authApi from "./auth";
 export * as creatorRecipesApi from "./creatorRecipes";
 export * as creatorsApi from "./creators";
+export * as eventsApi from "./events";
 export * as favoritesApi from "./favorites";
 export * as ingredientsApi from "./ingredients";
 export * as mediaApi from "./media";

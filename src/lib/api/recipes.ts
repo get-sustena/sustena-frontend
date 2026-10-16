@@ -40,6 +40,30 @@ export function getRecipeById(recipeId: string, source?: RecipeSource) {
   }).then(normalizeRecipeDetail);
 }
 
+// Your stars for a recipe, 1 to 5; sending another number changes them.
+export function rateRecipe(recipeId: string, rating: number) {
+  return apiRequest<{ rating: number | null; averageRating: number | null; ratingCount: number }>({
+    url: `/recipes/${encodeURIComponent(recipeId)}/rating`,
+    method: "PUT",
+    data: { rating },
+  });
+}
+
+// What anyone may see of a shared recipe, signed in or not: its name and photo.
+export function getPublicRecipeCard(slug: string) {
+  return apiRequest<{ slug: string; name: string; imageUrl: string | null }>({
+    url: `/public/recipes/${encodeURIComponent(slug)}`,
+    method: "GET",
+  });
+}
+
+export function getRecipeBySlug(slug: string) {
+  return apiRequest<RecipeDetail>({
+    url: `/recipes/slug/${encodeURIComponent(slug)}`,
+    method: "GET",
+  });
+}
+
 function normalizeRecipeDetail(recipe: RecipeDetail): RecipeDetail {
   return {
     ...recipe,

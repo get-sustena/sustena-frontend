@@ -1,15 +1,18 @@
 import { Image } from "expo-image";
 import { Href, router } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { LayoutChangeEvent, Pressable, ScrollView, Share, StyleSheet, TextInput, View } from "react-native";
+import { LayoutChangeEvent, Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuthoringVocabularyQuery, useCreateRecipeDraftMutation, useMyRecipesQuery } from "../../hooks/api/useCreatorRecipes";
 import { useMyCreatorProfileQuery } from "../../hooks/api/useCreators";
+import { useRecordActivity } from "../../hooks/useActivity";
+import { creatorShareUrl } from "../../lib/shareLinks";
 import { getApiErrorMessage } from "../../lib/api/errors";
 import { suggestedCreatorHandle } from "../../lib/creators/profileDefaults";
 import { createLocalId } from "../../lib/id";
 import { useAuthStore } from "../../store/authStore";
 import { closeSheet, openSheet, showToast } from "../../store/uiStore";
+import { shareWithFeedback } from "../../lib/shareWithFeedback";
 import { theme } from "../../theme/theme";
 import { appImages } from "../../assets/appImages";
 import type { RecipeDraft } from "../../types/api";
@@ -35,6 +38,7 @@ export function CreatorProfileScreen() {
   const gridCardWidth = useCreatorGridCardWidth();
   const profileQuery = useMyCreatorProfileQuery();
   const savedProfile = profileQuery.data;
+  const recordActivity = useRecordActivity();
   const hasCreatorProfile = Boolean(savedProfile);
   // Asked for alongside the profile, not after it: without a creator
   // profile the lists simply come back empty.
@@ -98,18 +102,18 @@ export function CreatorProfileScreen() {
     );
   }
 
-  async function shareOwnProfile() {
+  function shareOwnProfile() {
     if (!savedProfile) {
       router.push("/creator/edit-profile" as Href);
       return;
     }
-    const url = `https://sustena.app/@${savedProfile.handle}`;
-    try {
-      await Share.share({ title: savedProfile.displayName, message: url, url });
-      showToast("Profile link copied", "success");
-    } catch {
-      showToast("We couldn’t share your profile. Try again.", "danger");
-    }
+    const creatorProfileId = savedProfile.id;
+    void shareWithFeedback({
+      title: savedProfile.displayName,
+      url: creatorShareUrl(savedProfile.handle),
+      copiedMessage: "Profile link copied",
+      onShared: () => recordActivity({ type: "creator_profile_shared", properties: { creatorProfileId } }),
+    });
   }
 
   return (

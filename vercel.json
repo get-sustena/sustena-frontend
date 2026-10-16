@@ -49,6 +49,14 @@
   ],
   "rewrites": [
     {
+      "source": "/r/:slug",
+      "destination": "/api/share?kind=recipe&key=:slug"
+    },
+    {
+      "source": "/c/:handle",
+      "destination": "/api/share?kind=creator&key=:handle"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

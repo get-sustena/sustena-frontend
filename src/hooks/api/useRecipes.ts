@@ -93,14 +93,18 @@ function useRecipeDetailQuery(recipeId?: string, source?: RecipeSource) {
 }
 
 // For screens opened from the recipe page, such as its nutrition page: they
-// use the recipe already loaded, so opening them doesn't count as opening the
-// recipe again. It's fetched only when it isn't loaded, as after a reload.
+// use the recipe already loaded, or the copy saved on the phone, so opening
+// them doesn't count as opening the recipe again. It's fetched only when
+// neither has its nutrition, as after a reload on a recipe never saved.
 export function useLoadedRecipeDetail(recipeId?: string, source?: RecipeSource) {
   const db = useSQLiteContext();
 
   return useQuery({
     queryKey: queryKeys.recipes.detail(recipeId ?? ""),
-    queryFn: () => fetchRecipeDetail(db, recipeId ?? "", source),
+    queryFn: async () => {
+      const saved = await getLocalRecipeById(db, recipeId ?? "").catch(() => null);
+      return saved?.nutritionPerServing ? saved : fetchRecipeDetail(db, recipeId ?? "", source);
+    },
     enabled: Boolean(recipeId),
     staleTime: Infinity,
   });

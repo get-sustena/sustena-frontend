@@ -261,6 +261,11 @@ export interface RecipeCreatorSummary {
   displayName: string;
   handle: string;
   avatarUrl: string | null;
+  // On a recipe page, for the signed-in person. Missing from the phone's
+  // saved catalogue, and false in lists.
+  isFollowing?: boolean;
+  // The signed-in person's own creator profile: no Follow on their recipes.
+  isOwner?: boolean;
 }
 
 export interface IngredientAvailableUnit {
@@ -551,7 +556,11 @@ export interface CreatorProfile {
   coverUrl: string | null;
   specialities: string[];
   isOwner: boolean;
+  // True when the signed-in person follows this creator.
   isSaved: boolean;
+  followerCount: number;
+  // Creators this creator follows.
+  followingCount: number;
   publishedRecipeCount: number;
   totalRecipeSaves: number;
   averageRating: number | null;

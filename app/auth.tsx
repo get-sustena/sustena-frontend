@@ -8,7 +8,6 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import { AuthAlternativeActions } from "../src/components/auth/AuthAlternativeActions";
 import { AuthField } from "../src/components/auth/AuthField";
 import { AuthHeader } from "../src/components/auth/AuthHeader";
 import { AuthPrimaryButton } from "../src/components/auth/AuthPrimaryButton";
@@ -21,6 +20,7 @@ import {
 } from "../src/lib/api/errors";
 import { showToast } from "../src/store/uiStore";
 import { theme } from "../src/theme/theme";
+import { enterApp } from "../src/lib/navigation/sharedLinkReturn";
 
 type AuthFieldErrors = Record<string, string | undefined>;
 
@@ -33,7 +33,7 @@ export default function AuthScreen() {
   const [fieldErrors, setFieldErrors] = useState<AuthFieldErrors>({});
 
   function continueAfterAuth() {
-    router.replace("/(tabs)/home");
+    enterApp();
   }
 
   async function handleSubmit() {
@@ -133,8 +133,6 @@ export default function AuthScreen() {
           onPress={handleSubmit}
           disabled={loginMutation.isPending}
         />
-
-        <AuthAlternativeActions />
 
         <View style={styles.switchRow}>
           <AppText style={styles.switchText}>

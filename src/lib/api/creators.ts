@@ -67,6 +67,14 @@ export function getSavedCreators() {
   });
 }
 
+// What anyone may see of a shared creator profile, signed in or not.
+export function getPublicCreatorCard(handle: string) {
+  return apiRequest<{ handle: string; displayName: string; avatarUrl: string | null }>({
+    url: `/public/creators/${encodeURIComponent(handle)}`,
+    method: "GET",
+  });
+}
+
 export function saveCreator(creatorId: UUIDString) {
   return apiRequest<{ success: boolean }>({
     url: `/creators/${creatorId}/save`,

@@ -9,6 +9,7 @@ import { AppText } from "../../src/components/ui/AppText";
 import { Icon } from "../../src/components/ui/Icon";
 import { useAddPlanToList } from "../../src/hooks/useAddPlanToList";
 import { usePlanCommands, useSavedPlans } from "../../src/hooks/useSavedPlans";
+import { useScreenViewed } from "../../src/hooks/useActivity";
 import { formatNaira } from "../../src/lib/formatters";
 import { planSummary, type SavedPlan } from "../../src/lib/planner/planCommands";
 import { closeSheet, openSheet, showToast } from "../../src/store/uiStore";
@@ -17,6 +18,7 @@ import { theme } from "../../src/theme/theme";
 // Saved meal plans (MP-01, PRD v6.8 section 18), built like Shopping lists.
 // Plans live on the phone, so this works offline.
 export default function SavedMealPlansScreen() {
+  useScreenViewed("meal_plans");
   const insets = useSafeAreaInsets();
   const { plans } = useSavedPlans();
   const planCommands = usePlanCommands();

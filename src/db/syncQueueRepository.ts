@@ -27,7 +27,10 @@ export type SyncQueueKind =
   | "meal_plan_rename"
   | "meal_plan_swap"
   | "meal_plan_delete"
-  | "recipe_cooked";
+  | "recipe_cooked"
+  | "creator_follow"
+  | "creator_unfollow"
+  | "recipe_rate";
 
 export type SyncQueueOperation = {
   id: string;

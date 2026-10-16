@@ -5,7 +5,7 @@ import {
   runWithSqliteRetry,
 } from "./sqliteGuards.ts";
 
-const DATABASE_VERSION = 20;
+const DATABASE_VERSION = 21;
 let migrationQueue = Promise.resolve();
 
 export async function migrateDbIfNeeded(db: SQLiteDatabase) {
@@ -506,6 +506,27 @@ async function runMigrations(db: SQLiteDatabase) {
       ALTER TABLE shopping_list_items ADD COLUMN canonical_ingredient_name TEXT;
 
       PRAGMA user_version = 20;
+    `);
+  }
+
+  const versionAfterCanonicalNames = versionAfterRecipeNeeds < 20 ? 20 : versionAfterRecipeNeeds;
+
+  // Activity the server can't see (app opens, screens, shares), waiting to
+  // be sent to /me/events. Kept by account, outside the account snapshots.
+  if (versionAfterCanonicalNames < 21) {
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS activity_events (
+        client_event_id TEXT PRIMARY KEY NOT NULL,
+        user_id TEXT NOT NULL,
+        type TEXT NOT NULL,
+        occurred_at TEXT NOT NULL,
+        properties_json TEXT NOT NULL
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_activity_events_user_time
+        ON activity_events(user_id, occurred_at);
+
+      PRAGMA user_version = 21;
     `);
   }
 }

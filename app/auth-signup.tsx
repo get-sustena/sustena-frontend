@@ -8,7 +8,6 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import { AuthAlternativeActions } from "../src/components/auth/AuthAlternativeActions";
 import { AuthField } from "../src/components/auth/AuthField";
 import { AuthHeader } from "../src/components/auth/AuthHeader";
 import { AuthPrimaryButton } from "../src/components/auth/AuthPrimaryButton";
@@ -27,6 +26,7 @@ import { agreementError, type AgreementForm } from "../src/lib/legal/agreement";
 import { getPasswordScore } from "../src/lib/passwordStrength";
 import { showToast } from "../src/store/uiStore";
 import { theme } from "../src/theme/theme";
+import { enterApp } from "../src/lib/navigation/sharedLinkReturn";
 
 type AuthFieldErrors = Record<string, string | undefined>;
 
@@ -50,7 +50,7 @@ export default function AuthSignupScreen() {
   const [agreementProblem, setAgreementProblem] = useState<string | null>(null);
 
   function continueAfterAuth() {
-    router.replace("/(tabs)/home");
+    enterApp();
   }
 
   async function handleSubmit() {
@@ -265,8 +265,6 @@ export default function AuthSignupScreen() {
           onPress={handleSubmit}
           disabled={signupMutation.isPending}
         />
-
-        <AuthAlternativeActions />
 
         <View style={styles.switchRow}>
           <AppText style={styles.switchText}>Already have an account? </AppText>

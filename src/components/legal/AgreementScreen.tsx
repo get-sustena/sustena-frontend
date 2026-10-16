@@ -13,6 +13,7 @@ import { AppText } from "../ui/AppText";
 import { Icon } from "../ui/Icon";
 import { SignOutSheet } from "../profile/SignOutSheet";
 import { AgreementFields } from "./AgreementFields";
+import { enterApp } from "../../lib/navigation/sharedLinkReturn";
 
 // v6.9's one-time agreement (renderLegalAgree) for accounts made before
 // sign-up asked, or when the Terms change: shown before the app while
@@ -37,7 +38,7 @@ export function AgreementScreen() {
     }
     try {
       await agree.mutateAsync({ termsAccepted: form.terms, ageConfirmed: form.adult });
-      router.replace("/(tabs)/home");
+      enterApp();
       showToast("Saved. Read both any time in Settings.", "success");
     } catch (failure) {
       setError(getApiErrorMessage(failure));

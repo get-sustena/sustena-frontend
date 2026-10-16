@@ -23,6 +23,7 @@ import { getStoredShoppingLists, mapShoppingListRowToMeta } from "../../src/db/s
 import { runWriteTransaction } from "../../src/db/writeTransaction";
 import { useListCommands } from "../../src/hooks/useListCommands";
 import { useIsOnline } from "../../src/hooks/useIsOnline";
+import { useScreenViewed } from "../../src/hooks/useActivity";
 import { shoppingListsApi } from "../../src/lib/api";
 import { apiShoppingItemToLocalItem } from "../../src/lib/api/adapters";
 import { onSyncFinished } from "../../src/lib/sync/syncEvents";
@@ -38,6 +39,7 @@ type ListSummary = {
 };
 
 export default function ShoppingListsScreen() {
+  useScreenViewed("shopping_list");
   const insets = useSafeAreaInsets();
   const db = useSQLiteContext();
   const isOnline = useIsOnline();

@@ -44,6 +44,9 @@ export const queryKeys = {
       ["recipes", "local-fallback-detail", id] as const,
     localFavorites: ["recipes", "local-profile-favorites"] as const,
     detail: (id: string) => ["recipes", "detail", id] as const,
+    publicCard: (slug: string) => ["recipes", "public-card", slug] as const,
+    // Ratings waiting in the outbox (local only).
+    pendingRatings: ["recipes", "pending-ratings"] as const,
     // The Lagos day this person last marked the recipe cooked (local only).
     cookedDay: (userId: string, recipeId: string) =>
       ["recipes", "cooked-day", userId, recipeId] as const,
@@ -66,6 +69,9 @@ export const queryKeys = {
     recipes: (handle: string, params?: CreatorRecipeListParams) =>
       ["creators", "recipes", handle, params ?? {}] as const,
     saved: ["creators", "saved"] as const,
+    // Follows and unfollows waiting in the outbox (local only).
+    pendingFollows: ["creators", "pending-follows"] as const,
+    publicCard: (handle: string) => ["creators", "public-card", handle] as const,
   },
   creatorRecipes: {
     all: ["creator-recipes"] as const,
