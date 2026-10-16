@@ -295,6 +295,29 @@ export interface IngredientLocalName {
 // which read in pieces (SL-08).
 export type ShoppingUnit = "kg" | "L" | "tbsp" | "cube";
 
+// A counted measure: "item" is a piece (P-17).
+export type MeasureUnit = "item" | "bunch" | "clove" | "stalk" | "sachet" | "tin" | "cube";
+
+// What one piece, bunch, clove, stalk, sachet, tin or cube of an ingredient
+// weighs. Recipe amounts read in the default one.
+export interface IngredientMeasure {
+  unit: MeasureUnit;
+  size: "small" | "medium" | "large" | null;
+  grams: DecimalString;
+  isDefault: boolean;
+}
+
+// A recipe line's amount in its ingredient's measure, for the base servings.
+// "pinch" is a spice under ⅛ tsp.
+export interface RecipeLineMeasure {
+  unit: MeasureUnit | "pinch";
+  size: IngredientMeasure["size"];
+  // Whole or half, for the base servings.
+  quantity: DecimalString;
+  // The exact share, for scaling with the servings.
+  exactQuantity: DecimalString;
+}
+
 export interface Ingredient {
   id: string;
   canonicalName: string;
@@ -315,6 +338,10 @@ export interface Ingredient {
   notes: string | null;
   // Missing on a catalogue saved before shopping units existed.
   shoppingUnit?: ShoppingUnit | null;
+  // Missing on a catalogue saved before measures existed.
+  measures?: IngredientMeasure[];
+  // How its counts round (see countRuleFor). Missing from APIs before it.
+  countRule?: "normal" | "sensitive" | "whole";
   createdAt: ISODateTimeString;
   updatedAt: ISODateTimeString;
 }
@@ -394,6 +421,9 @@ export interface RecipeIngredient {
   nutrition?: NutrientValues | null;
   // Deep-frying oil, counted as only what the food soaks up.
   isFryingOil?: boolean;
+  // The amount in the ingredient's own measure; null keeps quantity and unit.
+  // Older APIs send none.
+  measure?: RecipeLineMeasure | null;
   id: UUIDString;
   position: number;
   rawText: string;

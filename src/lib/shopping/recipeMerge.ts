@@ -4,8 +4,14 @@
 // _try_merge_with_convertible_item, _merge_generated_with_existing and
 // combine_sources, pinned to them by the server's fixtures. After a sync
 // the server's own rows replace these. Shared by the app and its tests.
+import type { IngredientMeasure } from "../../types/api.ts";
 import type { ItemSource } from "../../types/shoppingList.ts";
+import { boughtAmount, inExistingMeasures } from "./measureRules.ts";
 import { convertQuantity, type UnitRow } from "./shoppingRules.ts";
+
+// An ingredient's measures from the saved catalogue; none when unknown.
+type MeasuresOf = (ingredientId: string | null | undefined) => IngredientMeasure[];
+const noMeasures: MeasuresOf = () => [];
 
 export type RecipeLine = {
   id: string;
@@ -14,6 +20,8 @@ export type RecipeLine = {
   canonicalIngredientName: string | null;
   quantity: number | null;
   unit: string | null;
+  // "medium" picks the measure a line in pieces means.
+  sizeNote: string | null;
   category: string | null;
   isOptional: boolean;
 };
@@ -109,7 +117,11 @@ function combineSources(...groups: ItemSource[][]) {
 const identityOf = (item: { canonicalIngredientName?: string | null; name: string }) =>
   item.canonicalIngredientName ?? item.name.toLowerCase();
 
-export function generateItemsFromRecipes(selections: RecipeSelectionInput[], units: Map<string, UnitRow>) {
+export function generateItemsFromRecipes(
+  selections: RecipeSelectionInput[],
+  units: Map<string, UnitRow>,
+  measuresOf: MeasuresOf = noMeasures
+) {
   const grouped = new Map<string, { key: [string, string | null]; item: GeneratedItem }>();
   const groupKey = (name: string, unit: string | null) => `${name}\u0000${unit ?? "\u0001"}`;
 
@@ -117,13 +129,14 @@ export function generateItemsFromRecipes(selections: RecipeSelectionInput[], uni
     const scale = servings / (recipe.baseServings || 1);
     for (const line of recipe.lines) {
       if (line.isOptional) continue;
+      const [quantity, unit] = boughtAmount(line.quantity, line.unit, line.sizeNote, measuresOf(line.ingredientId));
       const generated: GeneratedItem = {
         ingredientId: line.ingredientId,
         recipeId: recipe.id,
         name: line.name,
         canonicalIngredientName: line.canonicalIngredientName,
-        quantity: line.quantity === null ? null : line.quantity * scale,
-        unit: line.unit,
+        quantity: quantity === null ? null : quantity * scale,
+        unit,
         category: line.category,
         sourceLines: [lineKey(recipe.id, line.id)],
         sources: [],
@@ -182,7 +195,12 @@ function mergeWithConvertibleItem(
 
 // The existing row a generated item merges into, updated, or null when it
 // needs a row of its own.
-export function mergeWithExisting(rows: ListRow[], generated: GeneratedItem, units: Map<string, UnitRow>) {
+export function mergeWithExisting(
+  rows: ListRow[],
+  generated: GeneratedItem,
+  units: Map<string, UnitRow>,
+  measuresOf: MeasuresOf = noMeasures
+) {
   const identity = identityOf(generated).trim().toLowerCase();
   for (const row of rows) {
     if (identityOf(row).trim().toLowerCase() !== identity) continue;
@@ -200,9 +218,11 @@ export function mergeWithExisting(rows: ListRow[], generated: GeneratedItem, uni
     let amount = generated.quantity;
     if (generated.unit !== row.unit) {
       if (!generated.unit || !row.unit) continue;
-      const conversion = convertQuantity(amount, generated.unit, row.unit, units);
-      if (!conversion || conversion.isApproximate) continue;
-      amount = conversion.quantity;
+      const inMeasures = inExistingMeasures(row.unit, amount, generated.unit, measuresOf(row.ingredientId));
+      const conversion = inMeasures === null ? convertQuantity(amount, generated.unit, row.unit, units) : null;
+      if (inMeasures !== null) amount = inMeasures;
+      else if (conversion && !conversion.isApproximate) amount = conversion.quantity;
+      else continue;
     }
     row.amount = rowAmount + amount;
     row.quantity = decimalText(row.amount);
@@ -227,6 +247,7 @@ type StoredRecipe = {
     // Missing from recipes saved before it existed.
     exactQuantity?: string | null;
     unit: string | null;
+    sizeNote?: string | null;
     category: string | null;
     isOptional: boolean;
   }[];
@@ -251,6 +272,7 @@ export function selectionFromRecipe(
         canonicalIngredientName: line.canonicalIngredientName,
         quantity: (line.exactQuantity ?? line.quantity) === null ? null : Number(line.exactQuantity ?? line.quantity),
         unit: line.unit,
+        sizeNote: line.sizeNote ?? null,
         category: line.category,
         isOptional: line.isOptional,
       })),

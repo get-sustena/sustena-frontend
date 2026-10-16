@@ -122,6 +122,7 @@ test("strong ingredients round counts down, everything else rounds up", () => {
     [{ id: "red-bell-pepper", subcategory: "Pepper" }, "normal"],
     [{ id: "onion", subcategory: "Allium" }, "normal"],
     [{ id: "egg", subcategory: "Egg" }, "whole"],
+    [{ id: "onion", subcategory: "Allium", countRule: "sensitive" }, "sensitive"],
     [undefined, "normal"],
   ];
   for (const [ingredient, expected] of rules) assert.equal(countRuleFor(ingredient), expected, ingredient?.id);

@@ -582,8 +582,8 @@
       "name": "Cube",
       "context": "seasoning_cube",
       "baseUnit": "g",
-      "baseFactorMin": 2,
-      "baseFactorMax": 2,
+      "baseFactorMin": 4,
+      "baseFactorMax": 4,
       "isApproximate": false,
       "precisionLabel": "Exact product mapping",
       "scope": "Seasoning cubes only",
@@ -600,6 +600,66 @@
       "precisionLabel": "Exact count",
       "scope": "Whole-item ingredient counts",
       "sourceId": "cookease"
+    },
+    {
+      "id": "bunch",
+      "name": "Bunch",
+      "context": "measure",
+      "baseUnit": "bunch",
+      "baseFactorMin": 1,
+      "baseFactorMax": 1,
+      "isApproximate": false,
+      "precisionLabel": "Weight per ingredient",
+      "scope": "Ingredients with this measure; each ingredient's measures give the weight",
+      "sourceId": "sustena-measures"
+    },
+    {
+      "id": "clove",
+      "name": "Clove",
+      "context": "measure",
+      "baseUnit": "clove",
+      "baseFactorMin": 1,
+      "baseFactorMax": 1,
+      "isApproximate": false,
+      "precisionLabel": "Weight per ingredient",
+      "scope": "Ingredients with this measure; each ingredient's measures give the weight",
+      "sourceId": "sustena-measures"
+    },
+    {
+      "id": "stalk",
+      "name": "Stalk",
+      "context": "measure",
+      "baseUnit": "stalk",
+      "baseFactorMin": 1,
+      "baseFactorMax": 1,
+      "isApproximate": false,
+      "precisionLabel": "Weight per ingredient",
+      "scope": "Ingredients with this measure; each ingredient's measures give the weight",
+      "sourceId": "sustena-measures"
+    },
+    {
+      "id": "sachet",
+      "name": "Sachet",
+      "context": "measure",
+      "baseUnit": "sachet",
+      "baseFactorMin": 1,
+      "baseFactorMax": 1,
+      "isApproximate": false,
+      "precisionLabel": "Weight per ingredient",
+      "scope": "Ingredients with this measure; each ingredient's measures give the weight",
+      "sourceId": "sustena-measures"
+    },
+    {
+      "id": "tin",
+      "name": "Tin",
+      "context": "measure",
+      "baseUnit": "tin",
+      "baseFactorMin": 1,
+      "baseFactorMax": 1,
+      "isApproximate": false,
+      "precisionLabel": "Weight per ingredient",
+      "scope": "Ingredients with this measure; each ingredient's measures give the weight",
+      "sourceId": "sustena-measures"
     }
   ],
   "ingredients": [
@@ -608,49 +668,123 @@
       "displayName": "Rice",
       "subcategory": "Grain",
       "defaultMeasurementBasis": "g",
-      "shoppingUnit": "kg"
+      "shoppingUnit": "kg",
+      "countRule": "normal",
+      "measures": []
     },
     {
       "id": "flour",
       "displayName": "Flour",
       "subcategory": "Flour",
       "defaultMeasurementBasis": "g",
-      "shoppingUnit": "kg"
+      "shoppingUnit": "kg",
+      "countRule": "normal",
+      "measures": []
     },
     {
       "id": "palm-oil",
       "displayName": "Palm oil",
       "subcategory": "Oil",
       "defaultMeasurementBasis": "ml",
-      "shoppingUnit": "L"
+      "shoppingUnit": "L",
+      "countRule": "normal",
+      "measures": []
     },
     {
       "id": "tomato",
       "displayName": "Tomato",
       "subcategory": "Fruit vegetable",
       "defaultMeasurementBasis": "item",
-      "shoppingUnit": null
+      "shoppingUnit": null,
+      "countRule": "normal",
+      "measures": []
     },
     {
       "id": "curry-powder",
       "displayName": "Curry powder",
       "subcategory": "Spice blend",
       "defaultMeasurementBasis": "g",
-      "shoppingUnit": "tbsp"
+      "shoppingUnit": "tbsp",
+      "countRule": "sensitive",
+      "measures": []
     },
     {
       "id": "ginger",
       "displayName": "Ground ginger",
       "subcategory": "Dried spice",
       "defaultMeasurementBasis": "g",
-      "shoppingUnit": "tbsp"
+      "shoppingUnit": "tbsp",
+      "countRule": "sensitive",
+      "measures": []
     },
     {
       "id": "salt",
       "displayName": "Salt",
       "subcategory": "Basic seasoning",
       "defaultMeasurementBasis": "g",
-      "shoppingUnit": "tbsp"
+      "shoppingUnit": "tbsp",
+      "countRule": "sensitive",
+      "measures": []
+    },
+    {
+      "id": "onion",
+      "displayName": "Onion",
+      "subcategory": "Bulb vegetable",
+      "defaultMeasurementBasis": "g",
+      "shoppingUnit": "kg",
+      "countRule": "normal",
+      "measures": [
+        {
+          "unit": "item",
+          "size": "small",
+          "grams": "70",
+          "isDefault": false
+        },
+        {
+          "unit": "item",
+          "size": "medium",
+          "grams": "110",
+          "isDefault": true
+        },
+        {
+          "unit": "item",
+          "size": "large",
+          "grams": "150",
+          "isDefault": false
+        }
+      ]
+    },
+    {
+      "id": "ugu",
+      "displayName": "Ugu leaf",
+      "subcategory": "Leafy vegetable",
+      "defaultMeasurementBasis": "g",
+      "shoppingUnit": "kg",
+      "countRule": "normal",
+      "measures": [
+        {
+          "unit": "bunch",
+          "size": null,
+          "grams": "450",
+          "isDefault": true
+        }
+      ]
+    },
+    {
+      "id": "scotch-bonnet-pepper",
+      "displayName": "Ata rodo",
+      "subcategory": "Pepper",
+      "defaultMeasurementBasis": "item",
+      "shoppingUnit": null,
+      "countRule": "sensitive",
+      "measures": [
+        {
+          "unit": "item",
+          "size": null,
+          "grams": "6",
+          "isDefault": true
+        }
+      ]
     }
   ],
   "cases": [
@@ -698,6 +832,7 @@
               "isOptional": false,
               "parseConfidence": null,
               "parseWarnings": [],
+              "measure": null,
               "nutrition": null,
               "isFryingOil": false
             }
@@ -785,6 +920,7 @@
               "isOptional": false,
               "parseConfidence": null,
               "parseWarnings": [],
+              "measure": null,
               "nutrition": null,
               "isFryingOil": false
             }
@@ -872,6 +1008,7 @@
               "isOptional": false,
               "parseConfidence": null,
               "parseWarnings": [],
+              "measure": null,
               "nutrition": null,
               "isFryingOil": false
             }
@@ -959,6 +1096,7 @@
               "isOptional": false,
               "parseConfidence": null,
               "parseWarnings": [],
+              "measure": null,
               "nutrition": null,
               "isFryingOil": false
             }
@@ -1046,6 +1184,7 @@
               "isOptional": false,
               "parseConfidence": null,
               "parseWarnings": [],
+              "measure": null,
               "nutrition": null,
               "isFryingOil": false
             }
@@ -1133,6 +1272,7 @@
               "isOptional": false,
               "parseConfidence": null,
               "parseWarnings": [],
+              "measure": null,
               "nutrition": null,
               "isFryingOil": false
             }
@@ -1220,6 +1360,7 @@
               "isOptional": false,
               "parseConfidence": null,
               "parseWarnings": [],
+              "measure": null,
               "nutrition": null,
               "isFryingOil": false
             }
@@ -1307,6 +1448,7 @@
               "isOptional": false,
               "parseConfidence": null,
               "parseWarnings": [],
+              "measure": null,
               "nutrition": null,
               "isFryingOil": false
             }
@@ -1394,6 +1536,7 @@
               "isOptional": false,
               "parseConfidence": null,
               "parseWarnings": [],
+              "measure": null,
               "nutrition": null,
               "isFryingOil": false
             }
@@ -1416,13 +1559,702 @@
             "unit": null,
             "displayQuantity": "2 pieces",
             "checked": false,
-            "recipeAmount": "1.88 pieces",
+            "recipeAmount": "2 pieces",
             "sources": [
               {
                 "recipeId": "r1",
                 "recipeName": "Recipe r1",
                 "amount": "1.875",
                 "unit": null
+              }
+            ],
+            "existingRow": null
+          }
+        ],
+        "lineItems": [
+          {
+            "clientLineId": "r1/1",
+            "row": 0
+          }
+        ],
+        "skippedInPantry": []
+      }
+    },
+    {
+      "name": "a little over a whole piece buys the next one",
+      "existingRows": [],
+      "pantryIngredientIds": [],
+      "recipes": [
+        {
+          "id": "r1",
+          "baseServings": 1,
+          "ingredients": [
+            {
+              "id": "d2ab1c91-5a20-54c8-953c-014909dde2aa",
+              "position": 1,
+              "rawText": "Tomato",
+              "ingredientName": "Tomato",
+              "canonicalIngredientName": "tomato",
+              "ingredientId": "tomato",
+              "quantity": "3.05",
+              "exactQuantity": "3.05",
+              "quantityMax": null,
+              "quantityMode": "exact",
+              "unit": null,
+              "quantityText": "3.05",
+              "displayText": null,
+              "alternateQuantity": null,
+              "alternateUnit": null,
+              "availableUnits": [
+                {
+                  "quantity": "3.05",
+                  "unit": null,
+                  "label": "3.05",
+                  "source": "explicit",
+                  "confidence": "1.0000"
+                }
+              ],
+              "preparationNote": null,
+              "sizeNote": null,
+              "customMeasurementBasis": null,
+              "isCustom": false,
+              "sectionPosition": null,
+              "category": "other",
+              "isCoreIngredient": true,
+              "isOptional": false,
+              "parseConfidence": null,
+              "parseWarnings": [],
+              "measure": null,
+              "nutrition": null,
+              "isFryingOil": false
+            }
+          ]
+        }
+      ],
+      "add": [
+        {
+          "recipeId": "r1",
+          "servings": 1,
+          "unitOverrides": []
+        }
+      ],
+      "expected": {
+        "rows": [
+          {
+            "name": "Tomato",
+            "ingredientId": "tomato",
+            "amount": "3.05",
+            "unit": null,
+            "displayQuantity": "4 pieces",
+            "checked": false,
+            "recipeAmount": "3.5 pieces",
+            "sources": [
+              {
+                "recipeId": "r1",
+                "recipeName": "Recipe r1",
+                "amount": "3.05",
+                "unit": null
+              }
+            ],
+            "existingRow": null
+          }
+        ],
+        "lineItems": [
+          {
+            "clientLineId": "r1/1",
+            "row": 0
+          }
+        ],
+        "skippedInPantry": []
+      }
+    },
+    {
+      "name": "a sensitive food up to a tenth over a whole piece stays whole",
+      "existingRows": [],
+      "pantryIngredientIds": [],
+      "recipes": [
+        {
+          "id": "r1",
+          "baseServings": 1,
+          "ingredients": [
+            {
+              "id": "d2ab1c91-5a20-54c8-953c-014909dde2aa",
+              "position": 1,
+              "rawText": "Ata rodo",
+              "ingredientName": "Ata rodo",
+              "canonicalIngredientName": "ata rodo",
+              "ingredientId": "scotch-bonnet-pepper",
+              "quantity": "3.05",
+              "exactQuantity": "3.05",
+              "quantityMax": null,
+              "quantityMode": "exact",
+              "unit": null,
+              "quantityText": "3.05",
+              "displayText": null,
+              "alternateQuantity": null,
+              "alternateUnit": null,
+              "availableUnits": [
+                {
+                  "quantity": "3.05",
+                  "unit": null,
+                  "label": "3.05",
+                  "source": "explicit",
+                  "confidence": "1.0000"
+                }
+              ],
+              "preparationNote": null,
+              "sizeNote": null,
+              "customMeasurementBasis": null,
+              "isCustom": false,
+              "sectionPosition": null,
+              "category": "other",
+              "isCoreIngredient": true,
+              "isOptional": false,
+              "parseConfidence": null,
+              "parseWarnings": [],
+              "measure": null,
+              "nutrition": null,
+              "isFryingOil": false
+            }
+          ]
+        }
+      ],
+      "add": [
+        {
+          "recipeId": "r1",
+          "servings": 1,
+          "unitOverrides": []
+        }
+      ],
+      "expected": {
+        "rows": [
+          {
+            "name": "Ata rodo",
+            "ingredientId": "scotch-bonnet-pepper",
+            "amount": "3.05",
+            "unit": null,
+            "displayQuantity": "3 pieces",
+            "checked": false,
+            "recipeAmount": "3 pieces",
+            "sources": [
+              {
+                "recipeId": "r1",
+                "recipeName": "Recipe r1",
+                "amount": "3.05",
+                "unit": null
+              }
+            ],
+            "existingRow": null
+          }
+        ],
+        "lineItems": [
+          {
+            "clientLineId": "r1/1",
+            "row": 0
+          }
+        ],
+        "skippedInPantry": []
+      }
+    },
+    {
+      "name": "grams of a counted food buy whole pieces",
+      "existingRows": [],
+      "pantryIngredientIds": [],
+      "recipes": [
+        {
+          "id": "r1",
+          "baseServings": 1,
+          "ingredients": [
+            {
+              "id": "d2ab1c91-5a20-54c8-953c-014909dde2aa",
+              "position": 1,
+              "rawText": "Onion",
+              "ingredientName": "Onion",
+              "canonicalIngredientName": "onion",
+              "ingredientId": "onion",
+              "quantity": "150",
+              "exactQuantity": "150",
+              "quantityMax": null,
+              "quantityMode": "exact",
+              "unit": "g",
+              "quantityText": "150g",
+              "displayText": null,
+              "alternateQuantity": null,
+              "alternateUnit": null,
+              "availableUnits": [
+                {
+                  "quantity": "150",
+                  "unit": "g",
+                  "label": "150g",
+                  "source": "explicit",
+                  "confidence": "1.0000"
+                }
+              ],
+              "preparationNote": null,
+              "sizeNote": null,
+              "customMeasurementBasis": null,
+              "isCustom": false,
+              "sectionPosition": null,
+              "category": "other",
+              "isCoreIngredient": true,
+              "isOptional": false,
+              "parseConfidence": null,
+              "parseWarnings": [],
+              "measure": {
+                "unit": "item",
+                "size": "medium",
+                "quantity": "1.5",
+                "exactQuantity": "1.364"
+              },
+              "nutrition": null,
+              "isFryingOil": false
+            }
+          ]
+        }
+      ],
+      "add": [
+        {
+          "recipeId": "r1",
+          "servings": 1,
+          "unitOverrides": []
+        }
+      ],
+      "expected": {
+        "rows": [
+          {
+            "name": "Onion",
+            "ingredientId": "onion",
+            "amount": "150",
+            "unit": "g",
+            "displayQuantity": "2 medium pieces",
+            "checked": false,
+            "recipeAmount": "150 g",
+            "sources": [
+              {
+                "recipeId": "r1",
+                "recipeName": "Recipe r1",
+                "amount": "150",
+                "unit": "g"
+              }
+            ],
+            "existingRow": null
+          }
+        ],
+        "lineItems": [
+          {
+            "clientLineId": "r1/1",
+            "row": 0
+          }
+        ],
+        "skippedInPantry": []
+      }
+    },
+    {
+      "name": "a line in pieces adds up with grams of the same food",
+      "existingRows": [],
+      "pantryIngredientIds": [],
+      "recipes": [
+        {
+          "id": "r1",
+          "baseServings": 1,
+          "ingredients": [
+            {
+              "id": "d2ab1c91-5a20-54c8-953c-014909dde2aa",
+              "position": 1,
+              "rawText": "Onion",
+              "ingredientName": "Onion",
+              "canonicalIngredientName": "onion",
+              "ingredientId": "onion",
+              "quantity": "2",
+              "exactQuantity": "2",
+              "quantityMax": null,
+              "quantityMode": "exact",
+              "unit": "item",
+              "quantityText": "2 item",
+              "displayText": null,
+              "alternateQuantity": null,
+              "alternateUnit": null,
+              "availableUnits": [
+                {
+                  "quantity": "2",
+                  "unit": "item",
+                  "label": "2 item",
+                  "source": "explicit",
+                  "confidence": "1.0000"
+                }
+              ],
+              "preparationNote": null,
+              "sizeNote": "medium",
+              "customMeasurementBasis": null,
+              "isCustom": false,
+              "sectionPosition": null,
+              "category": "other",
+              "isCoreIngredient": true,
+              "isOptional": false,
+              "parseConfidence": null,
+              "parseWarnings": [],
+              "measure": {
+                "unit": "item",
+                "size": "medium",
+                "quantity": "2",
+                "exactQuantity": "2"
+              },
+              "nutrition": null,
+              "isFryingOil": false
+            },
+            {
+              "id": "f4130386-08f2-55b7-978d-9730c0249b04",
+              "position": 2,
+              "rawText": "Onion",
+              "ingredientName": "Onion",
+              "canonicalIngredientName": "onion",
+              "ingredientId": "onion",
+              "quantity": "150",
+              "exactQuantity": "150",
+              "quantityMax": null,
+              "quantityMode": "exact",
+              "unit": "g",
+              "quantityText": "150g",
+              "displayText": null,
+              "alternateQuantity": null,
+              "alternateUnit": null,
+              "availableUnits": [
+                {
+                  "quantity": "150",
+                  "unit": "g",
+                  "label": "150g",
+                  "source": "explicit",
+                  "confidence": "1.0000"
+                }
+              ],
+              "preparationNote": null,
+              "sizeNote": null,
+              "customMeasurementBasis": null,
+              "isCustom": false,
+              "sectionPosition": null,
+              "category": "other",
+              "isCoreIngredient": true,
+              "isOptional": false,
+              "parseConfidence": null,
+              "parseWarnings": [],
+              "measure": {
+                "unit": "item",
+                "size": "medium",
+                "quantity": "1.5",
+                "exactQuantity": "1.364"
+              },
+              "nutrition": null,
+              "isFryingOil": false
+            }
+          ]
+        }
+      ],
+      "add": [
+        {
+          "recipeId": "r1",
+          "servings": 1,
+          "unitOverrides": []
+        }
+      ],
+      "expected": {
+        "rows": [
+          {
+            "name": "Onion",
+            "ingredientId": "onion",
+            "amount": "370",
+            "unit": "g",
+            "displayQuantity": "4 medium pieces",
+            "checked": false,
+            "recipeAmount": "370 g",
+            "sources": [
+              {
+                "recipeId": "r1",
+                "recipeName": "Recipe r1",
+                "amount": "370",
+                "unit": "g"
+              }
+            ],
+            "existingRow": null
+          }
+        ],
+        "lineItems": [
+          {
+            "clientLineId": "r1/1",
+            "row": 0
+          },
+          {
+            "clientLineId": "r1/2",
+            "row": 0
+          }
+        ],
+        "skippedInPantry": []
+      }
+    },
+    {
+      "name": "a little over a whole measure buys the next one",
+      "existingRows": [],
+      "pantryIngredientIds": [],
+      "recipes": [
+        {
+          "id": "r1",
+          "baseServings": 1,
+          "ingredients": [
+            {
+              "id": "d2ab1c91-5a20-54c8-953c-014909dde2aa",
+              "position": 1,
+              "rawText": "Onion",
+              "ingredientName": "Onion",
+              "canonicalIngredientName": "onion",
+              "ingredientId": "onion",
+              "quantity": "115",
+              "exactQuantity": "115",
+              "quantityMax": null,
+              "quantityMode": "exact",
+              "unit": "g",
+              "quantityText": "115g",
+              "displayText": null,
+              "alternateQuantity": null,
+              "alternateUnit": null,
+              "availableUnits": [
+                {
+                  "quantity": "115",
+                  "unit": "g",
+                  "label": "115g",
+                  "source": "explicit",
+                  "confidence": "1.0000"
+                }
+              ],
+              "preparationNote": null,
+              "sizeNote": null,
+              "customMeasurementBasis": null,
+              "isCustom": false,
+              "sectionPosition": null,
+              "category": "other",
+              "isCoreIngredient": true,
+              "isOptional": false,
+              "parseConfidence": null,
+              "parseWarnings": [],
+              "measure": {
+                "unit": "item",
+                "size": "medium",
+                "quantity": "1.5",
+                "exactQuantity": "1.045"
+              },
+              "nutrition": null,
+              "isFryingOil": false
+            }
+          ]
+        }
+      ],
+      "add": [
+        {
+          "recipeId": "r1",
+          "servings": 1,
+          "unitOverrides": []
+        }
+      ],
+      "expected": {
+        "rows": [
+          {
+            "name": "Onion",
+            "ingredientId": "onion",
+            "amount": "115",
+            "unit": "g",
+            "displayQuantity": "2 medium pieces",
+            "checked": false,
+            "recipeAmount": "115 g",
+            "sources": [
+              {
+                "recipeId": "r1",
+                "recipeName": "Recipe r1",
+                "amount": "115",
+                "unit": "g"
+              }
+            ],
+            "existingRow": null
+          }
+        ],
+        "lineItems": [
+          {
+            "clientLineId": "r1/1",
+            "row": 0
+          }
+        ],
+        "skippedInPantry": []
+      }
+    },
+    {
+      "name": "a sensitive food up to a tenth over a whole measure stays whole",
+      "existingRows": [],
+      "pantryIngredientIds": [],
+      "recipes": [
+        {
+          "id": "r1",
+          "baseServings": 1,
+          "ingredients": [
+            {
+              "id": "d2ab1c91-5a20-54c8-953c-014909dde2aa",
+              "position": 1,
+              "rawText": "Ata rodo",
+              "ingredientName": "Ata rodo",
+              "canonicalIngredientName": "ata rodo",
+              "ingredientId": "scotch-bonnet-pepper",
+              "quantity": "18.5",
+              "exactQuantity": "18.5",
+              "quantityMax": null,
+              "quantityMode": "exact",
+              "unit": "g",
+              "quantityText": "18.5g",
+              "displayText": null,
+              "alternateQuantity": null,
+              "alternateUnit": null,
+              "availableUnits": [
+                {
+                  "quantity": "18.5",
+                  "unit": "g",
+                  "label": "18.5g",
+                  "source": "explicit",
+                  "confidence": "1.0000"
+                }
+              ],
+              "preparationNote": null,
+              "sizeNote": null,
+              "customMeasurementBasis": null,
+              "isCustom": false,
+              "sectionPosition": null,
+              "category": "other",
+              "isCoreIngredient": true,
+              "isOptional": false,
+              "parseConfidence": null,
+              "parseWarnings": [],
+              "measure": {
+                "unit": "item",
+                "size": null,
+                "quantity": "3",
+                "exactQuantity": "3.083"
+              },
+              "nutrition": null,
+              "isFryingOil": false
+            }
+          ]
+        }
+      ],
+      "add": [
+        {
+          "recipeId": "r1",
+          "servings": 1,
+          "unitOverrides": []
+        }
+      ],
+      "expected": {
+        "rows": [
+          {
+            "name": "Ata rodo",
+            "ingredientId": "scotch-bonnet-pepper",
+            "amount": "18.5",
+            "unit": "g",
+            "displayQuantity": "3 pieces",
+            "checked": false,
+            "recipeAmount": "18.5 g",
+            "sources": [
+              {
+                "recipeId": "r1",
+                "recipeName": "Recipe r1",
+                "amount": "18.5",
+                "unit": "g"
+              }
+            ],
+            "existingRow": null
+          }
+        ],
+        "lineItems": [
+          {
+            "clientLineId": "r1/1",
+            "row": 0
+          }
+        ],
+        "skippedInPantry": []
+      }
+    },
+    {
+      "name": "leafy vegetables buy whole bunches",
+      "existingRows": [],
+      "pantryIngredientIds": [],
+      "recipes": [
+        {
+          "id": "r1",
+          "baseServings": 1,
+          "ingredients": [
+            {
+              "id": "d2ab1c91-5a20-54c8-953c-014909dde2aa",
+              "position": 1,
+              "rawText": "Ugu leaf",
+              "ingredientName": "Ugu leaf",
+              "canonicalIngredientName": "ugu leaf",
+              "ingredientId": "ugu",
+              "quantity": "150",
+              "exactQuantity": "150",
+              "quantityMax": null,
+              "quantityMode": "exact",
+              "unit": "g",
+              "quantityText": "150g",
+              "displayText": null,
+              "alternateQuantity": null,
+              "alternateUnit": null,
+              "availableUnits": [
+                {
+                  "quantity": "150",
+                  "unit": "g",
+                  "label": "150g",
+                  "source": "explicit",
+                  "confidence": "1.0000"
+                }
+              ],
+              "preparationNote": null,
+              "sizeNote": null,
+              "customMeasurementBasis": null,
+              "isCustom": false,
+              "sectionPosition": null,
+              "category": "other",
+              "isCoreIngredient": true,
+              "isOptional": false,
+              "parseConfidence": null,
+              "parseWarnings": [],
+              "measure": {
+                "unit": "bunch",
+                "size": null,
+                "quantity": "0.5",
+                "exactQuantity": "0.333"
+              },
+              "nutrition": null,
+              "isFryingOil": false
+            }
+          ]
+        }
+      ],
+      "add": [
+        {
+          "recipeId": "r1",
+          "servings": 1,
+          "unitOverrides": []
+        }
+      ],
+      "expected": {
+        "rows": [
+          {
+            "name": "Ugu leaf",
+            "ingredientId": "ugu",
+            "amount": "150",
+            "unit": "g",
+            "displayQuantity": "1 bunch",
+            "checked": false,
+            "recipeAmount": "150 g",
+            "sources": [
+              {
+                "recipeId": "r1",
+                "recipeName": "Recipe r1",
+                "amount": "150",
+                "unit": "g"
               }
             ],
             "existingRow": null
@@ -1481,6 +2313,7 @@
               "isOptional": false,
               "parseConfidence": null,
               "parseWarnings": [],
+              "measure": null,
               "nutrition": null,
               "isFryingOil": false
             }
@@ -1568,6 +2401,7 @@
               "isOptional": false,
               "parseConfidence": null,
               "parseWarnings": [],
+              "measure": null,
               "nutrition": null,
               "isFryingOil": false
             }
@@ -1655,6 +2489,7 @@
               "isOptional": false,
               "parseConfidence": null,
               "parseWarnings": [],
+              "measure": null,
               "nutrition": null,
               "isFryingOil": false
             }
@@ -1699,6 +2534,7 @@
               "isOptional": false,
               "parseConfidence": null,
               "parseWarnings": [],
+              "measure": null,
               "nutrition": null,
               "isFryingOil": false
             }
@@ -1801,6 +2637,7 @@
               "isOptional": false,
               "parseConfidence": null,
               "parseWarnings": [],
+              "measure": null,
               "nutrition": null,
               "isFryingOil": false
             }
@@ -1845,6 +2682,7 @@
               "isOptional": false,
               "parseConfidence": null,
               "parseWarnings": [],
+              "measure": null,
               "nutrition": null,
               "isFryingOil": false
             }
@@ -1947,6 +2785,7 @@
               "isOptional": false,
               "parseConfidence": null,
               "parseWarnings": [],
+              "measure": null,
               "nutrition": null,
               "isFryingOil": false
             }
@@ -1991,6 +2830,7 @@
               "isOptional": false,
               "parseConfidence": null,
               "parseWarnings": [],
+              "measure": null,
               "nutrition": null,
               "isFryingOil": false
             }
@@ -2105,6 +2945,7 @@
               "isOptional": false,
               "parseConfidence": null,
               "parseWarnings": [],
+              "measure": null,
               "nutrition": null,
               "isFryingOil": false
             }
@@ -2208,6 +3049,7 @@
               "isOptional": false,
               "parseConfidence": null,
               "parseWarnings": [],
+              "measure": null,
               "nutrition": null,
               "isFryingOil": false
             }
@@ -2306,6 +3148,7 @@
               "isOptional": false,
               "parseConfidence": null,
               "parseWarnings": [],
+              "measure": null,
               "nutrition": null,
               "isFryingOil": false
             }
@@ -2404,6 +3247,7 @@
               "isOptional": false,
               "parseConfidence": null,
               "parseWarnings": [],
+              "measure": null,
               "nutrition": null,
               "isFryingOil": false
             }
@@ -2504,6 +3348,7 @@
               "isOptional": false,
               "parseConfidence": null,
               "parseWarnings": [],
+              "measure": null,
               "nutrition": null,
               "isFryingOil": false
             },
@@ -2542,6 +3387,7 @@
               "isOptional": false,
               "parseConfidence": null,
               "parseWarnings": [],
+              "measure": null,
               "nutrition": null,
               "isFryingOil": false
             }
@@ -2649,6 +3495,7 @@
               "isOptional": false,
               "parseConfidence": null,
               "parseWarnings": [],
+              "measure": null,
               "nutrition": null,
               "isFryingOil": false
             }
@@ -2734,6 +3581,7 @@
               "isOptional": false,
               "parseConfidence": null,
               "parseWarnings": [],
+              "measure": null,
               "nutrition": null,
               "isFryingOil": false
             },
@@ -2772,6 +3620,7 @@
               "isOptional": true,
               "parseConfidence": null,
               "parseWarnings": [],
+              "measure": null,
               "nutrition": null,
               "isFryingOil": false
             }

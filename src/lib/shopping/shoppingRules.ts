@@ -4,6 +4,7 @@
 // (convert_quantity), pinned to them by the fixtures the server generates.
 // After a sync the server's own result replaces what the phone worked out.
 // Shared by the app and its tests, so nothing here imports React Native.
+import type { CountRule } from "../friendlyAmounts.ts";
 
 const UNIT_LABELS: Record<string, string> = {
   mg: "mg",
@@ -89,13 +90,32 @@ const TABLESPOON_ML = 15;
 const TEASPOON_ML = 5;
 const SMALLER_UNIT: Record<string, [string, number]> = { kg: ["g", 1000], L: ["mL", 1000] };
 const BIGGER_UNIT: Record<string, [string, number]> = { g: ["kg", 1000], mL: ["L", 1000] };
+// Grams in each mass unit.
+export const MASS_GRAMS: Record<string, number> = { mg: 0.001, g: 1, kg: 1000 };
+// How an ingredient's own measures read ("item" is a piece), singular and plural.
+export const MEASURE_LABELS: Record<string, [string, string]> = {
+  item: ["piece", "pieces"],
+  bunch: ["bunch", "bunches"],
+  clove: ["clove", "cloves"],
+  stalk: ["stalk", "stalks"],
+  sachet: ["sachet", "sachets"],
+  tin: ["tin", "tins"],
+  cube: ["cube", "cubes"],
+};
+// Up to this much over a whole or a half of a sensitive ingredient rounds down.
+const COUNTED_SLACK = 0.1;
 
 // Decimal.quantize(0.001, ROUND_HALF_UP), for positive amounts.
 const settle = (amount: number) => Math.round(amount * 1000 + 1e-9) / 1000;
 
 // "8 cups", "250 g" or "2 pieces"; null when there's no positive amount. A
 // spice measured by volume reads in spoons.
-export function shoppingDisplayQuantity(amount: number | null, unit: string | null, ingredientSubcategory?: string | null) {
+export function shoppingDisplayQuantity(
+  amount: number | null,
+  unit: string | null,
+  ingredientSubcategory?: string | null,
+  rule: CountRule = "normal"
+) {
   if (amount === null || !(amount > 0)) return null;
   let current: string | null = unit?.trim() || null;
   let value = amount;
@@ -106,9 +126,37 @@ export function shoppingDisplayQuantity(amount: number | null, unit: string | nu
   }
   [current, value] = smallerUnitBelowOne(current, value);
   [current, value] = biggerUnitFromAThousand(current, value);
-  const whole = Math.ceil(settle(value));
+  // Pieces, bunches and cubes count by the ingredient's rule; weights and spoons always round up.
+  const whole = current === null || current in MEASURE_LABELS ? wholeCount(value, rule) : Math.ceil(settle(value));
   const [label, known] = unitLabel(current);
   return `${whole} ${known && whole !== 1 ? plural(label) : label}`;
+}
+
+// A counted amount as people say it (whole_or_half): 1.1 → 1 ½ and 1.6 → 2,
+// but 1.6 → 1 ½ for a sensitive ingredient, and 2.4 → 3 eggs.
+function wholeOrHalf(amount: number, rule: CountRule = "normal") {
+  return counted(amount, rule === "whole" ? 1 : 0.5, rule);
+}
+
+// Whole measures to buy (whole_count): 3.05 → 4, but 3 for a sensitive ingredient.
+function wholeCount(amount: number, rule: CountRule = "normal") {
+  return counted(amount, 1, rule);
+}
+
+function counted(amount: number, step: number, rule: CountRule) {
+  const settled = settle(amount);
+  const slack = rule === "normal" ? 0 : COUNTED_SLACK;
+  const below = Math.floor(settled / step + 1e-9) * step;
+  const rounded = settled - below <= slack + 1e-9 ? below : below + step;
+  return Math.max(rounded, step);
+}
+
+// "4 medium pieces" or "1 bunch": whole measures to buy (measure_display_quantity).
+export function measureDisplayQuantity(grams: number, unit: string, size: string | null, measureGrams: number, rule: CountRule = "normal") {
+  const count = wholeCount(grams / measureGrams, rule);
+  const [singular, plural] = MEASURE_LABELS[unit];
+  const label = count === 1 ? singular : plural;
+  return size ? `${count} ${size} ${label}` : `${count} ${label}`;
 }
 
 function smallerUnitBelowOne(unit: string | null, amount: number): [string | null, number] {
@@ -164,16 +212,18 @@ export function convertQuantity(quantity: number, fromUnit: string, toUnit: stri
   return { quantity: (quantity * factor(fromRow)) / factor(toRow), isApproximate };
 }
 
-// What an item's recipes need, exactly: "300 g", "0.33 metric cups", or
+// What an item's recipes need: "300 g", "0.33 metric cups", "1.5 pieces", or
 // "1 metric cup + 250 mL" when the units differ; null when no recipe gave
 // an amount (recipe_amount_text).
-export function recipeAmountText(sources: { amount: string | null; unit: string | null }[]) {
+export function recipeAmountText(sources: { amount: string | null; unit: string | null }[], rule: CountRule = "normal") {
   const totals = new Map<string | null, number>();
   for (const source of sources) {
     if (source.amount !== null) totals.set(source.unit, (totals.get(source.unit) ?? 0) + Number(source.amount));
   }
   const parts = [...totals].map(([unit, amount]) => {
-    const shown = Math.round(amount * 100 + 1e-9) / 100;
+    // Pieces and other counted measures read whole or half ("1.5 pieces").
+    const counts = unit === null || unit in MEASURE_LABELS;
+    const shown = counts ? wholeOrHalf(amount, rule) : Math.round(amount * 100 + 1e-9) / 100;
     const [label, known] = unitLabel(unit);
     return `${shown} ${known && shown !== 1 ? plural(label) : label}`;
   });

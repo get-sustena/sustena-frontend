@@ -30,7 +30,8 @@ const WHOLE_ITEM_INGREDIENT_IDS = new Set(["egg", "duck-egg", "quail-egg"]);
 // Strong ingredients, where a little too much spoils the dish: their counts
 // round down when only a little over (founder, 2026-10-16). Whole catalogue
 // subcategories, plus the hot peppers from "Pepper", which also holds bell
-// peppers. Moves to the ingredient data if Backend's measures carry a flag.
+// peppers. The same lists as the server's count_rule, for a catalogue saved
+// before ingredients carried countRule; goes once the live API sends it.
 const SENSITIVE_SUBCATEGORIES = new Set([
   "Alkaline ingredient",
   "Basic seasoning",
@@ -99,8 +100,11 @@ export function friendlyCount(value: number, rule: CountRule) {
   return wholes === 0 ? "½" : `${wholes} ½`;
 }
 
-export function countRuleFor(ingredient: { id: string; subcategory: string | null } | undefined): CountRule {
+export function countRuleFor(
+  ingredient: { id: string; subcategory: string | null; countRule?: CountRule } | undefined
+): CountRule {
   if (!ingredient) return "normal";
+  if (ingredient.countRule) return ingredient.countRule;
   if (WHOLE_ITEM_INGREDIENT_IDS.has(ingredient.id)) return "whole";
   if (SENSITIVE_INGREDIENT_IDS.has(ingredient.id)) return "sensitive";
   return ingredient.subcategory && SENSITIVE_SUBCATEGORIES.has(ingredient.subcategory) ? "sensitive" : "normal";

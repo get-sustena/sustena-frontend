@@ -110,7 +110,7 @@ async function listWithRice() {
     listId: LIST,
   });
   const rows = [{ id: RICE_ROW, name: "Rice", canonicalIngredientName: "rice", ingredientId: "rice", amount: 0.8, quantity: "0.8", unit: "kg", category: "grains", checked: false, sources: [] }];
-  const review = reviewRecipeAdd({ rows, selections: [jollof], units, pantryIngredientIds: new Set(), subcategoryOf: () => null });
+  const review = reviewRecipeAdd({ rows, selections: [jollof], units, pantryIngredientIds: new Set(), ingredientOf: () => null });
   return { database, review };
 }
 const shown = (db) => db.getAllAsync("SELECT name, display_quantity, recipe_amount FROM shopping_list_items WHERE list_id = ? ORDER BY name", [LIST]);

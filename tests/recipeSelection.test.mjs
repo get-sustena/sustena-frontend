@@ -20,9 +20,9 @@ test("SL-06: a stored recipe becomes the lines the server adds, with the unit th
     name: "Jollof Rice",
     baseServings: 4,
     lines: [
-      { id: "l1", ingredientId: "rice", name: "Long grain rice", canonicalIngredientName: "long grain rice", quantity: 2, unit: "metric_cup", category: "Grains", isOptional: false },
-      { id: "l2", ingredientId: null, name: "Salt to taste", canonicalIngredientName: null, quantity: null, unit: null, category: null, isOptional: false },
-      { id: "l3", ingredientId: "mint", name: "Mint", canonicalIngredientName: "mint", quantity: 5, unit: "g", category: "Herbs", isOptional: true },
+      { id: "l1", ingredientId: "rice", name: "Long grain rice", canonicalIngredientName: "long grain rice", quantity: 2, unit: "metric_cup", sizeNote: null, category: "Grains", isOptional: false },
+      { id: "l2", ingredientId: null, name: "Salt to taste", canonicalIngredientName: null, quantity: null, unit: null, sizeNote: null, category: null, isOptional: false },
+      { id: "l3", ingredientId: "mint", name: "Mint", canonicalIngredientName: "mint", quantity: 5, unit: "g", sizeNote: null, category: "Herbs", isOptional: true },
     ],
   });
   assert.equal(selection.servings, 6);

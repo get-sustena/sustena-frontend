@@ -37,8 +37,8 @@ export function useAddToShoppingList() {
   const shoppingCommands = useShoppingCommands();
 
   const unitTable = new Map<string, UnitRow>((units ?? []).map((unit) => [unit.id, unit]));
-  const subcategories = new Map((catalogue ?? []).map((ingredient) => [ingredient.id, ingredient.subcategory]));
-  const subcategoryOf = (ingredientId: string | null) => (ingredientId ? subcategories.get(ingredientId) ?? null : null);
+  const ingredients = new Map((catalogue ?? []).map((ingredient) => [ingredient.id, ingredient]));
+  const ingredientOf = (ingredientId: string | null | undefined) => (ingredientId ? ingredients.get(ingredientId) ?? null : null);
 
   async function reviewFor(listId: string, adding: Adding) {
     const rows: ListRow[] = (await getStoredShoppingListItems(db, listId)).map(mapShoppingListRowToItem).map((item) => ({
@@ -58,7 +58,7 @@ export function useAddToShoppingList() {
       selections: adding.selections,
       units: unitTable,
       pantryIngredientIds: new Set(pantryIngredientIds),
-      subcategoryOf,
+      ingredientOf,
     });
   }
 
