@@ -1,9 +1,12 @@
 // Conversion requires a shared base unit; context only limits which units are offered.
 
 import type { Ingredient, IngredientConversionContext, Unit } from "../types/api.ts";
-import { formatQuantityValue } from "./scaling.ts";
+import { friendlyQuantity, isBelowPinch, PINCH } from "./friendlyAmounts.ts";
 
 export type UnitMode = "metric" | "cups" | "imperial";
+
+// A milk cup or derica shows only from half a cup up (founder, 2026-10-16).
+const MIN_NIGERIAN_CUPS = 0.5;
 
 interface ConvertedQuantity {
   quantity: number;
@@ -196,9 +199,27 @@ export function buildScaleUnitOptions({
   servingFactor?: number;
 }): ScaleUnitOption[] {
   const unitsById = buildUnitLookup(units);
+  // In Nigerian units, the spoon or gram an amount under half a cup shows in.
+  const belowCupsUnit =
+    mode === "cups"
+      ? unitsById.get(
+          convertIngredientQuantity({
+            unitsById,
+            quantity: quantity * servingFactor,
+            fromUnit,
+            context,
+            mode,
+          })?.unit ?? ""
+        )
+      : undefined;
 
   return getCompatibleScaleUnits({ units, fromUnit, context })
-    .filter((unit) => !mode || getUnitModeForUnitId(unit.id) === mode)
+    .filter(
+      (unit) =>
+        !mode ||
+        getUnitModeForUnitId(unit.id) === mode ||
+        (belowCupsUnit !== undefined && isSameMeasure(unit, belowCupsUnit))
+    )
     .flatMap((unit) => {
       const converted = convertQuantity({
         unitsById,
@@ -207,22 +228,45 @@ export function buildScaleUnitOptions({
         toUnit: unit.id,
       });
 
-      if (!converted) {
+      if (
+        !converted ||
+        (getUnitModeForUnitId(unit.id) === "cups" && converted.quantity < MIN_NIGERIAN_CUPS)
+      ) {
         return [];
       }
-
-      const unitLabel = getUnitDisplayLabel(unitsById, unit.id);
 
       return [
         {
           ...converted,
           label: getUnitPickerLabel(unit),
-          preview: `${converted.isApproximate ? "≈" : ""}${formatScaleQuantity(
-            converted.quantity
-          )} ${unitLabel}`,
+          preview: formatAmountInUnit(unitsById, converted),
         },
       ];
     });
+}
+
+// The amount as it reads on the recipe: "≈1 ½ Milk cup", "38 g", "a pinch".
+export function formatAmountInUnit(
+  unitsById: Map<string, Unit>,
+  { quantity, unit, isApproximate }: ConvertedQuantity,
+  label = getUnitDisplayLabel(unitsById, unit)
+) {
+  const definition = unitsById.get(unit);
+
+  if (definition && isBelowPinch(quantity * averageUnitFactor(definition), definition.baseUnit)) {
+    return PINCH;
+  }
+
+  const amount = friendlyQuantity(quantity, unit);
+  return `${isApproximate ? "≈" : ""}${amount}${label ? ` ${label}` : ""}`;
+}
+
+function isSameMeasure(left: Unit, right: Unit) {
+  return (
+    left.baseUnit === right.baseUnit &&
+    Number(left.baseFactorMin) === Number(right.baseFactorMin) &&
+    Number(left.baseFactorMax) === Number(right.baseFactorMax)
+  );
 }
 
 export function getUnitModeForUnitId(unitId: string | null): UnitMode | null {
@@ -311,16 +355,37 @@ export function convertIngredientQuantity({
   }
 
   if (mode === "cups") {
-    if (!contextUnits.nigerianDefault) {
+    // Anything measured by volume (spices in mL too) goes in milk cups.
+    const measuredByVolume = unitsById.get(fromUnit)?.baseUnit === "mL";
+    const nigerianUnit = measuredByVolume ? "milk_cup" : contextUnits.nigerianDefault;
+
+    if (!nigerianUnit) {
       return null;
     }
 
-    return convertQuantity({
+    const cups = convertQuantity({
       unitsById,
       quantity,
       fromUnit,
-      toUnit: contextUnits.nigerianDefault,
+      toUnit: nigerianUnit,
     });
+
+    // Under half a milk cup or derica, liquids show in spoons and dry food in
+    // grams, so no amount reads "0.07 milk cup".
+    if (!cups || cups.quantity >= MIN_NIGERIAN_CUPS) {
+      return cups;
+    }
+
+    if (measuredByVolume) {
+      const tablespoons = convertQuantity({ unitsById, quantity, fromUnit, toUnit: "tbsp" });
+      return tablespoons && tablespoons.quantity >= 1
+        ? tablespoons
+        : convertQuantity({ unitsById, quantity, fromUnit, toUnit: "tsp" });
+    }
+
+    return contextUnits.metricSmall
+      ? convertQuantity({ unitsById, quantity, fromUnit, toUnit: contextUnits.metricSmall })
+      : null;
   }
 
   const smallUnit = mode === "metric" ? contextUnits.metricSmall : contextUnits.imperialSmall;
@@ -373,14 +438,6 @@ export function getIngredientConversionContext(
   ingredient: Ingredient | undefined
 ): IngredientConversionContext {
   return ingredient?.conversionContext ?? "mass";
-}
-
-export function formatConvertedQuantity(quantity: number, _mode: UnitMode): string {
-  if (!Number.isFinite(quantity) || quantity <= 0) {
-    return "0";
-  }
-
-  return formatQuantityValue(quantity);
 }
 
 export function getUnitDisplayLabel(unitsById: Map<string, Unit>, unitId: string): string {
@@ -454,8 +511,4 @@ export function getUnitPickerLabel(unit: Unit): string {
 
 function averageUnitFactor(unit: Unit) {
   return (Number(unit.baseFactorMin) + Number(unit.baseFactorMax)) / 2;
-}
-
-function formatScaleQuantity(quantity: number) {
-  return formatQuantityValue(quantity);
 }

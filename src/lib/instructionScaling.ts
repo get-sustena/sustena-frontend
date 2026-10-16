@@ -3,13 +3,13 @@ import type {
   RecipeInstructionQuantitySegment,
   Unit,
 } from "../types/api.ts";
+import { friendlyCount } from "./friendlyAmounts.ts";
 import {
   convertQuantity,
-  formatConvertedQuantity,
+  formatAmountInUnit,
   getUnitDisplayLabel,
-  getUnitModeForUnitId,
 } from "./unitConversion.ts";
-import { formatQuantityText, formatQuantityValue } from "./scaling.ts";
+import { formatQuantityText } from "./scaling.ts";
 
 const MAX_DECIMAL_PLACES = 3;
 
@@ -19,12 +19,15 @@ export function formatScaledInstruction({
   selectedServings,
   unitsById,
   selectedUnitByIngredientId,
+  wholeItemIngredientIds = new Set(),
 }: {
   instruction: RecipeInstruction;
   baseServings: number | null;
   selectedServings: number;
   unitsById: Map<string, Unit>;
   selectedUnitByIngredientId: Map<string, string>;
+  // Recipe ingredients counted in wholes (eggs), never as halves.
+  wholeItemIngredientIds?: Set<string>;
 }) {
   if (
     !instruction.segments?.length ||
@@ -50,6 +53,7 @@ export function formatScaledInstruction({
         selectedServings,
         unitsById,
         selectedUnitByIngredientId,
+        wholeItemIngredientIds,
       });
     })
     .join("");
@@ -90,12 +94,14 @@ function formatQuantitySegment({
   selectedServings,
   unitsById,
   selectedUnitByIngredientId,
+  wholeItemIngredientIds,
 }: {
   segment: RecipeInstructionQuantitySegment;
   baseServings: number;
   selectedServings: number;
   unitsById: Map<string, Unit>;
   selectedUnitByIngredientId: Map<string, string>;
+  wholeItemIngredientIds: Set<string>;
 }) {
   const scaledQuantity = scaleDecimalString(
     segment.baseQuantity,
@@ -127,24 +133,28 @@ function formatQuantitySegment({
     });
 
     if (converted) {
-      const mode = getUnitModeForUnitId(converted.unit) ?? "metric";
-      const quantity = formatConvertedQuantity(converted.quantity, mode);
-      const unitLabel = getInstructionUnitLabel(unitsById, converted.unit);
-
-      return `${converted.isApproximate ? "≈" : ""}${quantity}${
-        unitLabel ? ` ${unitLabel}` : ""
-      }`;
+      return formatAmountInUnit(
+        unitsById,
+        converted,
+        getInstructionUnitLabel(unitsById, converted.unit)
+      );
     }
   }
 
-  if (!segment.unit) {
-    return formatQuantityValue(Number(scaledQuantity));
+  if (!segment.unit || segment.unit.trim().toLowerCase() === "item") {
+    return friendlyCount(Number(scaledQuantity), {
+      whole: Boolean(
+        segment.recipeIngredientId &&
+          wholeItemIngredientIds.has(segment.recipeIngredientId)
+      ),
+    });
   }
 
-  const unitLabel = getInstructionUnitLabel(unitsById, segment.unit);
-  return `${formatQuantityValue(Number(scaledQuantity))}${
-    unitLabel ? ` ${unitLabel}` : ""
-  }`;
+  return formatAmountInUnit(
+    unitsById,
+    { quantity: Number(scaledQuantity), unit: segment.unit, isApproximate: false },
+    getInstructionUnitLabel(unitsById, segment.unit)
+  );
 }
 
 function getInstructionUnitLabel(unitsById: Map<string, Unit>, unit: string) {

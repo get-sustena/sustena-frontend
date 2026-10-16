@@ -33,6 +33,7 @@ import { formatNaira } from "../../src/lib/formatters";
 import {
   createInitialIngredientUnitSelections,
 } from "../../src/lib/ingredientUnits";
+import { countsInWholes } from "../../src/lib/friendlyAmounts";
 import { formatScaledInstruction } from "../../src/lib/instructionScaling";
 import { getRecipeMeals, MEAL_LABELS } from "../../src/lib/mealTime";
 import { scaleAmountText, scaleCost } from "../../src/lib/scaling";
@@ -347,6 +348,11 @@ export default function RecipeDetailScreen() {
       return selectedUnit ? [[ingredient.id, selectedUnit] as const] : [];
     })
   );
+  const wholeItemIngredientIds = new Set(
+    (recipeDetail?.ingredients ?? [])
+      .filter((ingredient) => countsInWholes(ingredient.ingredientId))
+      .map((ingredient) => ingredient.id)
+  );
   const instructions = [...(recipeDetail?.instructions ?? [])]
     .sort((left, right) => left.stepNumber - right.stepNumber)
     .map((instruction) => ({
@@ -357,6 +363,7 @@ export default function RecipeDetailScreen() {
         selectedServings: servings,
         unitsById,
         selectedUnitByIngredientId: selectedInstructionUnits,
+        wholeItemIngredientIds,
       }),
     }));
   const displayTags = getRecipeDetailTags(recipeDetail, recipe?.tags ?? []);
