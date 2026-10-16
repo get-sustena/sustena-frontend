@@ -55,7 +55,12 @@ export default function AuthScreen() {
     setFieldErrors({});
 
     try {
-      await loginMutation.mutateAsync({ email: trimmedEmail, password });
+      const { user } = await loginMutation.mutateAsync({ email: trimmedEmail, password });
+      // An account that hasn't entered its email code yet goes there first.
+      if (user.emailVerificationRequired) {
+        router.replace("/verify-email");
+        return;
+      }
       showToast("You're in. We'll personalize as you go.", "success");
       continueAfterAuth();
     } catch (error) {
